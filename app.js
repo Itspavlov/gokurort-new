@@ -34,18 +34,28 @@ const navItems = document.querySelectorAll('.nav-item');
 const tabContents = document.querySelectorAll('.tab-content');
 
 function switchTab(tabName) {
+    // Скрываем экран группы (если открыт)
+    const groupScreen = document.getElementById('group-screen');
+    if (groupScreen) {
+        groupScreen.style.display = 'none';
+    }
+    
+    // Скрываем все вкладки
     tabContents.forEach(section => section.style.display = 'none');
     
+    // Показываем нужную вкладку
     const target = document.getElementById('tab-' + tabName);
     if (target) {
         target.style.display = 'block';
         target.classList.add('fade-in');
     }
     
+    // Обновляем активность кнопок
     navItems.forEach(item => {
         item.classList.toggle('active', item.dataset.tab === tabName);
     });
     
+    // Скролл наверх
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -55,6 +65,7 @@ navItems.forEach(item => {
     });
 });
 
+// Показываем "Онлайн поиск" по умолчанию
 switchTab('search');
 
 // ---------- ОТКРЫТИЕ ГРУППЫ ----------
