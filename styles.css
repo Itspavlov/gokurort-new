@@ -922,3 +922,28 @@ body {
         height: 56px;
     }
 }
+/* ---------- РАЗДЕЛИТЕЛЬ ИСТОРИИ ---------- */
+.chat-history-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px 0;
+    position: relative;
+}
+
+.chat-history-divider::before,
+.chat-history-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--glass-border);
+}
+
+.chat-history-divider span {
+    padding: 0 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}

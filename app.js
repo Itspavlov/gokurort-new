@@ -109,7 +109,7 @@ function connectSocket() {
         addMessageToChat(message);
     });
     
-    // Пришла история комнаты — ОТОБРАЖАЕМ
+    // Пришла история комнаты
     socket.on('room-history', (history) => {
         console.log('📜 История комнаты:', history.length);
         renderHistory(history);
@@ -118,11 +118,17 @@ function connectSocket() {
     // Комната очищена
     socket.on('room-cleared', () => {
         const messagesContainer = document.getElementById('chatMessages');
-        if (messagesContainer) {
-            const welcome = messagesContainer.querySelector('.chat-welcome');
-            messagesContainer.innerHTML = '';
-            if (welcome) messagesContainer.appendChild(welcome);
-        }
+        if (!messagesContainer) return;
+        
+        // Удаляем только сообщения из истории
+        messagesContainer.querySelectorAll('.chat-message').forEach(el => {
+            // Но НЕ удаляем объявления
+            if (el.querySelector('.chat-ad-image')) return;
+            el.remove();
+        });
+        
+        const divider = document.getElementById('history-divider');
+        if (divider) divider.remove();
     });
 }
 
@@ -133,15 +139,36 @@ function renderHistory(history) {
     
     const userName = getUserName();
     
-    // Очищаем всё, кроме приветствия
-    const welcome = messagesContainer.querySelector('.chat-welcome');
-    messagesContainer.innerHTML = '';
-    if (welcome) messagesContainer.appendChild(welcome);
+    // Удаляем ТОЛЬКО старые сообщения из истории, объявления оставляем
+    const oldHistoryMessages = messagesContainer.querySelectorAll('.chat-message[data-from-history="true"]');
+    oldHistoryMessages.forEach(el => el.remove());
     
-    // Рисуем все сообщения
+    // Удаляем старый разделитель
+    const oldDivider = document.getElementById('history-divider');
+    if (oldDivider) oldDivider.remove();
+    
+    // Если истории нет — просто выходим
+    if (!history || history.length === 0) return;
+    
+    // Добавляем разделитель "История сообщений"
+    const divider = document.createElement('div');
+    divider.id = 'history-divider';
+    divider.className = 'chat-history-divider';
+    divider.innerHTML = '<span>История сообщений</span>';
+    messagesContainer.appendChild(divider);
+    
+    // Рисуем сообщения из истории
     history.forEach(message => {
         const html = renderMessageHTML(message, userName);
         messagesContainer.insertAdjacentHTML('beforeend', html);
+    });
+    
+    // Помечаем последние N сообщений (которые только что добавили) как "из истории"
+    const allMessages = messagesContainer.querySelectorAll('.chat-message:not([data-from-history])');
+    allMessages.forEach(el => {
+        // Пропускаем объявления
+        if (el.querySelector('.chat-ad-image')) return;
+        el.setAttribute('data-from-history', 'true');
     });
     
     scrollChatToBottom();
