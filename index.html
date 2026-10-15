@@ -6,10 +6,15 @@
     <meta name="theme-color" content="#0F172A">
     <title>Tell — общение и поиск</title>
     
+    <!-- Шрифты -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Иконки -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Стили -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -143,85 +148,9 @@
 
 </div>
 
-<script>
-    // ========== ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ==========
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = themeToggle.querySelector('i');
-    const html = document.documentElement;
-    const metaTheme = document.querySelector('meta[name="theme-color"]');
-    
-    const savedTheme = localStorage.getItem('tell-theme') || 'dark';
-    setTheme(savedTheme);
-    
-    function setTheme(theme) {
-        html.setAttribute('data-theme', theme);
-        localStorage.setItem('tell-theme', theme);
-        
-        if (theme === 'dark') {
-            themeIcon.className = 'fas fa-moon';
-            metaTheme.setAttribute('content', '#0F172A');
-        } else {
-            themeIcon.className = 'fas fa-sun';
-            metaTheme.setAttribute('content', '#F8FAFC');
-        }
-    }
-    
-    themeToggle.addEventListener('click', () => {
-        const current = html.getAttribute('data-theme');
-        setTheme(current === 'dark' ? 'light' : 'dark');
-    });
-
-    // ========== ПЕРЕКЛЮЧАТЕЛЬ ВКЛАДОК ==========
-    const navItems = document.querySelectorAll('.nav-item');
-    const tabContents = document.querySelectorAll('.tab-content');
-    
-    function switchTab(tabName) {
-        // Скрываем все секции
-        tabContents.forEach(section => section.style.display = 'none');
-        
-        // Показываем нужную
-        const target = document.getElementById('tab-' + tabName);
-        if (target) {
-            target.style.display = 'block';
-            target.classList.add('fade-in');
-        }
-        
-        // Обновляем активность кнопок
-        navItems.forEach(item => {
-            item.classList.toggle('active', item.dataset.tab === tabName);
-        });
-        
-        // Скролл наверх
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            switchTab(item.dataset.tab);
-        });
-    });
-    
-    // Показываем "Онлайн поиск" по умолчанию
-    switchTab('search');
-
-    // ========== ФУНКЦИИ ==========
-    function openGroup(groupId) {
-        console.log('Открываем группу:', groupId);
-        // Позже добавим переход в группу
-        alert('Группа "' + groupId + '" — скоро откроется!');
-    }
-    
-    function copyInviteLink() {
-        const link = 'https://gokurort-new.onrender.com';
-        navigator.clipboard.writeText(link).then(() => {
-            alert('✅ Ссылка скопирована: ' + link);
-        }).catch(() => {
-            alert('Ссылка: ' + link);
-        });
-    }
-    
-    console.log('💬 Tell — приложение запущено');
-</script>
+<!-- Скрипты (в конце body, чтобы DOM был готов) -->
+<script src="data/housing.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
