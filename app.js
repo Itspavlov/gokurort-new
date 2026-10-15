@@ -103,14 +103,94 @@ function connectSocket() {
         if (statusEl) statusEl.textContent = 'ошибка подключения';
     });
     
+    // Пришло новое сообщение
     socket.on('new-message', (message) => {
         console.log('💬 Новое сообщение:', message);
         addMessageToChat(message);
     });
     
+    // Пришла история комнаты — ОТОБРАЖАЕМ
     socket.on('room-history', (history) => {
         console.log('📜 История комнаты:', history.length);
+        renderHistory(history);
     });
+    
+    // Комната очищена
+    socket.on('room-cleared', () => {
+        const messagesContainer = document.getElementById('chatMessages');
+        if (messagesContainer) {
+            const welcome = messagesContainer.querySelector('.chat-welcome');
+            messagesContainer.innerHTML = '';
+            if (welcome) messagesContainer.appendChild(welcome);
+        }
+    });
+}
+
+// ---------- ОТРИСОВКА ИСТОРИИ ----------
+function renderHistory(history) {
+    const messagesContainer = document.getElementById('chatMessages');
+    if (!messagesContainer) return;
+    
+    const userName = getUserName();
+    
+    // Очищаем всё, кроме приветствия
+    const welcome = messagesContainer.querySelector('.chat-welcome');
+    messagesContainer.innerHTML = '';
+    if (welcome) messagesContainer.appendChild(welcome);
+    
+    // Рисуем все сообщения
+    history.forEach(message => {
+        const html = renderMessageHTML(message, userName);
+        messagesContainer.insertAdjacentHTML('beforeend', html);
+    });
+    
+    scrollChatToBottom();
+}
+
+// ---------- HTML ОДНОГО СООБЩЕНИЯ ----------
+function renderMessageHTML(message, userName) {
+    const isMine = message.user === userName;
+    
+    const imageBlock = message.image 
+        ? `<div class="chat-bubble-image"><img src="${message.image}" alt="Фото" loading="lazy"></div>` 
+        : '';
+    
+    const textBlock = message.text 
+        ? `<div>${escapeHtml(message.text)}</div>` 
+        : '';
+    
+    if (isMine) {
+        return `
+            <div class="chat-message chat-message-mine">
+                <div class="chat-bubble-wrap">
+                    <div class="chat-bubble chat-bubble-mine">
+                        ${imageBlock}
+                        ${textBlock}
+                    </div>
+                    <div class="chat-time-mine">${formatTime(message.time)}</div>
+                </div>
+            </div>
+        `;
+    } else {
+        const colors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
+        const color = colors[Math.abs(hashCode(message.user)) % colors.length];
+        
+        return `
+            <div class="chat-message">
+                <div class="chat-avatar" style="background: ${color};">${message.avatar || message.user[0]}</div>
+                <div class="chat-bubble-wrap">
+                    <div class="chat-bubble-header">
+                        <span class="chat-user-name">${escapeHtml(message.user)}</span>
+                        <span class="chat-time">${formatTime(message.time)}</span>
+                    </div>
+                    <div class="chat-bubble">
+                        ${imageBlock}
+                        ${textBlock}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 }
 
 // ---------- ОТКРЫТИЕ ГРУППЫ ----------
@@ -242,54 +322,14 @@ function sendMessage() {
     }
 }
 
+// ---------- ДОБАВИТЬ СООБЩЕНИЕ В ЧАТ ----------
 function addMessageToChat(message) {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
     
     const userName = getUserName();
-    const isMine = message.user === userName;
-    
-    // Если есть картинка — показываем её
-    const imageBlock = message.image 
-        ? `<div class="chat-bubble-image"><img src="${message.image}" alt="Фото"></div>` 
-        : '';
-    
-    const textBlock = message.text 
-        ? `<div>${escapeHtml(message.text)}</div>` 
-        : '';
-    
-    if (isMine) {
-        messagesContainer.insertAdjacentHTML('beforeend', `
-            <div class="chat-message chat-message-mine">
-                <div class="chat-bubble-wrap">
-                    <div class="chat-bubble chat-bubble-mine">
-                        ${imageBlock}
-                        ${textBlock}
-                    </div>
-                    <div class="chat-time-mine">${formatTime(message.time)}</div>
-                </div>
-            </div>
-        `);
-    } else {
-        const colors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
-        const color = colors[Math.abs(hashCode(message.user)) % colors.length];
-        
-        messagesContainer.insertAdjacentHTML('beforeend', `
-            <div class="chat-message">
-                <div class="chat-avatar" style="background: ${color};">${message.avatar || message.user[0]}</div>
-                <div class="chat-bubble-wrap">
-                    <div class="chat-bubble-header">
-                        <span class="chat-user-name">${escapeHtml(message.user)}</span>
-                        <span class="chat-time">${formatTime(message.time)}</span>
-                    </div>
-                    <div class="chat-bubble">
-                        ${imageBlock}
-                        ${textBlock}
-                    </div>
-                </div>
-            </div>
-        `);
-    }
+    const html = renderMessageHTML(message, userName);
+    messagesContainer.insertAdjacentHTML('beforeend', html);
     
     scrollChatToBottom();
 }
@@ -315,12 +355,11 @@ function handleImageSelect(event) {
         const userName = getUserName();
         
         if (socket && socket.connected) {
-            // Отправляем картинку на сервер
             socket.emit('send-message', {
                 room: currentRoom,
                 user: userName,
                 text: '',
-                image: e.target.result, // base64 строка
+                image: e.target.result,
                 avatar: userName[0]
             });
         } else {
