@@ -39,17 +39,17 @@
 
         <!-- ========== ВКЛАДКА 1: КОНТАКТЫ ========== -->
         <section class="tab-content" id="tab-contacts" style="display:none;">
-            <h1 class="page-title">Контакты 📇</h1>
+            <h1 class="page-title">Контакты</h1>
             <p class="page-subtitle">Пригласи друзей в Tell</p>
 
             <div class="placeholder fade-in">
-                <span class="placeholder-icon">📱</span>
+                <span class="placeholder-icon"><i class="fas fa-address-book"></i></span>
                 <h2 class="placeholder-title">Телефонная книга</h2>
                 <p class="placeholder-text">Здесь появится список твоих контактов.<br>Выбери контакт — и отправь приглашение через SMS.</p>
             </div>
 
             <div class="placeholder fade-in">
-                <span class="placeholder-icon">🔗</span>
+                <span class="placeholder-icon"><i class="fas fa-link"></i></span>
                 <h2 class="placeholder-title">Твоя ссылка для приглашения</h2>
                 <p class="placeholder-text" style="word-break: break-all;">
                     https://gokurort-new.onrender.com
@@ -62,30 +62,30 @@
 
         <!-- ========== ВКЛАДКА 2: ОНЛАЙН ПОИСК ========== -->
         <section class="tab-content" id="tab-search" style="display:none;">
-            <h1 class="page-title">Онлайн поиск 🔍</h1>
+            <h1 class="page-title">Онлайн поиск</h1>
             <p class="page-subtitle">Что ищем сегодня?</p>
 
             <div class="group-grid">
                 <div class="group-card" onclick="openGroup('housing')">
-                    <div class="group-icon">🏘️</div>
+                    <div class="group-icon"><i class="fas fa-home"></i></div>
                     <div class="group-title">Жильё</div>
                     <div class="group-desc">Аренда, продажа</div>
                 </div>
 
                 <div class="group-card" onclick="openGroup('work')">
-                    <div class="group-icon">💼</div>
+                    <div class="group-icon"><i class="fas fa-briefcase"></i></div>
                     <div class="group-title">Работа</div>
                     <div class="group-desc">Вакансии, резюме</div>
                 </div>
 
                 <div class="group-card" onclick="openGroup('market')">
-                    <div class="group-icon">🛍️</div>
+                    <div class="group-icon"><i class="fas fa-shopping-bag"></i></div>
                     <div class="group-title">Продам/Отдам</div>
                     <div class="group-desc">Вещи рядом</div>
                 </div>
 
                 <div class="group-card" onclick="openGroup('trips')">
-                    <div class="group-icon">🚗</div>
+                    <div class="group-icon"><i class="fas fa-car"></i></div>
                     <div class="group-title">Поездки</div>
                     <div class="group-desc">Попутчики, трансфер</div>
                 </div>
@@ -94,11 +94,11 @@
 
         <!-- ========== ВКЛАДКА 3: СООБЩЕНИЯ ========== -->
         <section class="tab-content" id="tab-messages" style="display:none;">
-            <h1 class="page-title">Сообщения 💬</h1>
+            <h1 class="page-title">Сообщения</h1>
             <p class="page-subtitle">Входящие от пользователей</p>
 
             <div class="placeholder fade-in">
-                <span class="placeholder-icon">📭</span>
+                <span class="placeholder-icon"><i class="fas fa-inbox"></i></span>
                 <h2 class="placeholder-title">Пока пусто</h2>
                 <p class="placeholder-text">Здесь будут появляться сообщения от других пользователей.<br>Начни общение — напиши кому-нибудь в группе.</p>
             </div>
@@ -106,17 +106,17 @@
 
         <!-- ========== ВКЛАДКА 4: ПРОФИЛЬ ========== -->
         <section class="tab-content" id="tab-profile" style="display:none;">
-            <h1 class="page-title">Профиль 👤</h1>
+            <h1 class="page-title">Профиль</h1>
             <p class="page-subtitle">Твои настройки и фото</p>
 
             <div class="profile-avatar-placeholder">
-                <div class="avatar-circle">👤</div>
+                <div class="avatar-circle"><i class="fas fa-user"></i></div>
                 <div class="profile-name">Гость</div>
                 <div class="profile-id">ID: не задан</div>
             </div>
 
             <div class="placeholder fade-in">
-                <span class="placeholder-icon">⚙️</span>
+                <span class="placeholder-icon"><i class="fas fa-cog"></i></span>
                 <h2 class="placeholder-title">Настройки</h2>
                 <p class="placeholder-text">Картинки, настройки профиля, уведомления — скоро</p>
             </div>
@@ -128,19 +128,19 @@
     <nav class="bottom-nav">
         <div class="bottom-nav-inner">
             <button class="nav-item" data-tab="contacts">
-                <span class="nav-icon">📇</span>
+                <span class="nav-icon"><i class="fas fa-address-book"></i></span>
                 <span class="nav-label">Контакты</span>
             </button>
             <button class="nav-item active" data-tab="search">
-                <span class="nav-icon">🔍</span>
+                <span class="nav-icon"><i class="fas fa-search"></i></span>
                 <span class="nav-label">Онлайн поиск</span>
             </button>
             <button class="nav-item" data-tab="messages">
-                <span class="nav-icon">💬</span>
+                <span class="nav-icon"><i class="fas fa-comment-dots"></i></span>
                 <span class="nav-label">Сообщения</span>
             </button>
             <button class="nav-item" data-tab="profile">
-                <span class="nav-icon">👤</span>
+                <span class="nav-icon"><i class="fas fa-user"></i></span>
                 <span class="nav-label">Профиль</span>
             </button>
         </div>
@@ -148,8 +148,13 @@
 
 </div>
 
-<!-- Скрипты (в конце body, чтобы DOM был готов) -->
+<!-- Socket.io клиент (для связи с бэкендом) -->
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<!-- Данные -->
 <script src="data/housing.js"></script>
+
+<!-- Логика приложения -->
 <script src="app.js"></script>
 
 </body>
