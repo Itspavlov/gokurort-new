@@ -75,11 +75,13 @@ function openGroup(groupId) {
     if (groupId === 'housing') {
         openHousingGroup();
     } else {
-        alert('Группа "' + groupId + '" — скоро!');
+        showToast('Группа "' + groupId + '" — скоро!');
     }
 }
 
-// ---------- ГРУППА "ЖИЛЬЁ" ----------
+// ============================================
+// ЧАТ "ЖИЛЬЁ"
+// ============================================
 function openHousingGroup() {
     // Скрываем все вкладки
     tabContents.forEach(section => section.style.display = 'none');
@@ -93,55 +95,151 @@ function openHousingGroup() {
         document.getElementById('appMain').appendChild(groupScreen);
     }
     
-    // Заполняем экран
+    // Заполняем экран — ЧАТ
     groupScreen.innerHTML = `
-        <div class="group-header">
-            <button class="group-back-btn" onclick="closeGroup()">
+        <div class="chat-header">
+            <button class="chat-back-btn" onclick="closeGroup()">
                 <i class="fas fa-arrow-left"></i>
             </button>
-            <h1 class="group-title">🏘️ Жильё</h1>
-            <div class="group-header-spacer"></div>
+            <div class="chat-header-info">
+                <div class="chat-header-title">Жильё</div>
+                <div class="chat-header-subtitle">${HOUSING_ADS.length} объявлений • 24 участника</div>
+            </div>
+            <button class="chat-header-btn" onclick="showToast('Меню группы — скоро')">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
         </div>
         
-        <p class="group-subtitle">${HOUSING_ADS.length} объявлений</p>
-        
-        <div class="ads-list">
-            ${HOUSING_ADS.map(ad => renderHousingCard(ad)).join('')}
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-welcome">
+                <div class="chat-welcome-icon"><i class="fas fa-home"></i></div>
+                <div class="chat-welcome-title">Добро пожаловать в чат «Жильё»</div>
+                <div class="chat-welcome-text">Здесь публикуют объявления о жилье. Общайтесь, задавайте вопросы, договаривайтесь о сделках.</div>
+            </div>
+            
+            ${HOUSING_ADS.map(ad => renderHousingMessage(ad)).join('')}
         </div>
         
-        <button class="fab-add" onclick="openAddForm('housing')">
-            <i class="fas fa-plus"></i>
-        </button>
+        <div class="chat-input-wrapper">
+            <button class="chat-attach-btn" onclick="attachImage()" title="Прикрепить фото">
+                <i class="fas fa-paperclip"></i>
+            </button>
+            <input 
+                type="file" 
+                id="imageInput" 
+                accept="image/*" 
+                style="display:none" 
+                onchange="handleImageSelect(event)"
+            >
+            <input 
+                type="text" 
+                class="chat-input" 
+                id="chatInput" 
+                placeholder="Написать сообщение..." 
+                onkeydown="if(event.key==='Enter') sendMessage()"
+            >
+            <button class="chat-send-btn" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
     `;
     
-    groupScreen.style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    groupScreen.style.display = 'flex';
+    setTimeout(() => scrollChatToBottom(), 100);
 }
 
-// ---------- КАРТОЧКА ОБЪЯВЛЕНИЯ ----------
-function renderHousingCard(ad) {
+// ---------- СООБЩЕНИЕ-ОБЪЯВЛЕНИЕ ----------
+function renderHousingMessage(ad) {
+    const avatarColors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
+    const color = avatarColors[ad.id % avatarColors.length];
+    const userName = ['Александр', 'Мария', 'Дмитрий', 'Анна', 'Сергей', 'Елена'][ad.id % 6];
+    const time = ['10:23', '10:45', '11:12', '12:30', '13:15', '14:02'][ad.id % 6];
+    
     return `
-        <div class="ad-card" onclick="openAdDetail(${ad.id})">
-            <div class="ad-image-wrap">
-                <img src="${ad.image}" class="ad-image" loading="lazy" alt="${ad.title}" onerror="this.style.display='none'">
-                ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
-                ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
+        <div class="chat-message" data-ad-id="${ad.id}">
+            <div class="chat-avatar" style="background: ${color};">
+                ${userName[0]}
             </div>
-            <div class="ad-body">
-                <div class="ad-price">${ad.price}</div>
-                <div class="ad-title">${ad.title}</div>
-                <div class="ad-location">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <span>${ad.location}</span>
+            <div class="chat-bubble-wrap">
+                <div class="chat-bubble-header">
+                    <span class="chat-user-name">${userName}</span>
+                    <span class="chat-time">${time}</span>
                 </div>
-                <div class="ad-meta">
-                    <span>${ad.date}</span>
-                    <span>•</span>
-                    <span><i class="fas fa-eye"></i> ${ad.views}</span>
+                <div class="chat-bubble">
+                    <div class="chat-ad-image">
+                        <img src="${ad.image}" loading="lazy" alt="${ad.title}" onerror="this.style.display='none'">
+                        ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
+                        ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
+                    </div>
+                    <div class="chat-ad-title">${ad.title}</div>
+                    <div class="chat-ad-price">${ad.price}</div>
+                    <div class="chat-ad-location">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${ad.location}</span>
+                    </div>
+                    <div class="chat-ad-desc">${ad.description}</div>
                 </div>
             </div>
         </div>
     `;
+}
+
+// ---------- ОТПРАВИТЬ СООБЩЕНИЕ ----------
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    const messagesContainer = document.getElementById('chatMessages');
+    
+    const messageHTML = `
+        <div class="chat-message chat-message-mine">
+            <div class="chat-bubble-wrap">
+                <div class="chat-bubble chat-bubble-mine">
+                    ${escapeHtml(text)}
+                </div>
+                <div class="chat-time-mine">${getCurrentTime()}</div>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+    input.value = '';
+    scrollChatToBottom();
+}
+
+// ---------- ПРИКРЕПИТЬ ФОТО ----------
+function attachImage() {
+    document.getElementById('imageInput').click();
+}
+
+// ---------- ОБРАБОТКА ВЫБОРА ФОТО ----------
+function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const messagesContainer = document.getElementById('chatMessages');
+        
+        const messageHTML = `
+            <div class="chat-message chat-message-mine">
+                <div class="chat-bubble-wrap">
+                    <div class="chat-bubble chat-bubble-mine chat-bubble-image">
+                        <img src="${e.target.result}" alt="Фото">
+                    </div>
+                    <div class="chat-time-mine">${getCurrentTime()}</div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+        scrollChatToBottom();
+    };
+    reader.readAsDataURL(file);
+    
+    event.target.value = '';
 }
 
 // ---------- ЗАКРЫТЬ ГРУППУ ----------
@@ -152,24 +250,30 @@ function closeGroup() {
     switchTab('search');
 }
 
-// ---------- ОТКРЫТЬ ОБЪЯВЛЕНИЕ ----------
-function openAdDetail(adId) {
-    const ad = HOUSING_ADS.find(a => a.id === adId);
-    if (!ad) return;
-    
-    alert(`📋 ${ad.title}\n\n💰 ${ad.price}\n📍 ${ad.location}\n\n${ad.description}\n\n— Детальная страница скоро!`);
+// ---------- ВСПОМОГАТЕЛЬНЫЕ ----------
+function scrollChatToBottom() {
+    const messages = document.getElementById('chatMessages');
+    if (messages) {
+        messages.scrollTop = messages.scrollHeight;
+    }
 }
 
-// ---------- ФОРМА ПОДАЧИ ----------
-function openAddForm(groupId) {
-    alert('📝 Форма подачи объявления в группе "' + groupId + '" — скоро!');
+function getCurrentTime() {
+    const now = new Date();
+    return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ---------- КОПИРОВАТЬ ССЫЛКУ ----------
 function copyInviteLink() {
     const link = 'https://gokurort-new.onrender.com';
     navigator.clipboard.writeText(link).then(() => {
-        showToast('✅ Ссылка скопирована!');
+        showToast('Ссылка скопирована!');
     }).catch(() => {
         alert('Ссылка: ' + link);
     });
