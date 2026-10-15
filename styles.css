@@ -658,9 +658,22 @@ body {
 }
 
 .chat-bubble-image {
-    padding: 4px;
-    background: var(--surface);
-    border: 1px solid var(--glass-border);
+    margin-bottom: 6px;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.chat-bubble-image img {
+    max-width: 100%;
+    display: block;
+    border-radius: 12px;
+    max-height: 300px;
+    object-fit: cover;
+}
+
+.chat-bubble-mine .chat-bubble-image img {
+    max-width: 240px;
 }
 
 .chat-bubble-image img {

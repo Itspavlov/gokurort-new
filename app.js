@@ -242,7 +242,6 @@ function sendMessage() {
     }
 }
 
-// ---------- ДОБАВИТЬ СООБЩЕНИЕ В ЧАТ ----------
 function addMessageToChat(message) {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
@@ -250,11 +249,23 @@ function addMessageToChat(message) {
     const userName = getUserName();
     const isMine = message.user === userName;
     
+    // Если есть картинка — показываем её
+    const imageBlock = message.image 
+        ? `<div class="chat-bubble-image"><img src="${message.image}" alt="Фото"></div>` 
+        : '';
+    
+    const textBlock = message.text 
+        ? `<div>${escapeHtml(message.text)}</div>` 
+        : '';
+    
     if (isMine) {
         messagesContainer.insertAdjacentHTML('beforeend', `
             <div class="chat-message chat-message-mine">
                 <div class="chat-bubble-wrap">
-                    <div class="chat-bubble chat-bubble-mine">${escapeHtml(message.text)}</div>
+                    <div class="chat-bubble chat-bubble-mine">
+                        ${imageBlock}
+                        ${textBlock}
+                    </div>
                     <div class="chat-time-mine">${formatTime(message.time)}</div>
                 </div>
             </div>
@@ -271,7 +282,10 @@ function addMessageToChat(message) {
                         <span class="chat-user-name">${escapeHtml(message.user)}</span>
                         <span class="chat-time">${formatTime(message.time)}</span>
                     </div>
-                    <div class="chat-bubble">${escapeHtml(message.text)}</div>
+                    <div class="chat-bubble">
+                        ${imageBlock}
+                        ${textBlock}
+                    </div>
                 </div>
             </div>
         `);
@@ -289,20 +303,29 @@ function handleImageSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
     
+    // Проверка размера — максимум 2 МБ
+    if (file.size > 2 * 1024 * 1024) {
+        showToast('Картинка слишком большая (макс. 2 МБ)');
+        event.target.value = '';
+        return;
+    }
+    
     const reader = new FileReader();
     reader.onload = (e) => {
-        const messagesContainer = document.getElementById('chatMessages');
-        messagesContainer.insertAdjacentHTML('beforeend', `
-            <div class="chat-message chat-message-mine">
-                <div class="chat-bubble-wrap">
-                    <div class="chat-bubble chat-bubble-mine chat-bubble-image">
-                        <img src="${e.target.result}" alt="Фото">
-                    </div>
-                    <div class="chat-time-mine">${getCurrentTime()}</div>
-                </div>
-            </div>
-        `);
-        scrollChatToBottom();
+        const userName = getUserName();
+        
+        if (socket && socket.connected) {
+            // Отправляем картинку на сервер
+            socket.emit('send-message', {
+                room: currentRoom,
+                user: userName,
+                text: '',
+                image: e.target.result, // base64 строка
+                avatar: userName[0]
+            });
+        } else {
+            showToast('Сервер недоступен');
+        }
     };
     reader.readAsDataURL(file);
     event.target.value = '';
