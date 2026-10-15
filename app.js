@@ -83,7 +83,6 @@ switchTab('search');
 
 // ---------- SOCKET.IO (с кэшированием подключения) ----------
 function connectSocket() {
-    // Если socket уже есть — переиспользуем
     if (socket) {
         if (!socket.connected) {
             socket.connect();
@@ -117,13 +116,11 @@ function connectSocket() {
         if (statusEl) statusEl.textContent = 'ошибка подключения';
     });
     
-    // Пришло новое сообщение
     socket.on('new-message', (message) => {
         console.log('💬 Новое сообщение:', message);
         addMessageToChat(message);
     });
     
-    // Пришла история комнаты
     socket.on('room-history', (history) => {
         console.log('📜 История (socket):', history.length);
         
@@ -134,7 +131,6 @@ function connectSocket() {
         renderHistory(history);
     });
     
-    // Комната очищена
     socket.on('room-cleared', () => {
         if (currentRoom) {
             messagesCache[currentRoom] = [];
@@ -153,6 +149,30 @@ function connectSocket() {
     });
 }
 
+// ---------- СКРОЛЛ ВНИЗ ----------
+function scrollChatToBottom() {
+    const messages = document.getElementById('chatMessages');
+    if (!messages) return;
+    
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            messages.scrollTop = messages.scrollHeight;
+        });
+    });
+}
+
+function scrollChatToBottomSmooth() {
+    const messages = document.getElementById('chatMessages');
+    if (!messages) return;
+    
+    requestAnimationFrame(() => {
+        messages.scrollTo({
+            top: messages.scrollHeight,
+            behavior: 'smooth'
+        });
+    });
+}
+
 // ---------- ОТРИСОВКА ИСТОРИИ ----------
 function renderHistory(history) {
     const messagesContainer = document.getElementById('chatMessages');
@@ -160,14 +180,18 @@ function renderHistory(history) {
     
     const userName = getUserName();
     
-    // Удаляем ТОЛЬКО сообщения из истории, объявления оставляем
+    // Удаляем только сообщения из истории
     const oldHistoryMessages = messagesContainer.querySelectorAll('.chat-message[data-from-history="true"]');
     oldHistoryMessages.forEach(el => el.remove());
     
     const oldDivider = document.getElementById('history-divider');
     if (oldDivider) oldDivider.remove();
     
-    if (!history || history.length === 0) return;
+    if (!history || history.length === 0) {
+        // Всё равно скроллим вниз
+        setTimeout(() => scrollChatToBottom(), 100);
+        return;
+    }
     
     // Разделитель
     const divider = document.createElement('div');
@@ -188,7 +212,8 @@ function renderHistory(history) {
         el.setAttribute('data-from-history', 'true');
     });
     
-    scrollChatToBottom();
+    // Скролл вниз — с задержкой, чтобы всё отрисовалось
+    setTimeout(() => scrollChatToBottom(), 100);
 }
 
 // ---------- HTML ОДНОГО СООБЩЕНИЯ ----------
@@ -296,7 +321,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
                 <i class="fas fa-paperclip"></i>
             </button>
             <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
-            <input type="text" class="chat-input" id="chatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendMessage();}">
             <button class="chat-send-btn" onclick="sendMessage()">
                 <i class="fas fa-paper-plane"></i>
             </button>
@@ -322,7 +347,10 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
         document.getElementById('chatStatus').textContent = 'онлайн';
     }
     
-    setTimeout(() => scrollChatToBottom(), 50);
+    // Скролл вниз после отрисовки (несколько раз)
+    setTimeout(() => scrollChatToBottom(), 100);
+    setTimeout(() => scrollChatToBottom(), 400);
+    setTimeout(() => scrollChatToBottom(), 800);
 }
 
 // ---------- ЗАГРУЗКА ИСТОРИИ ЧЕРЕЗ HTTP ----------
@@ -336,7 +364,6 @@ async function loadHistoryHTTP(roomId) {
         
         messagesCache[roomId] = newMessages;
         
-        // Перерисовываем только если изменилось
         if (newMessages.length !== oldCount) {
             console.log('🔄 Обновлено с сервера:', newMessages.length);
             renderHistory(newMessages);
@@ -396,6 +423,9 @@ function sendMessage() {
             avatar: userName[0]
         });
         input.value = '';
+        
+        // Разфокусируем инпут — чтобы кнопка "Назад" сразу сработала
+        input.blur();
     } else {
         showToast('Сервер недоступен. Проверьте интернет.');
     }
@@ -418,7 +448,8 @@ function addMessageToChat(message) {
     const html = renderMessageHTML(message, userName);
     messagesContainer.insertAdjacentHTML('beforeend', html);
     
-    scrollChatToBottom();
+    // Плавный скролл вниз
+    scrollChatToBottomSmooth();
 }
 
 // ---------- ПРИКРЕПИТЬ ФОТО ----------
@@ -458,6 +489,9 @@ function handleImageSelect(event) {
 
 // ---------- ЗАКРЫТЬ ЧАТ ----------
 function closeGroup() {
+    // Разфокусируем всё (закрыть клавиатуру)
+    if (document.activeElement) document.activeElement.blur();
+    
     if (socket && currentRoom) {
         socket.emit('leave-room', currentRoom);
     }
@@ -470,11 +504,6 @@ function closeGroup() {
 }
 
 // ---------- ВСПОМОГАТЕЛЬНЫЕ ----------
-function scrollChatToBottom() {
-    const messages = document.getElementById('chatMessages');
-    if (messages) messages.scrollTop = messages.scrollHeight;
-}
-
 function getCurrentTime() {
     const now = new Date();
     return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
