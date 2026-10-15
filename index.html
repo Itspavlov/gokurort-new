@@ -1,33 +1,227 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GOкурорт — жильё, работа, вещи</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #0F172A;
-            color: #F8FAFC;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-        h1 {
-            font-size: 28px;
-            background: linear-gradient(135deg, #6366F1, #8B5CF6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0F172A">
+    <title>Tell — общение и поиск</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div>
-        <h1>GOкурорт 🚀</h1>
-        <p>Приложение работает!</p>
-    </div>
+
+<div class="app-container">
+
+    <!-- ХЕДЕР -->
+    <header class="app-header">
+        <div class="app-logo">
+            <div class="app-logo-icon">💬</div>
+            <span class="app-logo-text">Tell</span>
+        </div>
+        <div class="app-header-actions">
+            <button class="header-btn" id="themeToggle" title="Переключить тему">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <main class="app-main" id="appMain">
+
+        <!-- ========== ВКЛАДКА 1: КОНТАКТЫ ========== -->
+        <section class="tab-content" id="tab-contacts" style="display:none;">
+            <h1 class="page-title">Контакты 📇</h1>
+            <p class="page-subtitle">Пригласи друзей в Tell</p>
+
+            <div class="placeholder fade-in">
+                <span class="placeholder-icon">📱</span>
+                <h2 class="placeholder-title">Телефонная книга</h2>
+                <p class="placeholder-text">Здесь появится список твоих контактов.<br>Выбери контакт — и отправь приглашение через SMS.</p>
+            </div>
+
+            <div class="placeholder fade-in">
+                <span class="placeholder-icon">🔗</span>
+                <h2 class="placeholder-title">Твоя ссылка для приглашения</h2>
+                <p class="placeholder-text" style="word-break: break-all;">
+                    https://gokurort-new.onrender.com
+                </p>
+                <button class="primary-btn" onclick="copyInviteLink()">
+                    <i class="fas fa-copy"></i> Скопировать ссылку
+                </button>
+            </div>
+        </section>
+
+        <!-- ========== ВКЛАДКА 2: ОНЛАЙН ПОИСК ========== -->
+        <section class="tab-content" id="tab-search" style="display:none;">
+            <h1 class="page-title">Онлайн поиск 🔍</h1>
+            <p class="page-subtitle">Что ищем сегодня?</p>
+
+            <div class="group-grid">
+                <div class="group-card" onclick="openGroup('housing')">
+                    <div class="group-icon">🏘️</div>
+                    <div class="group-title">Жильё</div>
+                    <div class="group-desc">Аренда, продажа</div>
+                </div>
+
+                <div class="group-card" onclick="openGroup('work')">
+                    <div class="group-icon">💼</div>
+                    <div class="group-title">Работа</div>
+                    <div class="group-desc">Вакансии, резюме</div>
+                </div>
+
+                <div class="group-card" onclick="openGroup('market')">
+                    <div class="group-icon">🛍️</div>
+                    <div class="group-title">Продам/Отдам</div>
+                    <div class="group-desc">Вещи рядом</div>
+                </div>
+
+                <div class="group-card" onclick="openGroup('trips')">
+                    <div class="group-icon">🚗</div>
+                    <div class="group-title">Поездки</div>
+                    <div class="group-desc">Попутчики, трансфер</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== ВКЛАДКА 3: СООБЩЕНИЯ ========== -->
+        <section class="tab-content" id="tab-messages" style="display:none;">
+            <h1 class="page-title">Сообщения 💬</h1>
+            <p class="page-subtitle">Входящие от пользователей</p>
+
+            <div class="placeholder fade-in">
+                <span class="placeholder-icon">📭</span>
+                <h2 class="placeholder-title">Пока пусто</h2>
+                <p class="placeholder-text">Здесь будут появляться сообщения от других пользователей.<br>Начни общение — напиши кому-нибудь в группе.</p>
+            </div>
+        </section>
+
+        <!-- ========== ВКЛАДКА 4: ПРОФИЛЬ ========== -->
+        <section class="tab-content" id="tab-profile" style="display:none;">
+            <h1 class="page-title">Профиль 👤</h1>
+            <p class="page-subtitle">Твои настройки и фото</p>
+
+            <div class="profile-avatar-placeholder">
+                <div class="avatar-circle">👤</div>
+                <div class="profile-name">Гость</div>
+                <div class="profile-id">ID: не задан</div>
+            </div>
+
+            <div class="placeholder fade-in">
+                <span class="placeholder-icon">⚙️</span>
+                <h2 class="placeholder-title">Настройки</h2>
+                <p class="placeholder-text">Картинки, настройки профиля, уведомления — скоро</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-inner">
+            <button class="nav-item" data-tab="contacts">
+                <span class="nav-icon">📇</span>
+                <span class="nav-label">Контакты</span>
+            </button>
+            <button class="nav-item active" data-tab="search">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Онлайн поиск</span>
+            </button>
+            <button class="nav-item" data-tab="messages">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Сообщения</span>
+            </button>
+            <button class="nav-item" data-tab="profile">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Профиль</span>
+            </button>
+        </div>
+    </nav>
+
+</div>
+
+<script>
+    // ========== ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ==========
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('i');
+    const html = document.documentElement;
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    
+    const savedTheme = localStorage.getItem('tell-theme') || 'dark';
+    setTheme(savedTheme);
+    
+    function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('tell-theme', theme);
+        
+        if (theme === 'dark') {
+            themeIcon.className = 'fas fa-moon';
+            metaTheme.setAttribute('content', '#0F172A');
+        } else {
+            themeIcon.className = 'fas fa-sun';
+            metaTheme.setAttribute('content', '#F8FAFC');
+        }
+    }
+    
+    themeToggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // ========== ПЕРЕКЛЮЧАТЕЛЬ ВКЛАДОК ==========
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    function switchTab(tabName) {
+        // Скрываем все секции
+        tabContents.forEach(section => section.style.display = 'none');
+        
+        // Показываем нужную
+        const target = document.getElementById('tab-' + tabName);
+        if (target) {
+            target.style.display = 'block';
+            target.classList.add('fade-in');
+        }
+        
+        // Обновляем активность кнопок
+        navItems.forEach(item => {
+            item.classList.toggle('active', item.dataset.tab === tabName);
+        });
+        
+        // Скролл наверх
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            switchTab(item.dataset.tab);
+        });
+    });
+    
+    // Показываем "Онлайн поиск" по умолчанию
+    switchTab('search');
+
+    // ========== ФУНКЦИИ ==========
+    function openGroup(groupId) {
+        console.log('Открываем группу:', groupId);
+        // Позже добавим переход в группу
+        alert('Группа "' + groupId + '" — скоро откроется!');
+    }
+    
+    function copyInviteLink() {
+        const link = 'https://gokurort-new.onrender.com';
+        navigator.clipboard.writeText(link).then(() => {
+            alert('✅ Ссылка скопирована: ' + link);
+        }).catch(() => {
+            alert('Ссылка: ' + link);
+        });
+    }
+    
+    console.log('💬 Tell — приложение запущено');
+</script>
+
 </body>
 </html>
