@@ -7,6 +7,14 @@ const SERVER_URL = 'https://tell-server.onrender.com';
 let socket = null;
 let currentRoom = null;
 
+// Кэш сообщений по комнатам
+const messagesCache = {
+    housing: null,
+    work: null,
+    market: null,
+    trips: null
+};
+
 // ---------- ТЕМА ----------
 const themeToggle = document.getElementById('themeToggle');
 const themeIcon = themeToggle.querySelector('i');
@@ -73,9 +81,15 @@ navItems.forEach(item => {
 
 switchTab('search');
 
-// ---------- SOCKET.IO ----------
+// ---------- SOCKET.IO (с кэшированием подключения) ----------
 function connectSocket() {
-    if (socket && socket.connected) return;
+    // Если socket уже есть — переиспользуем
+    if (socket) {
+        if (!socket.connected) {
+            socket.connect();
+        }
+        return;
+    }
     
     socket = io(SERVER_URL, {
         transports: ['websocket', 'polling'],
@@ -111,18 +125,25 @@ function connectSocket() {
     
     // Пришла история комнаты
     socket.on('room-history', (history) => {
-        console.log('📜 История комнаты:', history.length);
+        console.log('📜 История (socket):', history.length);
+        
+        if (currentRoom) {
+            messagesCache[currentRoom] = history;
+        }
+        
         renderHistory(history);
     });
     
     // Комната очищена
     socket.on('room-cleared', () => {
+        if (currentRoom) {
+            messagesCache[currentRoom] = [];
+        }
+        
         const messagesContainer = document.getElementById('chatMessages');
         if (!messagesContainer) return;
         
-        // Удаляем только сообщения из истории
         messagesContainer.querySelectorAll('.chat-message').forEach(el => {
-            // Но НЕ удаляем объявления
             if (el.querySelector('.chat-ad-image')) return;
             el.remove();
         });
@@ -139,34 +160,30 @@ function renderHistory(history) {
     
     const userName = getUserName();
     
-    // Удаляем ТОЛЬКО старые сообщения из истории, объявления оставляем
+    // Удаляем ТОЛЬКО сообщения из истории, объявления оставляем
     const oldHistoryMessages = messagesContainer.querySelectorAll('.chat-message[data-from-history="true"]');
     oldHistoryMessages.forEach(el => el.remove());
     
-    // Удаляем старый разделитель
     const oldDivider = document.getElementById('history-divider');
     if (oldDivider) oldDivider.remove();
     
-    // Если истории нет — просто выходим
     if (!history || history.length === 0) return;
     
-    // Добавляем разделитель "История сообщений"
+    // Разделитель
     const divider = document.createElement('div');
     divider.id = 'history-divider';
     divider.className = 'chat-history-divider';
     divider.innerHTML = '<span>История сообщений</span>';
     messagesContainer.appendChild(divider);
     
-    // Рисуем сообщения из истории
+    // Рисуем сообщения
     history.forEach(message => {
         const html = renderMessageHTML(message, userName);
         messagesContainer.insertAdjacentHTML('beforeend', html);
     });
     
-    // Помечаем последние N сообщений (которые только что добавили) как "из истории"
-    const allMessages = messagesContainer.querySelectorAll('.chat-message:not([data-from-history])');
-    allMessages.forEach(el => {
-        // Пропускаем объявления
+    // Помечаем как "из истории"
+    messagesContainer.querySelectorAll('.chat-message:not([data-from-history])').forEach(el => {
         if (el.querySelector('.chat-ad-image')) return;
         el.setAttribute('data-from-history', 'true');
     });
@@ -247,6 +264,10 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
         document.getElementById('appMain').appendChild(groupScreen);
     }
     
+    // Проверяем кэш
+    const cachedMessages = messagesCache[roomId];
+    const hasCache = cachedMessages !== null;
+    
     groupScreen.innerHTML = `
         <div class="chat-header">
             <button class="chat-back-btn" onclick="closeGroup()">
@@ -284,14 +305,45 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
     
     groupScreen.style.display = 'flex';
     currentRoom = roomId;
-    connectSocket();
     
+    // ✅ ЕСЛИ ЕСТЬ КЭШ — показываем мгновенно
+    if (hasCache) {
+        console.log('⚡ Мгновенно из кэша:', roomId);
+        renderHistory(cachedMessages);
+    }
+    
+    // 🌐 Параллельно обновляем с сервера
+    loadHistoryHTTP(roomId);
+    
+    // 📡 Socket.io для реалтайма
+    connectSocket();
     if (socket && socket.connected) {
         socket.emit('join-room', roomId);
         document.getElementById('chatStatus').textContent = 'онлайн';
     }
     
-    setTimeout(() => scrollChatToBottom(), 100);
+    setTimeout(() => scrollChatToBottom(), 50);
+}
+
+// ---------- ЗАГРУЗКА ИСТОРИИ ЧЕРЕЗ HTTP ----------
+async function loadHistoryHTTP(roomId) {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/messages/${roomId}`);
+        const data = await res.json();
+        
+        const newMessages = data.messages || [];
+        const oldCount = messagesCache[roomId]?.length || 0;
+        
+        messagesCache[roomId] = newMessages;
+        
+        // Перерисовываем только если изменилось
+        if (newMessages.length !== oldCount) {
+            console.log('🔄 Обновлено с сервера:', newMessages.length);
+            renderHistory(newMessages);
+        }
+    } catch (err) {
+        console.error('Ошибка HTTP:', err);
+    }
 }
 
 // ---------- СООБЩЕНИЕ-ОБЪЯВЛЕНИЕ ----------
@@ -354,6 +406,14 @@ function addMessageToChat(message) {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
     
+    // Обновляем кэш
+    if (currentRoom) {
+        if (!messagesCache[currentRoom]) {
+            messagesCache[currentRoom] = [];
+        }
+        messagesCache[currentRoom].push(message);
+    }
+    
     const userName = getUserName();
     const html = renderMessageHTML(message, userName);
     messagesContainer.insertAdjacentHTML('beforeend', html);
@@ -370,7 +430,6 @@ function handleImageSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    // Проверка размера — максимум 2 МБ
     if (file.size > 2 * 1024 * 1024) {
         showToast('Картинка слишком большая (макс. 2 МБ)');
         event.target.value = '';
