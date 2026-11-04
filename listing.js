@@ -470,19 +470,14 @@ function closeListing() {
     listingCal = null;
 }
 
-// ---------- НАПИСАТЬ ХОЗЯИНУ ----------
-// Личные чаты (комнаты dm_*) появятся вместе с аккаунтами (этап 5).
-// Сервер принимает только общие комнаты, поэтому пока «Написать»
-// открывает чат «Жильё» с готовым текстом, адресованным хозяину.
-const DM_ENABLED = false;
-
+// ---------- НАПИСАТЬ ХОЗЯИНУ (личные сообщения, нужен аккаунт) ----------
 function openDM(adId) {
     const ad = findAd(adId);
     if (!ad) return;
     const owner = getOwner(ad);
-    const ownerName = owner.name || 'Хозяин';
+    if (owner.id === 'me') { showToast('Это ваше собственное объявление'); return; }
 
-    let prefill = (DM_ENABLED ? '' : ownerName + ', ') + 'здравствуйте! Интересует «' + ad.title + '»';
+    let prefill = 'Здравствуйте! Интересует «' + ad.title + '»';
     const { start, end } = listingSel;
     if (start && end) {
         const n = daysBetween(start, end);
@@ -490,40 +485,5 @@ function openDM(adId) {
     }
     prefill += '. Свободно?';
 
-    if (!DM_ENABLED) {
-        closeListing();
-        openGroup('housing', { prefill });
-        return;
-    }
-
-    const me = getUserName().replace(/[^\wа-яА-ЯёЁ]+/g, '_');
-    const roomId = 'dm_' + (owner.id || 'x') + '_' + me;
-    saveDialog({
-        roomId,
-        name: ownerName,
-        color: owner.color || '#E8643F',
-        adTitle: ad.title,
-        adId: ad.id,
-        ts: Date.now()
-    });
-
-    closeListing();
-    openChatRoom(roomId, ownerName, 'fas fa-user', [], {
-        welcomeTitle: 'Личный чат с хозяином',
-        welcomeText: ad.title + ' · ' + ad.location,
-        prefill
-    });
-}
-
-function reopenDialog(roomId) {
-    const d = getDialogs().find(x => x.roomId === roomId);
-    if (!d) return;
-    if (!DM_ENABLED) {
-        openGroup('housing');
-        return;
-    }
-    openChatRoom(d.roomId, d.name, 'fas fa-user', [], {
-        welcomeTitle: 'Личный чат с хозяином',
-        welcomeText: d.adTitle || ''
-    });
+    startDm(owner.name || 'Хозяин', ad, prefill);
 }

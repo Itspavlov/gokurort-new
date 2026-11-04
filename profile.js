@@ -77,7 +77,7 @@ function renderProfile() {
             </div>
         </div>`).join('');
 
-    root.innerHTML = `
+    root.innerHTML = (typeof accountCardHTML === 'function' ? accountCardHTML() : '') + `
         <div class="profile-hero">
             <div class="avatar-circle profile-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '<i class="fas fa-user"></i>'}</div>
             <div class="profile-name">${e(p.name || 'Гость')}</div>
@@ -165,32 +165,6 @@ function fmtAgo(ts) {
     const h = Math.floor(min / 60);
     if (h < 24) return h + ' ч назад';
     return Math.floor(h / 24) + ' дн назад';
-}
-
-function renderDialogs() {
-    const root = document.getElementById('dialogsRoot');
-    if (!root) return;
-    const list = getDialogs();
-
-    if (!list.length) {
-        root.innerHTML = `
-            <div class="placeholder fade-in">
-                <span class="placeholder-icon"><i class="fas fa-inbox"></i></span>
-                <h2 class="placeholder-title">Пока пусто</h2>
-                <p class="placeholder-text">Откройте объявление в разделе «Жильё» и нажмите «Написать» — диалог появится здесь.</p>
-            </div>`;
-        return;
-    }
-
-    root.innerHTML = `<div class="dialogs">${list.map(d => `
-        <div class="dialog-row" onclick="reopenDialog('${d.roomId}')">
-            <div class="chat-avatar dialog-avatar" style="background:${d.color || '#E8643F'}">${escapeHtml((d.name || '?')[0])}</div>
-            <div class="dialog-info">
-                <div class="dialog-name">${escapeHtml(d.name)}</div>
-                <div class="dialog-ad">${escapeHtml(d.adTitle || '')}</div>
-            </div>
-            <div class="dialog-time">${fmtAgo(d.ts)}</div>
-        </div>`).join('')}</div>`;
 }
 
 // ============================================

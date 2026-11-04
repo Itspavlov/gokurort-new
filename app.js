@@ -17,6 +17,37 @@ function safeImageSrc(src) {
     return '';
 }
 
+// ---------- РЕАКЦИИ И ОТВЕТЫ (разметка) ----------
+const REACTION_SET = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+const myReacts = {}; // id сообщения -> мои эмодзи
+
+function isMyReaction(message, emoji) {
+    return (Array.isArray(message.mine) && message.mine.includes(emoji)) ||
+        (myReacts[message.id] && myReacts[message.id].includes(emoji));
+}
+
+function renderReactionChips(message) {
+    const r = message.reactions || {};
+    return REACTION_SET.filter(e => r[e] > 0).map(e =>
+        `<button type="button" class="react-chip${isMyReaction(message, e) ? ' mine' : ''}" data-emoji="${e}">${e}<b>${Number(r[e])}</b></button>`
+    ).join('');
+}
+
+function renderReplyHTML(message) {
+    const r = message.reply;
+    if (!r || !r.id) return '';
+    return `<div class="reply-quote" data-reply="${escapeHtml(String(r.id))}"><b>${escapeHtml(r.user || '')}</b><span>${escapeHtml(r.text || '')}</span></div>`;
+}
+
+function applyReactions(id, reactions) {
+    const list = (currentRoom && messagesCache[currentRoom]) || [];
+    const msg = list.find(m => m.id === id);
+    if (!msg) return;
+    msg.reactions = reactions;
+    const holder = document.querySelector(`.chat-reactions[data-for="${CSS.escape(String(id))}"]`);
+    if (holder) holder.innerHTML = renderReactionChips(msg);
+}
+
 function newClientId() {
     const a = new Uint8Array(12);
     (window.crypto || window.msCrypto).getRandomValues(a);
@@ -150,6 +181,7 @@ themeToggle.addEventListener('click', () => {
 
 // ---------- ИМЯ ПОЛЬЗОВАТЕЛЯ ----------
 function getUserName() {
+    if (typeof getAccount === 'function') { const acc = getAccount(); if (acc) return acc.name; }
     let name = localStorage.getItem('tell-username');
     if (!name) {
         name = 'Гость_' + Math.floor(Math.random() * 9000 + 1000);
@@ -228,6 +260,8 @@ function connectSocket() {
     }
 
     socket = io(SERVER_URL, {
+        // токен читается при каждом (пере)подключении
+        auth: (cb) => cb({ token: (typeof getToken === 'function' ? getToken() : '') }),
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 10,
@@ -236,6 +270,13 @@ function connectSocket() {
 
     socket.on('server-hello', (info) => {
         serverProtocol = (info && info.protocol) || 1;
+        if (typeof handleServerHello === 'function') handleServerHello(info);
+    });
+
+    socket.on('dm-message', (m) => { if (typeof onDmMessage === 'function') onDmMessage(m); });
+
+    socket.on('reaction-update', (d) => {
+        if (d && d.room === currentRoom) applyReactions(d.id, d.reactions || {});
     });
 
     socket.on('send-error', (e) => {
@@ -274,6 +315,7 @@ function connectSocket() {
 
     socket.on('room-history', (history) => {
         console.log('📜 История (socket):', history.length);
+        history.forEach(m => { if (m && m.id && Array.isArray(m.mine)) myReacts[m.id] = m.mine; });
 
         if (currentRoom) {
             messagesCache[currentRoom] = history;
@@ -377,15 +419,22 @@ function renderMessageHTML(message, userName) {
     const textBlock = message.text
         ? `<div>${escapeHtml(message.text)}</div>`
         : '';
+    const idAttr = message.id ? ` data-id="${escapeHtml(String(message.id))}"` : '';
+    const replyBlock = renderReplyHTML(message);
+    const reactBlock = message.id
+        ? `<div class="chat-reactions" data-for="${escapeHtml(String(message.id))}">${renderReactionChips(message)}</div>`
+        : '';
 
     if (isMine) {
         return `
-            <div class="chat-message chat-message-mine">
+            <div class="chat-message chat-message-mine"${idAttr}>
                 <div class="chat-bubble-wrap">
                     <div class="chat-bubble chat-bubble-mine">
+                        ${replyBlock}
                         ${imageBlock}
                         ${textBlock}
                     </div>
+                    ${reactBlock}
                     <div class="chat-time-mine">${formatTime(message.time)}</div>
                 </div>
             </div>
@@ -395,7 +444,7 @@ function renderMessageHTML(message, userName) {
         const color = colors[Math.abs(hashCode(message.user)) % colors.length];
 
         return `
-            <div class="chat-message">
+            <div class="chat-message"${idAttr}>
                 <div class="chat-avatar" style="background: ${color};">${escapeHtml(Array.from(String(message.user || '?'))[0] || '?')}</div>
                 <div class="chat-bubble-wrap">
                     <div class="chat-bubble-header">
@@ -403,9 +452,11 @@ function renderMessageHTML(message, userName) {
                         <span class="chat-time">${formatTime(message.time)}</span>
                     </div>
                     <div class="chat-bubble">
+                        ${replyBlock}
                         ${imageBlock}
                         ${textBlock}
                     </div>
+                    ${reactBlock}
                 </div>
             </div>
         `;
@@ -580,7 +631,10 @@ function sendMessage() {
     const userName = getUserName();
 
     if (socket && socket.connected) {
-        emitMessage({ room: currentRoom, user: userName, text: text });
+        const payload = { room: currentRoom, user: userName, text: text };
+        if (typeof replyDraft !== 'undefined' && replyDraft) payload.replyTo = replyDraft.id;
+        emitMessage(payload);
+        if (typeof clearReply === 'function') clearReply();
         input.value = '';
 
         // Разфокусируем инпут — чтобы кнопка "Назад" сразу сработала
