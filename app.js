@@ -429,6 +429,7 @@ function renderMessageHTML(message, userName) {
         ? `<div>${escapeHtml(message.text)}</div>`
         : '';
     const idAttr = message.id ? ` data-id="${escapeHtml(String(message.id))}"` : '';
+    const tsAttr = Number(message.time) ? ` data-ts="${Number(message.time)}"` : '';
     const replyBlock = renderReplyHTML(message);
     const reactBlock = message.id
         ? `<div class="chat-reactions" data-for="${escapeHtml(String(message.id))}">${renderReactionChips(message)}</div>`
@@ -436,7 +437,7 @@ function renderMessageHTML(message, userName) {
 
     if (isMine) {
         return `
-            <div class="chat-message chat-message-mine"${idAttr}>
+            <div class="chat-message chat-message-mine"${idAttr}${tsAttr}>
                 <div class="chat-bubble-wrap">
                     <div class="chat-bubble chat-bubble-mine">
                         ${replyBlock}
@@ -453,7 +454,7 @@ function renderMessageHTML(message, userName) {
         const color = colors[Math.abs(hashCode(message.user)) % colors.length];
 
         return `
-            <div class="chat-message"${idAttr}>
+            <div class="chat-message"${idAttr}${tsAttr}>
                 <div class="chat-avatar" style="background: ${color};">${escapeHtml(Array.from(String(message.user || '?'))[0] || '?')}</div>
                 <div class="chat-bubble-wrap">
                     <div class="chat-bubble-header">
@@ -475,7 +476,7 @@ function renderMessageHTML(message, userName) {
 // ---------- ОТКРЫТИЕ ГРУППЫ ----------
 function openGroup(groupId, opts) {
     const rooms = {
-        housing: { name: 'Жильё', icon: 'fas fa-home', ads: getAllAds() },
+        housing: { name: 'Жильё', icon: 'fas fa-home', ads: getAllAds().filter(a => !(typeof isRemoteAdId === 'function' && isRemoteAdId(a.id))), noAttach: true, hint: true },
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
         market: { name: 'Продам/Отдам', icon: 'fas fa-shopping-bag', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] }
@@ -484,7 +485,7 @@ function openGroup(groupId, opts) {
     const room = rooms[groupId];
     if (!room) return;
 
-    openChatRoom(groupId, room.name, room.icon, room.ads, opts || {});
+    openChatRoom(groupId, room.name, room.icon, room.ads, Object.assign({ noAttach: !!room.noAttach, hint: !!room.hint }, opts || {}));
 }
 
 // ---------- ОТКРЫТИЕ ЧАТА ----------
@@ -528,14 +529,19 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
                 <div class="chat-welcome-title">${escapeHtml(welcomeTitle)}</div>
                 <div class="chat-welcome-text">${escapeHtml(welcomeText)}</div>
             </div>
+            ${opts.hint ? `<div class="housing-hint">
+                <i class="fas fa-circle-info"></i>
+                <div><b>Хотите разместить жильё?</b> Это делается во вкладке «Профиль» — кнопка «Добавить жильё». Объявления могут публиковать только проверенные хозяева.</div>
+                <button type="button" onclick="goToProfileFromChat()">В профиль</button>
+            </div>` : ''}
             ${ads.map(ad => renderHousingMessage(ad)).join('')}
         </div>
 
         <div class="chat-input-wrapper">
-            <button class="chat-attach-btn" onclick="attachImage()">
+            ${opts.noAttach ? '' : `<button class="chat-attach-btn" onclick="attachImage()">
                 <i class="fas fa-paperclip"></i>
             </button>
-            <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
+            <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)">`}
             <input type="text" class="chat-input" id="chatInput" placeholder="Написать сообщение..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendMessage();}">
             <button class="chat-send-btn" onclick="sendMessage()">
                 <i class="fas fa-paper-plane"></i>
@@ -609,7 +615,7 @@ function renderHousingMessage(ad) {
         : escapeHtml(name[0] || '?');
 
     return `
-        <div class="chat-message chat-message-ad" data-id="ad_${escapeHtml(String(ad.id))}" data-ad-id="${escapeHtml(String(ad.id))}" onclick="openListing('${ad.id}')">
+        <div class="chat-message chat-message-ad" data-id="ad_${escapeHtml(String(ad.id))}" data-ad-id="${escapeHtml(String(ad.id))}"${ad.created ? ` data-ts="${Number(ad.created)}"` : ''} onclick="openListing('${ad.id}')">
             <div class="chat-avatar" style="background: ${color};">${avatar}</div>
             <div class="chat-bubble-wrap">
                 <div class="chat-bubble-header">
@@ -685,7 +691,8 @@ function addMessageToChat(message) {
 
 // ---------- ПРИКРЕПИТЬ ФОТО ----------
 function attachImage() {
-    document.getElementById('imageInput').click();
+    const inp = document.getElementById('imageInput');
+    if (inp) inp.click();
 }
 
 async function handleImageSelect(event) {
@@ -714,6 +721,11 @@ async function handleImageSelect(event) {
     } catch (err) {
         showToast('Не удалось обработать фото');
     }
+}
+
+function goToProfileFromChat() {
+    closeGroup();
+    switchTab('profile');
 }
 
 // ---------- ЗАКРЫТЬ ЧАТ ----------
@@ -852,3 +864,24 @@ connectSocket();
 console.log('💬 Tell — приложение запущено');
 console.log('🌐 Сервер:', SERVER_URL);
 console.log('👤 Ваше имя:', getUserName());
+
+
+// ---------- КНОПКА «НАЗАД»: срабатывает с первого касания ----------
+// Раньше первое касание уходило на закрытие клавиатуры (поле теряло фокус, раскладка
+// сдвигалась) и «клик» не попадал в кнопку. Теперь действие запускается при касании.
+(function fastBackButton() {
+    let lastFire = 0, synthetic = false;
+    document.addEventListener('pointerdown', (ev) => {
+        if (ev.button > 0) return;
+        const btn = ev.target.closest && ev.target.closest('.chat-back-btn');
+        if (!btn) return;
+        lastFire = Date.now();
+        synthetic = true;
+        try { btn.click(); } finally { synthetic = false; }
+    }, true);
+    document.addEventListener('click', (ev) => {
+        const btn = ev.target.closest && ev.target.closest('.chat-back-btn');
+        if (!btn || synthetic) return;
+        if (Date.now() - lastFire < 900) { ev.stopPropagation(); ev.preventDefault(); }
+    }, true);
+})();

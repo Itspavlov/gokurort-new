@@ -114,7 +114,7 @@ function accountCardHTML() {
     const a = getAccount();
     if (a) {
         return `<div class="account-card">
-            <div class="account-line"><i class="fas fa-circle-check"></i><span>Вы вошли как <b>${escapeHtml(a.name)}</b></span></div>
+            <div class="account-line"><i class="fas fa-circle-check"></i><span>Вы вошли как <b>${escapeHtml(a.name)}</b>${a.verified ? ' <span class="verified-pill"><i class="fas fa-check"></i> проверенный хозяин</span>' : ''}</span></div>
             <button class="ghost-btn" onclick="doLogout()">Выйти</button>
         </div>`;
     }
@@ -132,8 +132,50 @@ function handleServerHello(info) {
         showToast('Сессия истекла. Войдите снова.');
         if (typeof renderProfile === 'function') renderProfile();
     } else if (local) {
-        migrateLocalAds();
+        // статус «проверенный хозяин» выдаёт сервер — берём оттуда
+        const v = !!(info.user && info.user.verified);
+        if (!!local.verified !== v) {
+            try { localStorage.setItem('tell-account', JSON.stringify({ ...local, verified: v })); } catch (e) {}
+            if (v) showToast('Вы — проверенный хозяин. Можно размещать жильё!');
+            if (typeof renderProfile === 'function') renderProfile();
+        }
+        if (v) migrateLocalAds();
     }
+}
+
+// Размещать жильё могут только проверенные хозяева
+function ensureVerifiedHost(cb) {
+    ensureLogin(() => {
+        const a = getAccount();
+        if (a && a.verified) { cb(); return; }
+        openVerifySheet();
+    });
+}
+
+function openVerifySheet() {
+    openSheet('Только для проверенных хозяев', `
+        <p class="auth-note" style="margin:0 0 12px">Чтобы в «Жилье» не появлялись случайные и мошеннические объявления, размещать их могут только проверенные хозяева. Расскажите о себе — мы свяжемся и подтвердим аккаунт.</p>
+        <label class="field"><span>О себе и жилье</span><textarea id="verNote" rows="3" maxlength="500" placeholder="Что сдаёте, где, как с вами связаться"></textarea></label>
+        <div class="auth-error" id="verError"></div>
+        <button class="primary-btn wide-btn" id="verSend">Подать заявку на проверку</button>`, (el) => {
+        const err = el.querySelector('#verError'), btn = el.querySelector('#verSend');
+        btn.addEventListener('click', async () => {
+            const note = el.querySelector('#verNote').value.trim();
+            if (note.length < 5) { err.textContent = 'Напишите пару слов о себе и жилье'; return; }
+            btn.disabled = true; btn.textContent = 'Отправляю...';
+            try {
+                const res = await fetch(`${SERVER_URL}/api/auth/verify-request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+                    body: JSON.stringify({ note })
+                });
+                const data = await res.json().catch(() => null);
+                if (res.ok && data && data.ok) { closeSheet(); showToast(data.already ? 'Вы уже проверены. Обновите страницу.' : 'Заявка отправлена. Мы свяжемся с вами.'); return; }
+                err.textContent = (data && data.message) || (res.status === 429 ? 'Слишком часто. Попробуйте позже.' : 'Не удалось отправить');
+            } catch (e) { err.textContent = 'Нет связи с сервером'; }
+            btn.disabled = false; btn.textContent = 'Подать заявку на проверку';
+        });
+    });
 }
 
 // ---------- СОКЕТ: ожидание и запросы с подтверждением ----------
@@ -606,14 +648,16 @@ function renderDialogs() {
                         <div class="dialog-time">${g.last ? fmtAgo(g.last.time) : ''}</div>
                     </div>`).join('');
                 const dmRows = dms.map(c => `
-                    <div class="dialog-row" onclick="openDmById('${escapeHtml(c.id)}')">
+                    <div class="swipe-row" data-conv="${escapeHtml(c.id)}">
+                    <button type="button" class="swipe-del" data-del="${escapeHtml(c.id)}"><i class="fas fa-trash"></i> Удалить</button>
+                    <div class="dialog-row swipe-fg" onclick="openDmById('${escapeHtml(c.id)}')">
                         <div class="chat-avatar dialog-avatar" style="background:${dmColor(c.with)}">${escapeHtml(Array.from(c.with || '?')[0] || '?')}</div>
                         <div class="dialog-info">
                             <div class="dialog-name">${escapeHtml(c.with)}</div>
                             <div class="dialog-ad">${escapeHtml(c.last ? (c.last.mine ? 'Вы: ' : '') + c.last.text : (c.adTitle || ''))}</div>
                         </div>
                         <div class="dialog-time">${c.last ? fmtAgo(c.last.time) : ''}</div>
-                    </div>`).join('');
+                    </div></div>`).join('');
                 root.innerHTML = banner(groups.length > 0) +
                     (groups.length ? `<div class="section-head"><h2 class="section-title">Мои группы</h2></div><div class="dialogs">${groupRows}</div>` : '') +
                     `<div class="section-head"><h2 class="section-title">Личные сообщения</h2></div>` +
@@ -627,6 +671,77 @@ function renderDialogs() {
         });
     }, fail);
 }
+
+// Свайп влево по диалогу открывает красную кнопку «Удалить» (удаляется только у вас)
+(function attachDialogSwipe() {
+    const root = document.getElementById('dialogsRoot');
+    if (!root || root.dataset.swipe) return;
+    root.dataset.swipe = '1';
+    const W = 88;
+    let row = null, fg = null, sx = 0, sy = 0, state = 0, baseX = 0, dx = 0, moved = false;
+    const closeAll = (except) => root.querySelectorAll('.swipe-row.open').forEach(r => {
+        if (r !== except) { r.classList.remove('open', 'swiping'); const f = r.querySelector('.swipe-fg'); if (f) { f.style.transition = 'transform .18s ease-out'; f.style.transform = ''; } }
+    });
+    root.addEventListener('pointerdown', (ev) => {
+        if (ev.button > 0) return;
+        moved = false;
+        if (ev.target.closest('.swipe-del')) { row = null; return; }
+        const r = ev.target.closest('.swipe-row');
+        if (!r) { closeAll(null); row = null; return; }
+        closeAll(r);
+        row = r; fg = r.querySelector('.swipe-fg');
+        sx = ev.clientX; sy = ev.clientY; state = 0; moved = false;
+        baseX = r.classList.contains('open') ? -W : 0; dx = baseX;
+        fg.style.transition = '';
+    });
+    root.addEventListener('pointermove', (ev) => {
+        if (!row) return;
+        const mx = ev.clientX - sx, my = ev.clientY - sy;
+        if (state === 0) {
+            if (Math.abs(my) > 10 && Math.abs(my) > Math.abs(mx)) { state = -1; return; }
+            if (Math.abs(mx) > 12 && Math.abs(mx) > Math.abs(my) * 1.5) { state = 1; try { root.setPointerCapture(ev.pointerId); } catch (e) {} }
+            else return;
+        }
+        if (state !== 1) return;
+        moved = true;
+        row.classList.add('swiping');
+        dx = Math.max(-W, Math.min(0, baseX + mx));
+        fg.style.transform = `translateX(${dx}px)`;
+    });
+    const end = () => {
+        if (row && state === 1) {
+            const open = dx < -W / 2;
+            row.classList.toggle('open', open);
+            row.classList.remove('swiping');
+            fg.style.transition = 'transform .18s ease-out';
+            fg.style.transform = open ? `translateX(${-W}px)` : '';
+        }
+        row = null;
+    };
+    root.addEventListener('pointerup', end);
+    root.addEventListener('pointercancel', end);
+    root.addEventListener('click', (ev) => {
+        const del = ev.target.closest('.swipe-del');
+        if (del) {
+            ev.stopPropagation(); ev.preventDefault();
+            if (!confirm('Удалить переписку? У собеседника она останется.')) { closeAll(null); return; }
+            socketAsk('dm-delete', { convId: del.dataset.del }, (res) => {
+                if (!res || !res.ok) { showToast((res && res.message) || 'Не удалось удалить'); return; }
+                const r = del.closest('.swipe-row'); if (r) r.remove();
+                showToast('Диалог удалён');
+                renderDialogs();
+            });
+            return;
+        }
+        // после свайпа или при открытой кнопке клик по строке не открывает диалог
+        const r = ev.target.closest('.swipe-row');
+        if (moved || (r && r.classList.contains('open'))) {
+            ev.stopPropagation(); ev.preventDefault();
+            moved = false;
+            if (r && r.classList.contains('open') && state !== 1) closeAll(null);
+        }
+    }, true);
+})();
 
 // ============================================
 // ОТВЕТ, РЕАКЦИИ, МЕНЮ СООБЩЕНИЯ
@@ -765,7 +880,7 @@ function resolveTarget(msgEl) {
         const adId = msgEl.dataset.adId || id.slice(3);
         const ad = findAd(adId);
         if (!ad) return null;
-        return { kind: 'ad', id, adId, text: '', reply: { id, user: 'Объявление', text: ad.title, adId: String(ad.id), adTitle: ad.title } };
+        return { kind: 'ad', id, adId, mine: !!ad.mine, text: '', reply: { id, user: 'Объявление', text: ad.title, adId: String(ad.id), adTitle: ad.title } };
     }
     if (currentGroup) {
         const m = currentGroup.messages.find(x => x.id === id);
@@ -792,6 +907,7 @@ function openMsgMenu(msgEl) {
         <button type="button" class="msg-menu-item" data-act="reply"><i class="fas fa-reply"></i> Ответить</button>
         ${t.kind === 'ad' ? '<button type="button" class="msg-menu-item" data-act="group"><i class="fas fa-user-group"></i> Добавить в мою группу</button>' : ''}
         ${t.text ? '<button type="button" class="msg-menu-item" data-act="copy"><i class="fas fa-copy"></i> Копировать</button>' : ''}
+        ${t.kind === 'ad' && t.mine ? '<button type="button" class="msg-menu-item danger" data-act="delete"><i class="fas fa-trash"></i> Удалить объявление</button>' : ''}
     </div>`;
     document.body.appendChild(menu);
 
@@ -810,6 +926,11 @@ function openMsgMenu(msgEl) {
         if (emojiBtn) toggleReaction(t.id, emojiBtn.dataset.emoji);
         else if (act && act.dataset.act === 'reply') setReply(t.reply);
         else if (act && act.dataset.act === 'group') addAdToGroup(t.adId);
+        else if (act && act.dataset.act === 'delete') {
+            closeMsgMenu();
+            deleteMyAd(t.adId);   // спросит подтверждение, удалит у всех
+            return;
+        }
         else if (act && act.dataset.act === 'copy') {
             try { navigator.clipboard.writeText(t.text); showToast('Скопировано'); } catch (e) { showToast('Не удалось скопировать'); }
         }
@@ -821,30 +942,85 @@ function attachChatGestures() {
     const box = document.getElementById('chatMessages');
     if (!box || box.dataset.gestures) return;
     box.dataset.gestures = '1';
-    let startX = 0, startY = 0, held = false;
+    let startX = 0, startY = 0, held = false, swiped = false;
+    let swipeEl = null, swipeDx = 0, swipeState = 0;   // 0 — не определено, 1 — свайп, -1 — это прокрутка
+    const SWIPE_MAX = 84, SWIPE_TRIGGER = 56;
     const cancel = () => { if (gestureTimer) { clearTimeout(gestureTimer); gestureTimer = null; } };
+    const swipeHint = (el) => {
+        let h = el.querySelector(':scope > .swipe-hint');
+        if (!h) { h = document.createElement('div'); h.className = 'swipe-hint'; el.appendChild(h); }
+        return h;
+    };
+    const resetSwipe = (animate) => {
+        if (!swipeEl) return;
+        const el = swipeEl; swipeEl = null;
+        el.style.transition = animate ? 'transform .18s ease-out' : '';
+        el.style.transform = '';
+        const h = el.querySelector(':scope > .swipe-hint');
+        if (h) h.remove();
+        setTimeout(() => { el.style.transition = ''; }, 220);
+    };
 
     box.addEventListener('pointerdown', (ev) => {
         if (ev.button > 0) return;
+        held = false; swiped = false; swipeState = 0; swipeDx = 0;
+        resetSwipe(false);
         if (ev.target.closest('.react-chip, .reply-quote')) return;
         const msgEl = ev.target.closest('.chat-message[data-id]');
         if (!msgEl || !ev.target.closest('.chat-bubble')) return;
-        startX = ev.clientX; startY = ev.clientY; held = false;
+        startX = ev.clientX; startY = ev.clientY;
+        swipeEl = msgEl;
         cancel();
-        gestureTimer = setTimeout(() => { held = true; gestureTimer = null; openMsgMenu(msgEl); }, 450);
+        gestureTimer = setTimeout(() => { held = true; gestureTimer = null; swipeState = -1; resetSwipe(false); openMsgMenu(msgEl); }, 450);
     });
     box.addEventListener('pointermove', (ev) => {
-        if (gestureTimer && (Math.abs(ev.clientX - startX) > 10 || Math.abs(ev.clientY - startY) > 10)) cancel();
+        if (!swipeEl) return;
+        const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        if (swipeState === 0) {
+            if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { swipeState = -1; cancel(); resetSwipe(false); return; }
+            if (dx < -12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                swipeState = 1; cancel();
+                try { box.setPointerCapture(ev.pointerId); } catch (e) {}
+            } else if (Math.abs(dx) > 10 || Math.abs(dy) > 10) { cancel(); return; }
+            else return;
+        }
+        if (swipeState !== 1) return;
+        swipeDx = Math.max(-SWIPE_MAX, Math.min(0, dx));
+        swipeEl.style.transform = `translateX(${swipeDx}px)`;
+        const h = swipeHint(swipeEl);
+        const isAd = swipeEl.dataset.id.startsWith('ad_');
+        h.innerHTML = isAd ? '<i class="fas fa-user-group"></i>' : '<i class="fas fa-reply"></i>';
+        h.classList.toggle('ready', swipeDx <= -SWIPE_TRIGGER);
     });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => box.addEventListener(t, cancel));
+    const finish = (ev) => {
+        cancel();
+        if (swipeState === 1 && swipeEl) {
+            swiped = true;
+            const el = swipeEl;
+            const fire = swipeDx <= -SWIPE_TRIGGER;
+            resetSwipe(true);
+            if (fire && ev.type === 'pointerup') {
+                const t = resolveTarget(el);
+                if (t) {
+                    if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
+                    if (t.kind === 'ad') ensureLogin(() => addAdToGroup(t.adId));
+                    else setReply(t.reply);
+                }
+            }
+            return;
+        }
+        resetSwipe(false);
+    };
+    ['pointerup', 'pointercancel'].forEach(t => box.addEventListener(t, finish));
+    box.addEventListener('pointerleave', cancel);
     box.addEventListener('contextmenu', (ev) => {
         const msgEl = ev.target.closest('.chat-message[data-id]');
         if (msgEl && ev.target.closest('.chat-bubble')) { ev.preventDefault(); cancel(); held = true; openMsgMenu(msgEl); }
     });
 
-    // Клики ловим в фазе перехвата: так удержание/реакция не открывает объявление
+    // Клики ловим в фазе перехвата: так удержание/свайп/реакция не открывают объявление
     box.addEventListener('click', (ev) => {
-        if (held) { held = false; ev.stopPropagation(); ev.preventDefault(); return; }
+        if (held || swiped) { held = false; swiped = false; ev.stopPropagation(); ev.preventDefault(); return; }
         const chip = ev.target.closest('.react-chip');
         if (chip) {
             ev.stopPropagation(); ev.preventDefault();
@@ -876,7 +1052,10 @@ function attachChatGestures() {
         closeMsgMenu();
         origOpen.apply(this, arguments);
         attachChatGestures();
-        if (roomId === 'housing') whenSocketReady(fetchAdReactions, () => {});
+        if (roomId === 'housing') {
+            placeRemoteAds();
+            whenSocketReady(fetchAdReactions, () => {});
+        }
     };
     const origClose = closeGroup;
     closeGroup = function () {
@@ -967,12 +1146,42 @@ async function fetchFullAd(id, cb) {
 function refreshHousingAds() {
     const box = document.getElementById('chatMessages');
     if (!box || currentRoom !== 'housing') return;
-    box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
-    const anchor = box.querySelector('.chat-welcome');
-    const html = remoteAds.map(renderHousingMessage).join('');
-    if (anchor) anchor.insertAdjacentHTML('afterend', html); else box.insertAdjacentHTML('afterbegin', html);
+    placeRemoteAds();
     fetchAdReactions();
 }
+
+// Объявления с сервера стоят в ленте по времени публикации: новые — внизу, как обычные сообщения
+function placeRemoteAds() {
+    const box = document.getElementById('chatMessages');
+    if (!box || currentRoom !== 'housing') return;
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 160;
+    box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
+    const sorted = [...remoteAds].sort((a, b) => (a.created || 0) - (b.created || 0));
+    let added = false;
+    for (const ad of sorted) {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = renderHousingMessage(ad).trim();
+        const el = tpl.content.firstElementChild;
+        if (!el) continue;
+        const ts = Number(ad.created) || 0;
+        let before = null;
+        for (const m of box.querySelectorAll('.chat-message[data-ts]')) {
+            if (Number(m.dataset.ts) > ts) { before = m; break; }
+        }
+        if (before) box.insertBefore(el, before); else box.appendChild(el);
+        added = true;
+    }
+    if (added && nearBottom) scrollChatToBottom();
+}
+
+// История перерисовывается после загрузки — возвращаем объявления на место
+(function patchHistoryRender() {
+    const orig = renderHistory;
+    renderHistory = function () {
+        orig.apply(this, arguments);
+        if (currentRoom === 'housing') placeRemoteAds();
+    };
+})();
 
 // ---------- сжатие фото для сервера ----------
 function loadImage(src) {
@@ -1067,7 +1276,8 @@ async function deleteRemoteAd(id) {
 // Старые объявления, сохранённые только на этом устройстве, публикуем для всех
 let migratingAds = false;
 async function migrateLocalAds() {
-    if (migratingAds || !getAccount()) return;
+    const acc = getAccount();
+    if (migratingAds || !acc || !acc.verified) return;
     const local = getMyAds();
     if (!local.length) return;
     migratingAds = true;

@@ -151,6 +151,7 @@ function deleteMyAd(id) {
     if (!confirm('Удалить объявление?')) return;
     if (isRemoteAdId(id)) { deleteRemoteAd(id); return; }
     saveMyAds(getMyAds().filter(a => String(a.id) !== String(id)));
+    document.querySelectorAll('.chat-message-ad').forEach(el => { if (el.dataset.adId === String(id)) el.remove(); });
     renderProfile();
     renderFeatured();
     showToast('Объявление удалено');
@@ -177,6 +178,11 @@ let pickMarkers = {};
 let formCal = null;
 
 function openAdForm(editId) {
+    // Новые объявления — только от проверенных хозяев
+    if (!editId) {
+        const acc = typeof getAccount === 'function' ? getAccount() : null;
+        if (!acc || !acc.verified) { ensureVerifiedHost(() => openAdForm(editId)); return; }
+    }
     const old = editId ? myAdsAll().find(a => String(a.id) === String(editId)) : null;
     if (old && old.partial) { fetchFullAd(old.id, (ok) => { if (ok) openAdForm(editId); }); return; }
     const f = (old && old.form) || {};
