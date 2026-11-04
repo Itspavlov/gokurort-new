@@ -27,13 +27,13 @@ setTheme(savedTheme);
 function setTheme(theme) {
     html.setAttribute('data-theme', theme);
     localStorage.setItem('tell-theme', theme);
-    
+
     if (theme === 'dark') {
         themeIcon.className = 'fas fa-moon';
-        metaTheme.setAttribute('content', '#0F172A');
+        metaTheme.setAttribute('content', '#0A0F24');
     } else {
         themeIcon.className = 'fas fa-sun';
-        metaTheme.setAttribute('content', '#F8FAFC');
+        metaTheme.setAttribute('content', '#EEF1FB');
     }
 }
 
@@ -52,26 +52,7 @@ function getUserName() {
     return name;
 }
 
-// ---------- ПЕРЕКЛЮЧАТЕЛЬ ВКЛАДОК ----------
-const navItems = document.querySelectorAll('.nav-item');
-const tabContents = document.querySelectorAll('.tab-content');
-
-function switchTab(tabName) {
-    const groupScreen = document.getElementById('group-screen');
-    if (groupScreen) groupScreen.style.display = 'none';
-    
-    tabContents.forEach(section => section.style.display = 'none');
-    
-    const target = document.getElementById('tab-' + tabName);
-    if (target) {
-        target.style.display = 'block';
-        target.classList.add('fade-in');
-    }
-    
-    navItems.forEach(item => {
-        item.classList.toggle('active', item.dataset.tab === tabName);
-    });
-    // ---------- ПУЗЫРЬ В НИЖНЕЙ ПАНЕЛИ ----------
+// ---------- ПУЗЫРЬ В НИЖНЕЙ ПАНЕЛИ ----------
 const navIndicator = document.querySelector('.nav-indicator');
 
 function moveNavIndicator(animate = true) {
@@ -95,6 +76,29 @@ function moveNavIndicator(animate = true) {
 
 window.addEventListener('load', () => moveNavIndicator(false));
 window.addEventListener('resize', () => moveNavIndicator(false));
+
+// ---------- ПЕРЕКЛЮЧАТЕЛЬ ВКЛАДОК ----------
+const navItems = document.querySelectorAll('.nav-item');
+const tabContents = document.querySelectorAll('.tab-content');
+
+function switchTab(tabName, animate = true) {
+    const groupScreen = document.getElementById('group-screen');
+    if (groupScreen) groupScreen.style.display = 'none';
+
+    tabContents.forEach(section => section.style.display = 'none');
+
+    const target = document.getElementById('tab-' + tabName);
+    if (target) {
+        target.style.display = 'block';
+        target.classList.add('fade-in');
+    }
+
+    navItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.tab === tabName);
+    });
+
+    moveNavIndicator(animate);
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -102,7 +106,7 @@ navItems.forEach(item => {
     item.addEventListener('click', () => switchTab(item.dataset.tab));
 });
 
-switchTab('search');
+switchTab('search', false);
 
 // ---------- SOCKET.IO (с кэшированием подключения) ----------
 function connectSocket() {
@@ -112,61 +116,61 @@ function connectSocket() {
         }
         return;
     }
-    
+
     socket = io(SERVER_URL, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 2000
     });
-    
+
     socket.on('connect', () => {
         console.log('🟢 Подключено к серверу:', socket.id);
         const statusEl = document.getElementById('chatStatus');
         if (statusEl) statusEl.textContent = 'онлайн';
         if (currentRoom) socket.emit('join-room', currentRoom);
     });
-    
+
     socket.on('disconnect', () => {
         console.log('🔴 Отключено от сервера');
         const statusEl = document.getElementById('chatStatus');
         if (statusEl) statusEl.textContent = 'отключено';
     });
-    
+
     socket.on('connect_error', (err) => {
         console.error('Ошибка подключения:', err);
         const statusEl = document.getElementById('chatStatus');
         if (statusEl) statusEl.textContent = 'ошибка подключения';
     });
-    
+
     socket.on('new-message', (message) => {
         console.log('💬 Новое сообщение:', message);
         addMessageToChat(message);
     });
-    
+
     socket.on('room-history', (history) => {
         console.log('📜 История (socket):', history.length);
-        
+
         if (currentRoom) {
             messagesCache[currentRoom] = history;
         }
-        
+
         renderHistory(history);
     });
-    
+
     socket.on('room-cleared', () => {
         if (currentRoom) {
             messagesCache[currentRoom] = [];
         }
-        
+
         const messagesContainer = document.getElementById('chatMessages');
         if (!messagesContainer) return;
-        
+
         messagesContainer.querySelectorAll('.chat-message').forEach(el => {
             if (el.querySelector('.chat-ad-image')) return;
             el.remove();
         });
-        
+
         const divider = document.getElementById('history-divider');
         if (divider) divider.remove();
     });
@@ -176,7 +180,7 @@ function connectSocket() {
 function scrollChatToBottom() {
     const messages = document.getElementById('chatMessages');
     if (!messages) return;
-    
+
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             messages.scrollTop = messages.scrollHeight;
@@ -187,7 +191,7 @@ function scrollChatToBottom() {
 function scrollChatToBottomSmooth() {
     const messages = document.getElementById('chatMessages');
     if (!messages) return;
-    
+
     requestAnimationFrame(() => {
         messages.scrollTo({
             top: messages.scrollHeight,
@@ -200,41 +204,40 @@ function scrollChatToBottomSmooth() {
 function renderHistory(history) {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
-    
+
     const userName = getUserName();
-    
+
     // Удаляем только сообщения из истории
     const oldHistoryMessages = messagesContainer.querySelectorAll('.chat-message[data-from-history="true"]');
     oldHistoryMessages.forEach(el => el.remove());
-    
+
     const oldDivider = document.getElementById('history-divider');
     if (oldDivider) oldDivider.remove();
-    
+
     if (!history || history.length === 0) {
-        // Всё равно скроллим вниз
         setTimeout(() => scrollChatToBottom(), 100);
         return;
     }
-    
+
     // Разделитель
     const divider = document.createElement('div');
     divider.id = 'history-divider';
     divider.className = 'chat-history-divider';
     divider.innerHTML = '<span>История сообщений</span>';
     messagesContainer.appendChild(divider);
-    
+
     // Рисуем сообщения
     history.forEach(message => {
-        const html = renderMessageHTML(message, userName);
-        messagesContainer.insertAdjacentHTML('beforeend', html);
+        const messageHtml = renderMessageHTML(message, userName);
+        messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
     });
-    
+
     // Помечаем как "из истории"
     messagesContainer.querySelectorAll('.chat-message:not([data-from-history])').forEach(el => {
         if (el.querySelector('.chat-ad-image')) return;
         el.setAttribute('data-from-history', 'true');
     });
-    
+
     // Скролл вниз — с задержкой, чтобы всё отрисовалось
     setTimeout(() => scrollChatToBottom(), 100);
 }
@@ -242,15 +245,15 @@ function renderHistory(history) {
 // ---------- HTML ОДНОГО СООБЩЕНИЯ ----------
 function renderMessageHTML(message, userName) {
     const isMine = message.user === userName;
-    
-    const imageBlock = message.image 
-        ? `<div class="chat-bubble-image"><img src="${message.image}" alt="Фото" loading="lazy"></div>` 
+
+    const imageBlock = message.image
+        ? `<div class="chat-bubble-image"><img src="${message.image}" alt="Фото" loading="lazy"></div>`
         : '';
-    
-    const textBlock = message.text 
-        ? `<div>${escapeHtml(message.text)}</div>` 
+
+    const textBlock = message.text
+        ? `<div>${escapeHtml(message.text)}</div>`
         : '';
-    
+
     if (isMine) {
         return `
             <div class="chat-message chat-message-mine">
@@ -266,7 +269,7 @@ function renderMessageHTML(message, userName) {
     } else {
         const colors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
         const color = colors[Math.abs(hashCode(message.user)) % colors.length];
-        
+
         return `
             <div class="chat-message">
                 <div class="chat-avatar" style="background: ${color};">${message.avatar || message.user[0]}</div>
@@ -293,17 +296,17 @@ function openGroup(groupId) {
         market: { name: 'Продам/Отдам', icon: 'fas fa-shopping-bag', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] }
     };
-    
+
     const room = rooms[groupId];
     if (!room) return;
-    
+
     openChatRoom(groupId, room.name, room.icon, room.ads);
 }
 
 // ---------- ОТКРЫТИЕ ЧАТА ----------
 function openChatRoom(roomId, roomName, roomIcon, ads) {
     tabContents.forEach(section => section.style.display = 'none');
-    
+
     let groupScreen = document.getElementById('group-screen');
     if (!groupScreen) {
         groupScreen = document.createElement('section');
@@ -311,11 +314,11 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
         groupScreen.className = 'group-screen';
         document.getElementById('appMain').appendChild(groupScreen);
     }
-    
+
     // Проверяем кэш
     const cachedMessages = messagesCache[roomId];
     const hasCache = cachedMessages !== null;
-    
+
     groupScreen.innerHTML = `
         <div class="chat-header">
             <button class="chat-back-btn" onclick="closeGroup()">
@@ -329,7 +332,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
                 <i class="fas fa-ellipsis-v"></i>
             </button>
         </div>
-        
+
         <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome">
                 <div class="chat-welcome-icon"><i class="${roomIcon}"></i></div>
@@ -338,7 +341,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
             </div>
             ${ads.map(ad => renderHousingMessage(ad)).join('')}
         </div>
-        
+
         <div class="chat-input-wrapper">
             <button class="chat-attach-btn" onclick="attachImage()">
                 <i class="fas fa-paperclip"></i>
@@ -350,26 +353,26 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
             </button>
         </div>
     `;
-    
+
     groupScreen.style.display = 'flex';
     currentRoom = roomId;
-    
-    // ✅ ЕСЛИ ЕСТЬ КЭШ — показываем мгновенно
+
+    // Если есть кэш — показываем мгновенно
     if (hasCache) {
         console.log('⚡ Мгновенно из кэша:', roomId);
         renderHistory(cachedMessages);
     }
-    
-    // 🌐 Параллельно обновляем с сервера
+
+    // Параллельно обновляем с сервера
     loadHistoryHTTP(roomId);
-    
-    // 📡 Socket.io для реалтайма
+
+    // Socket.io для реалтайма
     connectSocket();
     if (socket && socket.connected) {
         socket.emit('join-room', roomId);
         document.getElementById('chatStatus').textContent = 'онлайн';
     }
-    
+
     // Скролл вниз после отрисовки (несколько раз)
     setTimeout(() => scrollChatToBottom(), 100);
     setTimeout(() => scrollChatToBottom(), 400);
@@ -381,12 +384,12 @@ async function loadHistoryHTTP(roomId) {
     try {
         const res = await fetch(`${SERVER_URL}/api/messages/${roomId}`);
         const data = await res.json();
-        
+
         const newMessages = data.messages || [];
         const oldCount = messagesCache[roomId]?.length || 0;
-        
+
         messagesCache[roomId] = newMessages;
-        
+
         if (newMessages.length !== oldCount) {
             console.log('🔄 Обновлено с сервера:', newMessages.length);
             renderHistory(newMessages);
@@ -402,7 +405,7 @@ function renderHousingMessage(ad) {
     const color = colors[ad.id % colors.length];
     const userName = ['Александр', 'Мария', 'Дмитрий', 'Анна', 'Сергей', 'Елена'][ad.id % 6];
     const time = ['10:23', '10:45', '11:12', '12:30', '13:15', '14:02'][ad.id % 6];
-    
+
     return `
         <div class="chat-message">
             <div class="chat-avatar" style="background: ${color};">${userName[0]}</div>
@@ -435,9 +438,9 @@ function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
-    
+
     const userName = getUserName();
-    
+
     if (socket && socket.connected) {
         socket.emit('send-message', {
             room: currentRoom,
@@ -446,7 +449,7 @@ function sendMessage() {
             avatar: userName[0]
         });
         input.value = '';
-        
+
         // Разфокусируем инпут — чтобы кнопка "Назад" сразу сработала
         input.blur();
     } else {
@@ -458,7 +461,7 @@ function sendMessage() {
 function addMessageToChat(message) {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
-    
+
     // Обновляем кэш
     if (currentRoom) {
         if (!messagesCache[currentRoom]) {
@@ -466,11 +469,11 @@ function addMessageToChat(message) {
         }
         messagesCache[currentRoom].push(message);
     }
-    
+
     const userName = getUserName();
-    const html = renderMessageHTML(message, userName);
-    messagesContainer.insertAdjacentHTML('beforeend', html);
-    
+    const messageHtml = renderMessageHTML(message, userName);
+    messagesContainer.insertAdjacentHTML('beforeend', messageHtml);
+
     // Плавный скролл вниз
     scrollChatToBottomSmooth();
 }
@@ -483,17 +486,17 @@ function attachImage() {
 function handleImageSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     if (file.size > 2 * 1024 * 1024) {
         showToast('Картинка слишком большая (макс. 2 МБ)');
         event.target.value = '';
         return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
         const userName = getUserName();
-        
+
         if (socket && socket.connected) {
             socket.emit('send-message', {
                 room: currentRoom,
@@ -514,16 +517,16 @@ function handleImageSelect(event) {
 function closeGroup() {
     // Разфокусируем всё (закрыть клавиатуру)
     if (document.activeElement) document.activeElement.blur();
-    
+
     if (socket && currentRoom) {
         socket.emit('leave-room', currentRoom);
     }
     currentRoom = null;
-    
+
     const groupScreen = document.getElementById('group-screen');
     if (groupScreen) groupScreen.style.display = 'none';
-    
-    switchTab('search');
+
+    switchTab('search', false);
 }
 
 // ---------- ВСПОМОГАТЕЛЬНЫЕ ----------
