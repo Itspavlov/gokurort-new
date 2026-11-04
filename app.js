@@ -130,9 +130,12 @@ function saveMyAds(list) {
     }
 }
 
+// Объявления с сервера (их видят все). Заполняется в social.js
+let remoteAds = [];
+
 function getAllAds() {
     const base = typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [];
-    return [...getMyAds(), ...base];
+    return [...remoteAds, ...getMyAds(), ...base];
 }
 
 function findAd(id) {
@@ -277,7 +280,7 @@ function connectSocket() {
 
     socket.on('dm-message', (m) => { if (typeof onDmMessage === 'function') onDmMessage(m); });
 
-    ['group-message', 'group-reaction', 'group-members', 'group-invited', 'ad-reaction-update'].forEach((ev) => {
+    ['group-message', 'group-reaction', 'group-members', 'group-invited', 'ad-reaction-update', 'listing-changed'].forEach((ev) => {
         socket.on(ev, (d) => { if (typeof onSocialEvent === 'function') onSocialEvent(ev, d); });
     });
 
@@ -796,7 +799,7 @@ function renderFeatured() {
 
     if (!list) return;
 
-    const mine = getMyAds();
+    const mine = [...remoteAds, ...getMyAds()];
     const top = [...(typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [])].sort((a, b) => b.views - a.views);
     const hot = [...mine, ...top].slice(0, 7);
 

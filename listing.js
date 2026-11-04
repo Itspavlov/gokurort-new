@@ -183,6 +183,8 @@ let listingPhotos = [];
 function openListing(adId) {
     const ad = findAd(adId);
     if (!ad) return;
+    // в общем списке у объявлений с сервера только обложка: догружаем все фото
+    if (ad.partial) { fetchFullAd(ad.id, (ok) => { if (ok) openListing(adId); }); return; }
     closeListingMap();
 
     listingAd = ad;

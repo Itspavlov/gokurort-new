@@ -56,7 +56,7 @@ function renderProfile() {
     if (!root) return;
     const e = escapeHtml;
     const p = getProfile();
-    const mine = getMyAds();
+    const mine = myAdsAll();
 
     const meta = [
         p.city ? `<span><i class="fas fa-location-dot"></i>${e(p.city)}</span>` : '',
@@ -149,6 +149,7 @@ function openProfileEditor() {
 
 function deleteMyAd(id) {
     if (!confirm('Удалить объявление?')) return;
+    if (isRemoteAdId(id)) { deleteRemoteAd(id); return; }
     saveMyAds(getMyAds().filter(a => String(a.id) !== String(id)));
     renderProfile();
     renderFeatured();
@@ -176,7 +177,8 @@ let pickMarkers = {};
 let formCal = null;
 
 function openAdForm(editId) {
-    const old = editId ? getMyAds().find(a => String(a.id) === String(editId)) : null;
+    const old = editId ? myAdsAll().find(a => String(a.id) === String(editId)) : null;
+    if (old && old.partial) { fetchFullAd(old.id, (ok) => { if (ok) openAdForm(editId); }); return; }
     const f = (old && old.form) || {};
     const e = escapeHtml;
 
@@ -463,15 +465,17 @@ function saveAdForm() {
         form: { rooms, guests, from, out, deposit, how, rules: rulesText }
     };
 
-    const list = getMyAds();
-    const idx = list.findIndex(a => String(a.id) === String(ad.id));
-    if (idx >= 0) list[idx] = ad; else list.unshift(ad);
-    if (!saveMyAds(list)) return;
-
-    closeAdForm();
-    renderProfile();
-    renderFeatured();
-    showToast('Готово: объявление в чате «Жильё»');
+    // объявление публикуется на сервере: так его увидят все
+    const remoteId = isRemoteAdId(formState.id) ? formState.id : null;
+    const legacyId = formState.id && !remoteId ? formState.id : null;
+    publishAd(ad, remoteId, (ok) => {
+        if (!ok) return;
+        if (legacyId) saveMyAds(getMyAds().filter(a => String(a.id) !== String(legacyId)));
+        closeAdForm();
+        renderProfile();
+        renderFeatured();
+        showToast('Готово: объявление видят все в чате «Жильё»');
+    });
 }
 
 function closeAdForm() {

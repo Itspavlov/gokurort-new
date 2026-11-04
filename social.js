@@ -84,6 +84,7 @@ function openAuthSheet(onDone, mode = 'login') {
             closeSheet();
             reconnectSocket();
             showToast(m === 'login' ? 'Вы вошли как ' + r.user.name : 'Аккаунт создан. Добро пожаловать, ' + r.user.name + '!');
+            fetchRemoteAds();
             if (typeof renderProfile === 'function') renderProfile();
             if (typeof renderDialogs === 'function') renderDialogs();
             if (onDone) onDone();
@@ -104,6 +105,7 @@ async function doLogout() {
     try { fetch(`${SERVER_URL}/api/auth/logout`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } }); } catch (e) {}
     reconnectSocket();
     showToast('Вы вышли из аккаунта');
+    fetchRemoteAds();
     if (typeof renderProfile === 'function') renderProfile();
     if (typeof renderDialogs === 'function') renderDialogs();
 }
@@ -129,6 +131,8 @@ function handleServerHello(info) {
         clearSession();
         showToast('Сессия истекла. Войдите снова.');
         if (typeof renderProfile === 'function') renderProfile();
+    } else if (local) {
+        migrateLocalAds();
     }
 }
 
@@ -699,7 +703,10 @@ function fetchAdReactions() {
 // обработка событий в реальном времени
 function onSocialEvent(ev, d) {
     if (!d) return;
-    if (ev === 'ad-reaction-update') {
+    if (ev === 'listing-changed') {
+        clearTimeout(onSocialEvent._t);
+        onSocialEvent._t = setTimeout(fetchRemoteAds, 400);
+    } else if (ev === 'ad-reaction-update') {
         const st = adState[d.adId] || { counts: {}, mine: [] };
         st.counts = d.reactions || {};
         adState[d.adId] = st;
@@ -901,3 +908,178 @@ function handleJoinLink() {
     setTimeout(run, 600);
 }
 handleJoinLink();
+
+
+// ============================================
+// ОБЪЯВЛЕНИЯ НА СЕРВЕРЕ (их видят все)
+// ============================================
+const isRemoteAdId = (id) => typeof id === 'string' && /^l_[0-9a-f]{16}$/.test(id);
+
+function myAdsAll() {
+    return [...remoteAds.filter(a => a.mine), ...getMyAds()];
+}
+
+function normalizeRemoteAd(a) {
+    const acc = getAccount();
+    a.mine = !!(acc && a.ownerId === acc.id);
+    const d = new Date(a.created || Date.now());
+    const today = new Date();
+    const p2 = (n) => String(n).padStart(2, '0');
+    a.time = p2(d.getHours()) + ':' + p2(d.getMinutes());
+    a.date = d.toDateString() === today.toDateString() ? 'Сегодня' : p2(d.getDate()) + '.' + p2(d.getMonth() + 1);
+    return a;
+}
+
+async function fetchRemoteAds() {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/listings`);
+        const data = await res.json();
+        if (!data || !data.ok) return;
+        const old = new Map(remoteAds.map(a => [a.id, a]));
+        remoteAds = data.listings.map(l => {
+            const prev = old.get(l.id);
+            // если полная версия уже загружена и не менялась — не теряем её
+            return normalizeRemoteAd(prev && !prev.partial && prev.updated === l.updated ? prev : l);
+        });
+        renderFeatured();
+        refreshHousingAds();
+        const prof = document.getElementById('profileRoot');
+        if (prof && prof.offsetParent !== null) renderProfile();
+    } catch (e) { /* сервер недоступен — остаются демо и локальные объявления */ }
+}
+
+async function fetchFullAd(id, cb) {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/listings/${encodeURIComponent(id)}`);
+        const data = await res.json();
+        if (!data || !data.ok) throw new Error('no');
+        const full = normalizeRemoteAd(data.listing);
+        const i = remoteAds.findIndex(a => a.id === id);
+        if (i >= 0) remoteAds[i] = full; else remoteAds.unshift(full);
+        cb(true);
+    } catch (e) {
+        showToast('Не удалось загрузить объявление. Проверьте интернет.');
+        cb(false);
+    }
+}
+
+// Обновляем карточки объявлений в открытом чате «Жильё»
+function refreshHousingAds() {
+    const box = document.getElementById('chatMessages');
+    if (!box || currentRoom !== 'housing') return;
+    box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
+    const anchor = box.querySelector('.chat-welcome');
+    const html = remoteAds.map(renderHousingMessage).join('');
+    if (anchor) anchor.insertAdjacentHTML('afterend', html); else box.insertAdjacentHTML('afterbegin', html);
+    fetchAdReactions();
+}
+
+// ---------- сжатие фото для сервера ----------
+function loadImage(src) {
+    return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+}
+
+async function shrinkDataURL(src, maxSide, quality) {
+    const img = await loadImage(src);
+    const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.width * k));
+    c.height = Math.max(1, Math.round(img.height * k));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', quality);
+}
+
+async function fitPhoto(src, maxBytes) {
+    if (typeof src !== 'string' || !src.startsWith('data:image/')) return null;
+    for (const [side, q] of [[1000, 0.72], [900, 0.65], [800, 0.58], [700, 0.5], [600, 0.45]]) {
+        const out = await shrinkDataURL(src, side, q);
+        if (out.length * 0.75 <= maxBytes) return out;
+    }
+    return null;
+}
+
+// ---------- публикация ----------
+async function publishAd(ad, remoteId, done) {
+    ensureLogin(async () => {
+        showToast('Публикую объявление...');
+        try {
+            const photos = [];
+            for (const p of (ad.photos || []).slice(0, 6)) {
+                const fit = await fitPhoto(p, 330000);
+                if (fit) photos.push(fit);
+            }
+            if ((ad.photos || []).length && !photos.length) { showToast('Не удалось подготовить фото'); done(false); return; }
+            const thumb = photos[0] ? await fitThumb(photos[0]) : '';
+            const prof = getProfile();
+            let avatar = prof.avatar || '';
+            if (avatar && avatar.length * 0.75 > 110000) avatar = await fitPhoto(avatar, 110000) || '';
+
+            const body = { id: remoteId || undefined, ad: { ...ad, photos, thumb }, profile: { phone: prof.phone || '', about: prof.about || '', avatar } };
+            delete body.ad.id; delete body.ad.mine;
+            const res = await fetch(`${SERVER_URL}/api/listings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+                body: JSON.stringify(body)
+            });
+            let data = null;
+            try { data = await res.json(); } catch (e) {}
+            if (!res.ok || !data || !data.ok) {
+                if (res.status === 401) { clearSession(); showToast('Сессия истекла. Войдите снова.'); }
+                else showToast((data && data.message) || 'Не удалось опубликовать');
+                done(false);
+                return;
+            }
+            const saved = normalizeRemoteAd(data.listing);
+            const i = remoteAds.findIndex(a => a.id === saved.id);
+            if (i >= 0) remoteAds[i] = saved; else remoteAds.unshift(saved);
+            refreshHousingAds();
+            done(true);
+        } catch (e) {
+            showToast('Нет связи с сервером. Попробуйте позже.');
+            done(false);
+        }
+    });
+}
+
+async function fitThumb(src) {
+    for (const [side, q] of [[480, 0.65], [400, 0.55], [320, 0.5]]) {
+        const out = await shrinkDataURL(src, side, q);
+        if (out.length * 0.75 <= 75000) return out;
+    }
+    return '';
+}
+
+async function deleteRemoteAd(id) {
+    try {
+        const res = await fetch(`${SERVER_URL}/api/listings/${encodeURIComponent(id)}`, {
+            method: 'DELETE', headers: { Authorization: 'Bearer ' + getToken() }
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || !data.ok) { showToast((data && data.message) || 'Не удалось удалить'); return; }
+        remoteAds = remoteAds.filter(a => a.id !== id);
+        refreshHousingAds();
+        renderProfile();
+        renderFeatured();
+        showToast('Объявление удалено');
+    } catch (e) { showToast('Нет связи с сервером'); }
+}
+
+// Старые объявления, сохранённые только на этом устройстве, публикуем для всех
+let migratingAds = false;
+async function migrateLocalAds() {
+    if (migratingAds || !getAccount()) return;
+    const local = getMyAds();
+    if (!local.length) return;
+    migratingAds = true;
+    let moved = 0;
+    for (const ad of local) {
+        const ok = await new Promise(r => publishAd(ad, null, r));
+        if (!ok) break;
+        saveMyAds(getMyAds().filter(a => String(a.id) !== String(ad.id)));
+        moved++;
+    }
+    migratingAds = false;
+    if (moved) { showToast('Ваши объявления опубликованы для всех: ' + moved); renderProfile(); renderFeatured(); }
+}
+
+fetchRemoteAds();
