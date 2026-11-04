@@ -284,6 +284,7 @@ function connectSocket() {
     });
 
     socket.on('dm-message', (m) => { if (typeof onDmMessage === 'function') onDmMessage(m); });
+    socket.on('notify', (p) => { if (typeof onNotify === 'function') onNotify(p); });
 
     ['group-message', 'group-reaction', 'group-members', 'group-invited', 'ad-reaction-update', 'listing-changed'].forEach((ev) => {
         socket.on(ev, (d) => { if (typeof onSocialEvent === 'function') onSocialEvent(ev, d); });

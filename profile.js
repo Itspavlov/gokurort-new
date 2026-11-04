@@ -77,7 +77,7 @@ function renderProfile() {
             </div>
         </div>`).join('');
 
-    root.innerHTML = (typeof accountCardHTML === 'function' ? accountCardHTML() : '') + `
+    root.innerHTML = (typeof accountCardHTML === 'function' ? accountCardHTML() : '') + (typeof notifyCardHTML === 'function' ? notifyCardHTML() : '') + `
         <div class="profile-hero">
             <div class="avatar-circle profile-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '<i class="fas fa-user"></i>'}</div>
             <div class="profile-name">${e(p.name || 'Гость')}</div>
