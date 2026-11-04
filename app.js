@@ -3,7 +3,12 @@
 // ============================================
 
 // ---------- НАСТРОЙКИ ----------
-const SERVER_URL = 'https://tell-server.onrender.com';
+// Адрес сервера: на старом хостинге (Render) — прежний, на своём домене — тот же адрес, что у сайта.
+// Для проверки можно задать window.TELL_SERVER_URL до загрузки app.js.
+const SERVER_URL = window.TELL_SERVER_URL ||
+    (/onrender\.com$/.test(location.hostname) || location.protocol === 'file:' || location.hostname === 'localhost'
+        ? 'https://tell-server.onrender.com'
+        : location.origin);
 let socket = null;
 let currentRoom = null;
 // 2 — сервер умеет подтверждения (ack) и идентификаторы; 1 — старый сервер
