@@ -333,6 +333,16 @@ function connectSocket() {
         renderHistory(history);
     });
 
+    // модератор удалил сообщение — убираем его у всех сразу
+    socket.on('message-deleted', (d) => {
+        if (!d || typeof d.id !== 'string') return;
+        if (messagesCache[d.room]) messagesCache[d.room] = messagesCache[d.room].filter(m => m.id !== d.id);
+        if (d.room !== currentRoom) return;
+        const box = document.getElementById('chatMessages');
+        if (!box) return;
+        box.querySelectorAll('.chat-message[data-id]').forEach(el => { if (el.dataset.id === d.id) el.remove(); });
+    });
+
     socket.on('room-cleared', () => {
         if (currentRoom) {
             messagesCache[currentRoom] = [];
