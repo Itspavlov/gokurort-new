@@ -40,7 +40,9 @@ function renderReplyHTML(message) {
 }
 
 function applyReactions(id, reactions) {
-    const list = (currentRoom && messagesCache[currentRoom]) || [];
+    const list = (typeof currentGroup !== 'undefined' && currentGroup)
+        ? currentGroup.messages
+        : ((currentRoom && messagesCache[currentRoom]) || []);
     const msg = list.find(m => m.id === id);
     if (!msg) return;
     msg.reactions = reactions;
@@ -274,6 +276,10 @@ function connectSocket() {
     });
 
     socket.on('dm-message', (m) => { if (typeof onDmMessage === 'function') onDmMessage(m); });
+
+    ['group-message', 'group-reaction', 'group-members', 'group-invited', 'ad-reaction-update'].forEach((ev) => {
+        socket.on(ev, (d) => { if (typeof onSocialEvent === 'function') onSocialEvent(ev, d); });
+    });
 
     socket.on('reaction-update', (d) => {
         if (d && d.room === currentRoom) applyReactions(d.id, d.reactions || {});
@@ -585,6 +591,11 @@ async function loadHistoryHTTP(roomId) {
 }
 
 // ---------- СООБЩЕНИЕ-ОБЪЯВЛЕНИЕ ----------
+function adChipsHTML(adId) {
+    const st = (typeof adState !== 'undefined' && adState[adId]) || { counts: {}, mine: [] };
+    return renderReactionChips({ id: 'ad_' + adId, reactions: st.counts, mine: st.mine });
+}
+
 function renderHousingMessage(ad) {
     const owner = getOwner(ad);
     const name = owner.name || 'Хозяин';
@@ -595,7 +606,7 @@ function renderHousingMessage(ad) {
         : escapeHtml(name[0] || '?');
 
     return `
-        <div class="chat-message chat-message-ad" onclick="openListing('${ad.id}')">
+        <div class="chat-message chat-message-ad" data-id="ad_${escapeHtml(String(ad.id))}" data-ad-id="${escapeHtml(String(ad.id))}" onclick="openListing('${ad.id}')">
             <div class="chat-avatar" style="background: ${color};">${avatar}</div>
             <div class="chat-bubble-wrap">
                 <div class="chat-bubble-header">
@@ -617,6 +628,7 @@ function renderHousingMessage(ad) {
                     <div class="chat-ad-desc">${escapeHtml(ad.description || '')}</div>
                     <div class="chat-ad-more">Фото, карта, свободные даты <i class="fas fa-chevron-right"></i></div>
                 </div>
+                <div class="chat-reactions" data-for="ad_${escapeHtml(String(ad.id))}">${adChipsHTML(ad.id)}</div>
             </div>
         </div>
     `;
@@ -632,7 +644,10 @@ function sendMessage() {
 
     if (socket && socket.connected) {
         const payload = { room: currentRoom, user: userName, text: text };
-        if (typeof replyDraft !== 'undefined' && replyDraft) payload.replyTo = replyDraft.id;
+        if (typeof replyDraft !== 'undefined' && replyDraft) {
+            if (String(replyDraft.id).startsWith('ad_')) payload.replyAd = { id: replyDraft.adId, title: replyDraft.adTitle };
+            else payload.replyTo = replyDraft.id;
+        }
         emitMessage(payload);
         if (typeof clearReply === 'function') clearReply();
         input.value = '';

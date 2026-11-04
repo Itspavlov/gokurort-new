@@ -192,6 +192,7 @@ function renderDmMessage(m) {
 function openDmChat(conv, prefill, messages) {
     if (socket && currentRoom) socket.emit('leave-room', currentRoom);
     currentRoom = null;
+    currentGroup = null;
     clearReply();
     currentDm = { convId: conv.id, with: conv.with };
 
@@ -280,48 +281,352 @@ function onDmMessage(m) {
     if (dlg && dlg.offsetParent !== null) renderDialogs();
 }
 
-// ---------- ВКЛАДКА «СООБЩЕНИЯ» ----------
+// ============================================
+// ГРУППЫ («Моя группа»)
+// ============================================
+let currentGroup = null;   // открытая группа: { id, name, code, isOwner, members, messages }
+let groupsCache = [];
+const adState = {};        // adId -> { counts, mine }
+
+function loginRequired(cb) { ensureLogin(() => whenSocketReady(cb)); }
+
+function refreshGroupsCache(cb) {
+    if (!getAccount()) { groupsCache = []; if (cb) cb([]); return; }
+    whenSocketReady(() => socketAsk('group-list', undefined, (res) => {
+        groupsCache = res.ok ? res.groups : [];
+        if (cb) cb(groupsCache);
+    }), () => { if (cb) cb([]); });
+}
+
+function renderGroupMessage(m) {
+    const me = getAccount();
+    const mine = me && m.from && m.from.id === me.id;
+    const id = escapeHtml(String(m.id));
+    const nm = (m.from && m.from.name) || '?';
+    const reply = renderReplyHTML(m);
+    const ad = m.ad ? `<div class="group-ad" data-ad="${escapeHtml(String(m.ad.id))}">
+            <div class="group-ad-title"><i class="fas fa-house-chimney"></i> ${escapeHtml(m.ad.title)}</div>
+            ${m.ad.price ? `<div class="group-ad-price">${escapeHtml(m.ad.price)}</div>` : ''}
+            ${m.ad.location ? `<div class="group-ad-loc"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(m.ad.location)}</div>` : ''}
+            <div class="group-ad-open">Открыть объявление <i class="fas fa-chevron-right"></i></div>
+        </div>` : '';
+    const text = m.text ? `<div>${escapeHtml(m.text)}</div>` : '';
+    const chips = `<div class="chat-reactions" data-for="${id}">${renderReactionChips(m)}</div>`;
+    const time = formatTime(m.time);
+    if (mine) {
+        return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap"><div class="chat-bubble chat-bubble-mine">${reply}${ad}${text}</div>${chips}<div class="chat-time-mine">${time}</div></div></div>`;
+    }
+    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${escapeHtml(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble">${reply}${ad}${text}</div>${chips}</div></div>`;
+}
+
+function openGroupChat(group, messages) {
+    if (socket && currentRoom) socket.emit('leave-room', currentRoom);
+    currentRoom = null; currentDm = null;
+    clearReply(); closeMsgMenu();
+    currentGroup = { id: group.id, name: group.name, code: group.code, isOwner: group.isOwner, members: group.members || [], messages: messages || [] };
+
+    tabContents.forEach(section => section.style.display = 'none');
+    let screen = document.getElementById('group-screen');
+    if (!screen) {
+        screen = document.createElement('section');
+        screen.id = 'group-screen';
+        screen.className = 'group-screen';
+        document.getElementById('appMain').appendChild(screen);
+    }
+    const e = escapeHtml;
+    screen.innerHTML = `
+        <div class="chat-header">
+            <button class="chat-back-btn" onclick="closeGroupChat()"><i class="fas fa-arrow-left"></i></button>
+            <div class="chat-header-info" onclick="openGroupMenu()" style="cursor:pointer">
+                <div class="chat-header-title">${e(group.name)}</div>
+                <div class="chat-header-subtitle" id="chatStatus">${currentGroup.members.length} ${memberWord(currentGroup.members.length)}</div>
+            </div>
+            <button class="chat-header-btn" onclick="openGroupMenu()" aria-label="Участники"><i class="fas fa-user-group"></i></button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-welcome">
+                <div class="chat-welcome-icon"><i class="fas fa-users"></i></div>
+                <div class="chat-welcome-title">Ваша группа</div>
+                <div class="chat-welcome-text">Скидывайте сюда объявления (удерживайте объявление в чате «Жильё» → «Добавить в мою группу»), ставьте реакции и выбирайте вместе.</div>
+            </div>
+        </div>
+        <div class="chat-input-wrapper">
+            <input type="text" class="chat-input" id="chatInput" maxlength="1000" placeholder="Написать группе..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendGroupMessage();}">
+            <button class="chat-send-btn" onclick="sendGroupMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>`;
+    screen.style.display = 'flex';
+    attachChatGestures();
+    paintGroup();
+    setTimeout(() => scrollChatToBottom(), 150);
+}
+
+function memberWord(n) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'участник';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'участника';
+    return 'участников';
+}
+
+function paintGroup() {
+    const box = document.getElementById('chatMessages');
+    if (!box || !currentGroup) return;
+    box.querySelectorAll('.chat-message').forEach(el => el.remove());
+    box.insertAdjacentHTML('beforeend', currentGroup.messages.map(renderGroupMessage).join(''));
+    scrollChatToBottom();
+}
+
+function openGroupById(groupId) {
+    loginRequired(() => socketAsk('group-open', { groupId }, (res) => {
+        if (!res.ok) { showToast(res.message || 'Группа не найдена'); return; }
+        openGroupChat(res.group, res.messages);
+    }));
+}
+
+function closeGroupChat() {
+    if (document.activeElement) document.activeElement.blur();
+    clearReply(); closeMsgMenu();
+    currentGroup = null;
+    const screen = document.getElementById('group-screen');
+    if (screen) screen.style.display = 'none';
+    switchTab('messages', false);
+}
+
+function sendGroupMessage() {
+    if (!currentGroup) return;
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    if (!socket || !socket.connected) { showToast('Сервер недоступен. Проверьте интернет.'); return; }
+    const payload = { groupId: currentGroup.id, text, clientId: newClientId() };
+    if (replyDraft && !String(replyDraft.id).startsWith('ad_')) payload.replyTo = replyDraft.id;
+    input.value = '';
+    clearReply();
+    const attempt = (retry) => socketAsk('group-send', payload, (res) => {
+        if (res.ok) return;
+        if (!retry && !res.code) return attempt(true);
+        input.value = text;
+        showToast(res.message || 'Не удалось отправить');
+    });
+    attempt(false);
+}
+
+function refreshCurrentGroup(cb) {
+    if (!currentGroup) return;
+    const gid = currentGroup.id;
+    socketAsk('group-open', { groupId: gid }, (res) => {
+        if (!res.ok || !currentGroup || currentGroup.id !== gid) return;
+        currentGroup.members = res.group.members;
+        currentGroup.isOwner = res.group.isOwner;
+        const st = document.getElementById('chatStatus');
+        if (st) st.textContent = currentGroup.members.length + ' ' + memberWord(currentGroup.members.length);
+        if (cb) cb();
+    });
+}
+
+// ---------- создание группы и приглашение ----------
+function openCreateGroupSheet(afterCreate) {
+    loginRequired(() => {
+        openSheet('Новая группа', `
+            <p class="auth-note" style="margin:0 4px 14px">Добавьте тех, с кем планируете отдыхать, и выбирайте жильё и развлечения вместе.</p>
+            <label class="field"><span>Название группы</span><input id="grpName" maxlength="40" placeholder="Например: Отпуск с друзьями"></label>
+            <div class="auth-error" id="grpErr"></div>
+            <button class="primary-btn wide-btn" id="grpCreate"><i class="fas fa-user-plus"></i> Создать и пригласить</button>`, (el) => {
+            const go = () => {
+                const name = el.querySelector('#grpName').value.trim();
+                const err = el.querySelector('#grpErr');
+                if (name.length < 2) { err.textContent = 'Название: от 2 символов'; return; }
+                const btn = el.querySelector('#grpCreate'); btn.disabled = true;
+                socketAsk('group-create', { name }, (res) => {
+                    btn.disabled = false;
+                    if (!res.ok) { err.textContent = res.message || 'Не удалось создать'; return; }
+                    closeSheet();
+                    refreshGroupsCache();
+                    openInviteSheet(res.group, afterCreate);
+                });
+            };
+            el.querySelector('#grpCreate').addEventListener('click', go);
+            el.querySelector('#grpName').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
+            setTimeout(() => el.querySelector('#grpName').focus(), 300);
+        });
+    });
+}
+
+function inviteLink(code) {
+    return location.origin + location.pathname + '?join=' + encodeURIComponent(code);
+}
+
+function openInviteSheet(group, afterDone) {
+    const e = escapeHtml;
+    const membersHTML = (list) => list.map(m => `<div class="member-row"><div class="chat-avatar" style="background:${dmColor(m.name)}">${e(Array.from(m.name)[0] || '?')}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
+    openSheet('Пригласить в «' + e(group.name) + '»', `
+        <div class="members" id="invMembers">${membersHTML(group.members)}</div>
+        <label class="field"><span>Имя друга в Tell</span><input id="invName" maxlength="24" placeholder="Как он зарегистрирован"></label>
+        <div class="auth-error" id="invErr"></div>
+        <button class="primary-btn wide-btn" id="invAdd"><i class="fas fa-user-plus"></i> Добавить</button>
+        <button class="ghost-btn wide-btn" id="invShare" style="margin-top:10px"><i class="fas fa-share-nodes"></i> Поделиться ссылкой</button>
+        <button class="ghost-btn wide-btn" id="invDone" style="margin-top:10px">Готово — открыть чат</button>
+        <p class="auth-note">Друг должен зарегистрироваться в Tell. Ссылка-приглашение работает после входа в аккаунт.</p>`, (el) => {
+        const err = el.querySelector('#invErr');
+        el.querySelector('#invAdd').addEventListener('click', () => {
+            const name = el.querySelector('#invName').value.trim();
+            if (!name) { err.textContent = 'Введите имя'; return; }
+            socketAsk('group-invite', { groupId: group.id, name }, (res) => {
+                if (!res.ok) { err.textContent = res.message || 'Не удалось добавить'; return; }
+                err.textContent = '';
+                group.members.push({ id: res.added.id, name: res.added.name });
+                el.querySelector('#invMembers').innerHTML = membersHTML(group.members);
+                el.querySelector('#invName').value = '';
+                showToast(res.added.name + ' добавлен(а) в группу');
+            });
+        });
+        el.querySelector('#invShare').addEventListener('click', async () => {
+            const url = inviteLink(group.code);
+            const text = 'Присоединяйся к группе «' + group.name + '» в Tell — выберем жильё вместе';
+            try {
+                if (navigator.share) { await navigator.share({ title: 'Tell', text, url }); return; }
+            } catch (ex) { if (ex && ex.name === 'AbortError') return; }
+            try { await navigator.clipboard.writeText(text + '\n' + url); showToast('Ссылка скопирована'); }
+            catch (ex) { showToast(url); }
+        });
+        el.querySelector('#invDone').addEventListener('click', () => {
+            closeSheet();
+            if (typeof afterDone === 'function') afterDone(group);
+            else openGroupById(group.id);
+        });
+    });
+}
+
+function openGroupMenu() {
+    if (!currentGroup) return;
+    const g = currentGroup, e = escapeHtml;
+    const rows = g.members.map(m => `<div class="member-row"><div class="chat-avatar" style="background:${dmColor(m.name)}">${e(Array.from(m.name)[0] || '?')}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
+    openSheet(e(g.name), `
+        <div class="members">${rows}</div>
+        <button class="primary-btn wide-btn" id="gmInvite"><i class="fas fa-user-plus"></i> Пригласить</button>
+        <button class="ghost-btn wide-btn" id="gmLeave" style="margin-top:10px"><i class="fas fa-right-from-bracket"></i> Выйти из группы</button>`, (el) => {
+        el.querySelector('#gmInvite').addEventListener('click', () => {
+            closeSheet();
+            openInviteSheet({ id: g.id, name: g.name, code: g.code, members: g.members }, () => { refreshCurrentGroup(); });
+        });
+        el.querySelector('#gmLeave').addEventListener('click', () => {
+            if (!confirm('Выйти из группы «' + g.name + '»?')) return;
+            socketAsk('group-leave', { groupId: g.id }, (res) => {
+                if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
+                closeSheet();
+                closeGroupChat();
+                showToast('Вы вышли из группы');
+            });
+        });
+    });
+}
+
+// ---------- «Добавить в мою группу» ----------
+function addAdToGroup(adId) {
+    const ad = findAd(adId);
+    if (!ad) { showToast('Объявление не найдено'); return; }
+    loginRequired(() => refreshGroupsCache((list) => {
+        const send = (g) => socketAsk('group-send', {
+            groupId: g.id, clientId: newClientId(),
+            ad: { id: String(ad.id), title: ad.title, price: ad.price || '', location: ad.location || '' }
+        }, (res) => {
+            if (!res.ok) { showToast(res.message || 'Не удалось добавить'); return; }
+            closeSheet();
+            showToast('Добавлено в группу «' + g.name + '»');
+        });
+        if (!list.length) {
+            openSheet('У вас пока нет группы', `
+                <p class="auth-note" style="margin:0 4px 14px">Создайте группу и добавьте друзей — объявление сразу попадёт туда.</p>
+                <button class="primary-btn wide-btn" id="noGrpCreate"><i class="fas fa-user-plus"></i> Создать группу</button>`, (el) => {
+                el.querySelector('#noGrpCreate').addEventListener('click', () => {
+                    closeSheet();
+                    openCreateGroupSheet((group) => {
+                        send({ id: group.id, name: group.name });
+                        openGroupById(group.id);
+                    });
+                });
+            });
+        } else if (list.length === 1) {
+            send(list[0]);
+        } else {
+            openSheet('В какую группу добавить?', list.map(g => `<button class="group-pick" data-id="${escapeHtml(g.id)}"><i class="fas fa-users"></i><span>${escapeHtml(g.name)}</span><em>${g.members} ${memberWord(g.members)}</em></button>`).join(''), (el) => {
+                el.querySelectorAll('.group-pick').forEach(b => b.addEventListener('click', () => {
+                    const g = list.find(x => x.id === b.dataset.id);
+                    if (g) send(g);
+                }));
+            });
+        }
+    }));
+}
+
+// ============================================
+// ВКЛАДКА «СООБЩЕНИЯ»: Моя группа + личные чаты
+// ============================================
 function renderDialogs() {
     const root = document.getElementById('dialogsRoot');
     if (!root) return;
 
+    const banner = (hasGroups) => `
+        <div class="my-group-card">
+            <div class="my-group-head"><span class="my-group-icon"><i class="fas fa-users"></i></span><h2>Моя группа</h2></div>
+            <p>Создайте группу и добавляйте тех, с кем планируете отдыхать. Скидывайте объявления, ставьте реакции и выбирайте жильё и развлечения вместе.</p>
+            ${getAccount()
+                ? `<button class="primary-btn" onclick="openCreateGroupSheet()"><i class="fas fa-plus"></i> ${hasGroups ? 'Ещё одна группа' : 'Создать группу'}</button>`
+                : `<button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти, чтобы создать</button>`}
+        </div>`;
+
     if (!getAccount()) {
-        root.innerHTML = `
+        root.innerHTML = banner(false) + `
             <div class="placeholder fade-in">
                 <span class="placeholder-icon"><i class="fas fa-lock"></i></span>
                 <h2 class="placeholder-title">Личные сообщения</h2>
                 <p class="placeholder-text">Войдите в аккаунт, чтобы писать хозяевам лично. Эти диалоги видите только вы и собеседник.</p>
-                <button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти или зарегистрироваться</button>
             </div>`;
         return;
     }
-    root.innerHTML = '<div class="placeholder fade-in"><p class="placeholder-text">Загружаю диалоги...</p></div>';
+    root.innerHTML = banner(false) + '<div class="placeholder fade-in"><p class="placeholder-text">Загружаю...</p></div>';
+    const fail = () => { root.innerHTML = banner(false) + '<div class="placeholder"><p class="placeholder-text">Сервер недоступен</p></div>'; };
+
     whenSocketReady(() => {
-        socketAsk('dm-list', undefined, (res) => {
-            if (!res.ok) { root.innerHTML = `<div class="placeholder"><p class="placeholder-text">${escapeHtml(res.message || 'Не удалось загрузить')}</p></div>`; return; }
-            if (!res.convs.length) {
-                root.innerHTML = `
-                    <div class="placeholder fade-in">
-                        <span class="placeholder-icon"><i class="fas fa-inbox"></i></span>
-                        <h2 class="placeholder-title">Пока пусто</h2>
-                        <p class="placeholder-text">Откройте объявление в разделе «Жильё» и нажмите «Написать» — диалог появится здесь.</p>
-                    </div>`;
-                return;
-            }
-            root.innerHTML = `<div class="dialogs">${res.convs.map(c => `
-                <div class="dialog-row" onclick="openDmById('${escapeHtml(c.id)}')">
-                    <div class="chat-avatar dialog-avatar" style="background:${dmColor(c.with)}">${escapeHtml(Array.from(c.with || '?')[0] || '?')}</div>
-                    <div class="dialog-info">
-                        <div class="dialog-name">${escapeHtml(c.with)}</div>
-                        <div class="dialog-ad">${escapeHtml(c.last ? (c.last.mine ? 'Вы: ' : '') + c.last.text : (c.adTitle || ''))}</div>
-                    </div>
-                    <div class="dialog-time">${c.last ? fmtAgo(c.last.time) : ''}</div>
-                </div>`).join('')}</div>`;
-        }, () => { root.innerHTML = '<div class="placeholder"><p class="placeholder-text">Сервер недоступен</p></div>'; });
-    }, () => { root.innerHTML = '<div class="placeholder"><p class="placeholder-text">Сервер недоступен</p></div>'; });
+        socketAsk('group-list', undefined, (gr) => {
+            socketAsk('dm-list', undefined, (dr) => {
+                const groups = gr.ok ? gr.groups : [];
+                groupsCache = groups;
+                const dms = dr.ok ? dr.convs : [];
+                const groupRows = groups.map(g => `
+                    <div class="dialog-row" onclick="openGroupById('${escapeHtml(g.id)}')">
+                        <div class="chat-avatar dialog-avatar group-avatar"><i class="fas fa-users"></i></div>
+                        <div class="dialog-info">
+                            <div class="dialog-name">${escapeHtml(g.name)}</div>
+                            <div class="dialog-ad">${escapeHtml(g.last ? (g.last.from ? g.last.from + ': ' : '') + g.last.text : g.members + ' ' + memberWord(g.members))}</div>
+                        </div>
+                        <div class="dialog-time">${g.last ? fmtAgo(g.last.time) : ''}</div>
+                    </div>`).join('');
+                const dmRows = dms.map(c => `
+                    <div class="dialog-row" onclick="openDmById('${escapeHtml(c.id)}')">
+                        <div class="chat-avatar dialog-avatar" style="background:${dmColor(c.with)}">${escapeHtml(Array.from(c.with || '?')[0] || '?')}</div>
+                        <div class="dialog-info">
+                            <div class="dialog-name">${escapeHtml(c.with)}</div>
+                            <div class="dialog-ad">${escapeHtml(c.last ? (c.last.mine ? 'Вы: ' : '') + c.last.text : (c.adTitle || ''))}</div>
+                        </div>
+                        <div class="dialog-time">${c.last ? fmtAgo(c.last.time) : ''}</div>
+                    </div>`).join('');
+                root.innerHTML = banner(groups.length > 0) +
+                    (groups.length ? `<div class="section-head"><h2 class="section-title">Мои группы</h2></div><div class="dialogs">${groupRows}</div>` : '') +
+                    `<div class="section-head"><h2 class="section-title">Личные сообщения</h2></div>` +
+                    (dms.length ? `<div class="dialogs">${dmRows}</div>` : `
+                        <div class="placeholder fade-in">
+                            <span class="placeholder-icon"><i class="fas fa-inbox"></i></span>
+                            <h2 class="placeholder-title">Пока пусто</h2>
+                            <p class="placeholder-text">Откройте объявление в разделе «Жильё» и нажмите «Написать» — диалог появится здесь.</p>
+                        </div>`);
+            });
+        });
+    }, fail);
 }
 
-// ---------- ОТВЕТ НА СООБЩЕНИЕ ----------
+// ============================================
+// ОТВЕТ, РЕАКЦИИ, МЕНЮ СООБЩЕНИЯ
+// ============================================
 let replyDraft = null;
 
 function clearReply() {
@@ -330,8 +635,8 @@ function clearReply() {
     if (bar) bar.remove();
 }
 
-function setReply(msg) {
-    replyDraft = { id: msg.id, user: msg.user, text: msg.text ? msg.text.slice(0, 100) : '📷 Фото' };
+function setReply(draft) {
+    replyDraft = draft;
     const wrap = document.querySelector('#group-screen .chat-input-wrapper');
     if (!wrap) return;
     let bar = document.getElementById('replyBar');
@@ -341,25 +646,102 @@ function setReply(msg) {
         bar.className = 'reply-bar';
         wrap.parentNode.insertBefore(bar, wrap);
     }
-    bar.innerHTML = `<i class="fas fa-reply"></i><div class="reply-bar-text"><b>${escapeHtml(replyDraft.user)}</b><span>${escapeHtml(replyDraft.text)}</span></div><button type="button" aria-label="Отменить ответ"><i class="fas fa-xmark"></i></button>`;
+    bar.innerHTML = `<i class="fas fa-reply"></i><div class="reply-bar-text"><b>${escapeHtml(draft.user)}</b><span>${escapeHtml(draft.text)}</span></div><button type="button" aria-label="Отменить ответ"><i class="fas fa-xmark"></i></button>`;
     bar.querySelector('button').addEventListener('click', clearReply);
     const inp = document.getElementById('chatInput');
     if (inp) inp.focus();
 }
 
-// ---------- РЕАКЦИИ ----------
+function paintAdChips(adId) {
+    const st = adState[adId] || { counts: {}, mine: [] };
+    const holder = document.querySelector(`.chat-reactions[data-for="${CSS.escape('ad_' + adId)}"]`);
+    if (holder) holder.innerHTML = renderReactionChips({ id: 'ad_' + adId, reactions: st.counts, mine: st.mine });
+}
+
 function toggleReaction(id, emoji) {
-    if (!currentRoom) return;
+    id = String(id);
     if (serverProtocol < 2) { showToast('Реакции заработают после обновления сервера'); return; }
     if (!socket || !socket.connected) { showToast('Сервер недоступен'); return; }
-    socketAsk('react', { room: currentRoom, id, emoji, user: getUserName() }, (res) => {
-        if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
-        myReacts[id] = res.mine || [];
-        applyReactions(id, res.reactions || {});
+
+    if (id.startsWith('ad_')) {                       // реакция на объявление
+        const adId = id.slice(3);
+        socketAsk('ad-react', { adId, emoji, user: getUserName() }, (res) => {
+            if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
+            adState[adId] = { counts: res.reactions || {}, mine: res.mine || [] };
+            paintAdChips(adId);
+        });
+    } else if (currentGroup) {                        // реакция в группе
+        socketAsk('group-react', { groupId: currentGroup.id, id, emoji }, (res) => {
+            if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
+            const m = currentGroup && currentGroup.messages.find(x => x.id === id);
+            if (m) { m.reactions = res.reactions || {}; m.mine = res.mine || []; }
+            const holder = document.querySelector(`.chat-reactions[data-for="${CSS.escape(id)}"]`);
+            if (holder && m) holder.innerHTML = renderReactionChips(m);
+        });
+    } else if (currentRoom) {                         // реакция в общем чате
+        socketAsk('react', { room: currentRoom, id, emoji, user: getUserName() }, (res) => {
+            if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
+            myReacts[id] = res.mine || [];
+            applyReactions(id, res.reactions || {});
+        });
+    }
+}
+
+function fetchAdReactions() {
+    const ids = [...document.querySelectorAll('.chat-message-ad[data-ad-id]')].map(el => el.dataset.adId);
+    if (!ids.length || serverProtocol < 2) return;
+    socketAsk('ad-reactions', { ids, user: getUserName() }, (res) => {
+        if (!res.ok) return;
+        Object.keys(res.ads || {}).forEach(id => { adState[id] = res.ads[id]; paintAdChips(id); });
     });
 }
 
-// ---------- ЖЕСТЫ: удержание = меню, нажатие на реакцию = переключить ----------
+// обработка событий в реальном времени
+function onSocialEvent(ev, d) {
+    if (!d) return;
+    if (ev === 'ad-reaction-update') {
+        const st = adState[d.adId] || { counts: {}, mine: [] };
+        st.counts = d.reactions || {};
+        adState[d.adId] = st;
+        paintAdChips(d.adId);
+    } else if (ev === 'group-message') {
+        if (currentGroup && currentGroup.id === d.groupId) {
+            if (!currentGroup.messages.some(m => m.id === d.id)) {
+                currentGroup.messages.push(d);
+                const box = document.getElementById('chatMessages');
+                if (box) { box.insertAdjacentHTML('beforeend', renderGroupMessage(d)); scrollChatToBottomSmooth(); }
+            }
+        } else {
+            const me = getAccount();
+            const g = groupsCache.find(x => x.id === d.groupId);
+            if (me && d.from && d.from.id !== me.id) showToast((g ? '«' + g.name + '»: ' : 'Группа: ') + d.from.name);
+            const dlg = document.getElementById('dialogsRoot');
+            if (dlg && dlg.offsetParent !== null) renderDialogs();
+        }
+    } else if (ev === 'group-reaction') {
+        if (currentGroup && currentGroup.id === d.groupId) {
+            const m = currentGroup.messages.find(x => x.id === d.id);
+            if (m) {
+                m.reactions = d.reactions || {};
+                const holder = document.querySelector(`.chat-reactions[data-for="${CSS.escape(String(d.id))}"]`);
+                if (holder) holder.innerHTML = renderReactionChips(m);
+            }
+        }
+    } else if (ev === 'group-members') {
+        if (currentGroup && currentGroup.id === d.groupId) {
+            refreshCurrentGroup();
+            if (d.added) showToast(d.added.name + ' теперь в группе');
+            if (d.left) showToast(d.left.name + ' вышел(а) из группы');
+        }
+    } else if (ev === 'group-invited') {
+        showToast((d.by || 'Друг') + ' добавил(а) вас в группу «' + d.name + '»');
+        refreshGroupsCache();
+        const dlg = document.getElementById('dialogsRoot');
+        if (dlg && dlg.offsetParent !== null) renderDialogs();
+    }
+}
+
+// ---------- меню по удержанию ----------
 let gestureTimer = null;
 
 function closeMsgMenu() {
@@ -368,11 +750,29 @@ function closeMsgMenu() {
     document.querySelectorAll('.chat-message.pressed').forEach(el => el.classList.remove('pressed'));
 }
 
-function openMsgMenu(msgEl) {
+// что за сообщение удержали
+function resolveTarget(msgEl) {
     const id = msgEl.dataset.id;
-    const list = (currentRoom && messagesCache[currentRoom]) || [];
-    const msg = list.find(m => m.id === id);
-    if (!msg) return;
+    if (!id) return null;
+    if (id.startsWith('ad_')) {
+        const adId = msgEl.dataset.adId || id.slice(3);
+        const ad = findAd(adId);
+        if (!ad) return null;
+        return { kind: 'ad', id, adId, text: '', reply: { id, user: 'Объявление', text: ad.title, adId: String(ad.id), adTitle: ad.title } };
+    }
+    if (currentGroup) {
+        const m = currentGroup.messages.find(x => x.id === id);
+        if (!m) return null;
+        return { kind: 'group', id, text: m.text, reply: { id, user: (m.from && m.from.name) || '', text: m.text ? m.text.slice(0, 100) : (m.ad ? '🏠 ' + m.ad.title : '') } };
+    }
+    const m = ((currentRoom && messagesCache[currentRoom]) || []).find(x => x.id === id);
+    if (!m) return null;
+    return { kind: 'room', id, text: m.text, reply: { id, user: m.user, text: m.text ? m.text.slice(0, 100) : '📷 Фото' } };
+}
+
+function openMsgMenu(msgEl) {
+    const t = resolveTarget(msgEl);
+    if (!t) return;
     closeMsgMenu();
     msgEl.classList.add('pressed');
     if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
@@ -383,7 +783,8 @@ function openMsgMenu(msgEl) {
     menu.innerHTML = `<div class="msg-menu" role="menu">
         <div class="msg-menu-emojis">${['👍', '❤️', '😂', '😮', '😢', '🔥'].map(e => `<button type="button" data-emoji="${e}">${e}</button>`).join('')}</div>
         <button type="button" class="msg-menu-item" data-act="reply"><i class="fas fa-reply"></i> Ответить</button>
-        ${msg.text ? '<button type="button" class="msg-menu-item" data-act="copy"><i class="fas fa-copy"></i> Копировать</button>' : ''}
+        ${t.kind === 'ad' ? '<button type="button" class="msg-menu-item" data-act="group"><i class="fas fa-user-group"></i> Добавить в мою группу</button>' : ''}
+        ${t.text ? '<button type="button" class="msg-menu-item" data-act="copy"><i class="fas fa-copy"></i> Копировать</button>' : ''}
     </div>`;
     document.body.appendChild(menu);
 
@@ -391,18 +792,19 @@ function openMsgMenu(msgEl) {
     const rect = (msgEl.querySelector('.chat-bubble') || msgEl).getBoundingClientRect();
     const ph = panel.offsetHeight, pw = panel.offsetWidth;
     let top = rect.top - ph - 8;
-    if (top < 8) top = Math.min(rect.bottom + 8, window.innerHeight - ph - 8);
-    let left = Math.min(Math.max(8, rect.left), window.innerWidth - pw - 8);
+    if (top < 8) top = Math.min(Math.max(8, rect.top + 8), window.innerHeight - ph - 8);
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - pw - 8);
     panel.style.top = top + 'px';
     panel.style.left = left + 'px';
 
     menu.addEventListener('click', (ev) => {
         const emojiBtn = ev.target.closest('[data-emoji]');
         const act = ev.target.closest('[data-act]');
-        if (emojiBtn) { toggleReaction(id, emojiBtn.dataset.emoji); }
-        else if (act && act.dataset.act === 'reply') { setReply(msg); }
+        if (emojiBtn) toggleReaction(t.id, emojiBtn.dataset.emoji);
+        else if (act && act.dataset.act === 'reply') setReply(t.reply);
+        else if (act && act.dataset.act === 'group') addAdToGroup(t.adId);
         else if (act && act.dataset.act === 'copy') {
-            try { navigator.clipboard.writeText(msg.text); showToast('Скопировано'); } catch (e) { showToast('Не удалось скопировать'); }
+            try { navigator.clipboard.writeText(t.text); showToast('Скопировано'); } catch (e) { showToast('Не удалось скопировать'); }
         }
         closeMsgMenu();
     });
@@ -413,12 +815,11 @@ function attachChatGestures() {
     if (!box || box.dataset.gestures) return;
     box.dataset.gestures = '1';
     let startX = 0, startY = 0, held = false;
-
     const cancel = () => { if (gestureTimer) { clearTimeout(gestureTimer); gestureTimer = null; } };
 
     box.addEventListener('pointerdown', (ev) => {
         if (ev.button > 0) return;
-        if (ev.target.closest('.react-chip')) return;
+        if (ev.target.closest('.react-chip, .reply-quote')) return;
         const msgEl = ev.target.closest('.chat-message[data-id]');
         if (!msgEl || !ev.target.closest('.chat-bubble')) return;
         startX = ev.clientX; startY = ev.clientY; held = false;
@@ -429,45 +830,74 @@ function attachChatGestures() {
         if (gestureTimer && (Math.abs(ev.clientX - startX) > 10 || Math.abs(ev.clientY - startY) > 10)) cancel();
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => box.addEventListener(t, cancel));
-    box.addEventListener('scroll', cancel, { passive: true });
-    // правый клик на компьютере — то же меню
     box.addEventListener('contextmenu', (ev) => {
         const msgEl = ev.target.closest('.chat-message[data-id]');
-        if (msgEl && ev.target.closest('.chat-bubble')) { ev.preventDefault(); openMsgMenu(msgEl); }
+        if (msgEl && ev.target.closest('.chat-bubble')) { ev.preventDefault(); cancel(); held = true; openMsgMenu(msgEl); }
     });
+
+    // Клики ловим в фазе перехвата: так удержание/реакция не открывает объявление
     box.addEventListener('click', (ev) => {
-        if (held) { held = false; ev.preventDefault(); return; }
+        if (held) { held = false; ev.stopPropagation(); ev.preventDefault(); return; }
         const chip = ev.target.closest('.react-chip');
         if (chip) {
+            ev.stopPropagation(); ev.preventDefault();
             const msgEl = chip.closest('.chat-message[data-id]');
             if (msgEl) toggleReaction(msgEl.dataset.id, chip.dataset.emoji);
             return;
         }
         const q = ev.target.closest('.reply-quote[data-reply]');
         if (q) {
+            ev.stopPropagation(); ev.preventDefault();
             const target = box.querySelector(`.chat-message[data-id="${CSS.escape(q.dataset.reply)}"]`);
             if (target) { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); target.classList.add('flash'); setTimeout(() => target.classList.remove('flash'), 1200); }
+            return;
         }
-    });
+        const ga = ev.target.closest('.group-ad[data-ad]');
+        if (ga) {
+            ev.stopPropagation(); ev.preventDefault();
+            if (findAd(ga.dataset.ad)) openListing(ga.dataset.ad); else showToast('Это объявление недоступно на вашем устройстве');
+        }
+    }, true);
 }
 
-// Подключаем жесты каждый раз, когда открывается общий чат
+// Подключаем жесты и реакции на объявления при открытии общего чата
 (function patchChatOpen() {
     const origOpen = openChatRoom;
-    openChatRoom = function () {
-        currentDm = null;
+    openChatRoom = function (roomId) {
+        currentDm = null; currentGroup = null;
         clearReply();
         closeMsgMenu();
         origOpen.apply(this, arguments);
         attachChatGestures();
+        if (roomId === 'housing') whenSocketReady(fetchAdReactions, () => {});
     };
     const origClose = closeGroup;
     closeGroup = function () {
         clearReply();
         closeMsgMenu();
-        currentDm = null;
+        currentDm = null; currentGroup = null;
         origClose.apply(this, arguments);
     };
 })();
 
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeMsgMenu(); });
+
+// ---------- ссылка-приглашение ?join=КОД ----------
+function handleJoinLink() {
+    let code = null;
+    try { code = new URLSearchParams(location.search).get('join'); } catch (e) {}
+    if (code) {
+        try { localStorage.setItem('tell-pending-join', code); history.replaceState(null, '', location.pathname); } catch (e) {}
+    }
+    let pending = '';
+    try { pending = localStorage.getItem('tell-pending-join') || ''; } catch (e) {}
+    if (!/^[0-9a-f]{16}$/.test(pending)) return;
+    const run = () => ensureLogin(() => whenSocketReady(() => socketAsk('group-join', { code: pending }, (res) => {
+        try { localStorage.removeItem('tell-pending-join'); } catch (e) {}
+        if (!res.ok) { showToast(res.message || 'Приглашение недействительно'); return; }
+        showToast(res.already ? 'Вы уже в группе «' + res.group.name + '»' : 'Вы в группе «' + res.group.name + '»');
+        openGroupById(res.group.id);
+    })));
+    setTimeout(run, 600);
+}
+handleJoinLink();
