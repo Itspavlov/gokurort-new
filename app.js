@@ -6,6 +6,56 @@
 const SERVER_URL = 'https://tell-server.onrender.com';
 let socket = null;
 let currentRoom = null;
+// 2 — сервер умеет подтверждения (ack) и идентификаторы; 1 — старый сервер
+let serverProtocol = 1;
+
+// Разрешаем в <img> только настоящие картинки из data: или https
+function safeImageSrc(src) {
+    if (typeof src !== 'string') return '';
+    if (/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+\/]+={0,2}$/.test(src)) return src;
+    if (/^https:\/\/[^\s"'<>]+$/.test(src)) return src;
+    return '';
+}
+
+function newClientId() {
+    const a = new Uint8Array(12);
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    return 'c' + Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Отправка с подтверждением. Против старого сервера работает как раньше.
+function emitMessage(payload, onDone) {
+    if (!socket || !socket.connected) { showToast('Сервер недоступен. Проверьте интернет.'); return; }
+    if (serverProtocol < 2) {
+        socket.emit('send-message', payload);
+        if (onDone) onDone(true);
+        return;
+    }
+    const data = Object.assign({ clientId: newClientId() }, payload);
+    let retried = false;
+    const attempt = () => {
+        let answered = false;
+        const timer = setTimeout(() => {
+            if (answered) return;
+            answered = true;
+            if (!retried) { retried = true; attempt(); } // тот же clientId — дубля не будет
+            else { showToast('Не удалось отправить. Проверьте соединение.'); if (onDone) onDone(false); }
+        }, 8000);
+        socket.emit('send-message', data, (res) => {
+            if (answered) return;
+            answered = true; clearTimeout(timer);
+            if (res && res.ok) { if (onDone) onDone(true); return; }
+            if (res && res.code === 'NOT_IN_ROOM' && !retried) {
+                retried = true;
+                socket.emit('join-room', data.room, () => attempt());
+                return;
+            }
+            showToast((res && res.message) || 'Не удалось отправить');
+            if (onDone) onDone(false);
+        });
+    };
+    attempt();
+}
 
 // Кэш сообщений по комнатам
 const messagesCache = {
@@ -184,7 +234,16 @@ function connectSocket() {
         reconnectionDelay: 2000
     });
 
+    socket.on('server-hello', (info) => {
+        serverProtocol = (info && info.protocol) || 1;
+    });
+
+    socket.on('send-error', (e) => {
+        showToast((e && e.message) || 'Не удалось отправить');
+    });
+
     socket.on('connect', () => {
+        serverProtocol = 1; // уточнится после server-hello
         console.log('🟢 Подключено к серверу:', socket.id);
         const statusEl = document.getElementById('chatStatus');
         if (statusEl) statusEl.textContent = 'онлайн';
@@ -204,7 +263,12 @@ function connectSocket() {
     });
 
     socket.on('new-message', (message) => {
-        console.log('💬 Новое сообщение:', message);
+        if (!message || typeof message !== 'object') return;
+        // сообщение из другой комнаты не показываем
+        if (message.room && message.room !== currentRoom) return;
+        // защита от дублей (повторная доставка после переподключения)
+        const cached = currentRoom && messagesCache[currentRoom];
+        if (message.id && cached && cached.some(m => m.id === message.id)) return;
         addMessageToChat(message);
     });
 
@@ -306,8 +370,8 @@ function renderHistory(history) {
 function renderMessageHTML(message, userName) {
     const isMine = message.user === userName;
 
-    const imageBlock = message.image
-        ? `<div class="chat-bubble-image"><img src="${message.image}" alt="Фото" loading="lazy"></div>`
+    const imageBlock = safeImageSrc(message.image)
+        ? `<div class="chat-bubble-image"><img src="${safeImageSrc(message.image)}" alt="Фото" loading="lazy"></div>`
         : '';
 
     const textBlock = message.text
@@ -332,7 +396,7 @@ function renderMessageHTML(message, userName) {
 
         return `
             <div class="chat-message">
-                <div class="chat-avatar" style="background: ${color};">${message.avatar || message.user[0]}</div>
+                <div class="chat-avatar" style="background: ${color};">${escapeHtml(Array.from(String(message.user || '?'))[0] || '?')}</div>
                 <div class="chat-bubble-wrap">
                     <div class="chat-bubble-header">
                         <span class="chat-user-name">${escapeHtml(message.user)}</span>
@@ -349,7 +413,7 @@ function renderMessageHTML(message, userName) {
 }
 
 // ---------- ОТКРЫТИЕ ГРУППЫ ----------
-function openGroup(groupId) {
+function openGroup(groupId, opts) {
     const rooms = {
         housing: { name: 'Жильё', icon: 'fas fa-home', ads: getAllAds() },
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
@@ -360,7 +424,7 @@ function openGroup(groupId) {
     const room = rooms[groupId];
     if (!room) return;
 
-    openChatRoom(groupId, room.name, room.icon, room.ads);
+    openChatRoom(groupId, room.name, room.icon, room.ads, opts || {});
 }
 
 // ---------- ОТКРЫТИЕ ЧАТА ----------
@@ -516,12 +580,7 @@ function sendMessage() {
     const userName = getUserName();
 
     if (socket && socket.connected) {
-        socket.emit('send-message', {
-            room: currentRoom,
-            user: userName,
-            text: text,
-            avatar: userName[0]
-        });
+        emitMessage({ room: currentRoom, user: userName, text: text });
         input.value = '';
 
         // Разфокусируем инпут — чтобы кнопка "Назад" сразу сработала
@@ -557,34 +616,32 @@ function attachImage() {
     document.getElementById('imageInput').click();
 }
 
-function handleImageSelect(event) {
+async function handleImageSelect(event) {
     const file = event.target.files[0];
+    event.target.value = '';
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-        showToast('Картинка слишком большая (макс. 2 МБ)');
-        event.target.value = '';
+    if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+        showToast('Нужна картинка JPEG, PNG, WebP или GIF');
         return;
     }
+    if (file.size > 12 * 1024 * 1024) {
+        showToast('Картинка слишком большая');
+        return;
+    }
+    if (!socket || !socket.connected) { showToast('Сервер недоступен'); return; }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const userName = getUserName();
-
-        if (socket && socket.connected) {
-            socket.emit('send-message', {
-                room: currentRoom,
-                user: userName,
-                text: '',
-                image: e.target.result,
-                avatar: userName[0]
-            });
-        } else {
-            showToast('Сервер недоступен');
+    try {
+        // Сжимаем до 1280 px — сервер принимает не более 1,5 МБ
+        const dataUrl = await fileToDataURL(file, 1280, 0.8);
+        if (dataUrl.length * 0.75 > 1.4 * 1024 * 1024) {
+            showToast('Фото слишком тяжёлое даже после сжатия');
+            return;
         }
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
+        emitMessage({ room: currentRoom, user: getUserName(), text: '', image: dataUrl });
+    } catch (err) {
+        showToast('Не удалось обработать фото');
+    }
 }
 
 // ---------- ЗАКРЫТЬ ЧАТ ----------
