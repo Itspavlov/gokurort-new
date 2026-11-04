@@ -71,7 +71,30 @@ function switchTab(tabName) {
     navItems.forEach(item => {
         item.classList.toggle('active', item.dataset.tab === tabName);
     });
-    
+    // ---------- ПУЗЫРЬ В НИЖНЕЙ ПАНЕЛИ ----------
+const navIndicator = document.querySelector('.nav-indicator');
+
+function moveNavIndicator(animate = true) {
+    const active = document.querySelector('.nav-item.active');
+    if (!active || !navIndicator) return;
+
+    if (!animate) navIndicator.style.transition = 'none';
+
+    navIndicator.style.width = active.offsetWidth + 'px';
+    navIndicator.style.transform = `translateX(${active.offsetLeft}px)`;
+
+    if (animate) {
+        navIndicator.classList.remove('moving');
+        void navIndicator.offsetWidth;
+        navIndicator.classList.add('moving');
+    } else {
+        void navIndicator.offsetWidth;
+        navIndicator.style.transition = '';
+    }
+}
+
+window.addEventListener('load', () => moveNavIndicator(false));
+window.addEventListener('resize', () => moveNavIndicator(false));
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
