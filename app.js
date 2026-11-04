@@ -30,10 +30,10 @@ function setTheme(theme) {
 
     if (theme === 'dark') {
         themeIcon.className = 'fas fa-moon';
-        metaTheme.setAttribute('content', '#0A0F24');
+        metaTheme.setAttribute('content', '#060F1C');
     } else {
         themeIcon.className = 'fas fa-sun';
-        metaTheme.setAttribute('content', '#EEF1FB');
+        metaTheme.setAttribute('content', '#E9F5F7');
     }
 }
 
@@ -267,7 +267,7 @@ function renderMessageHTML(message, userName) {
             </div>
         `;
     } else {
-        const colors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
+        const colors = ['#E8643F', '#12A8A8', '#D98A1E', '#7C5CFF', '#3E7BFF', '#C2417A'];
         const color = colors[Math.abs(hashCode(message.user)) % colors.length];
 
         return `
@@ -401,7 +401,7 @@ async function loadHistoryHTTP(roomId) {
 
 // ---------- СООБЩЕНИЕ-ОБЪЯВЛЕНИЕ ----------
 function renderHousingMessage(ad) {
-    const colors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
+    const colors = ['#E8643F', '#12A8A8', '#D98A1E', '#7C5CFF', '#3E7BFF', '#C2417A'];
     const color = colors[ad.id % colors.length];
     const userName = ['Александр', 'Мария', 'Дмитрий', 'Анна', 'Сергей', 'Елена'][ad.id % 6];
     const time = ['10:23', '10:45', '11:12', '12:30', '13:15', '14:02'][ad.id % 6];
@@ -579,7 +579,67 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
+// ---------- ЛЕНТА «ГОРЯЧЕЕ СЕГОДНЯ» ----------
+function renderFeatured() {
+    const list = document.getElementById('featuredList');
+    if (!list || typeof HOUSING_ADS === 'undefined') return;
+
+    const hot = [...HOUSING_ADS].sort((a, b) => b.views - a.views).slice(0, 6);
+
+    list.innerHTML = hot.map(ad => `
+        <div class="ad-card" onclick="openGroup('housing')">
+            <div class="ad-card-img">
+                <img src="${ad.image}" alt="${ad.title}" loading="lazy" onerror="this.style.display='none'">
+                ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
+                ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
+            </div>
+            <div class="ad-card-body">
+                <div class="ad-card-price">${ad.price}</div>
+                <div class="ad-card-title">${ad.title}</div>
+                <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${ad.location}</span></div>
+            </div>
+        </div>
+    `).join('');
+
+    const count = document.getElementById('housingCount');
+    if (count) {
+        const n = HOUSING_ADS.length;
+        const last = n % 10, two = n % 100;
+        const word = (two >= 11 && two <= 14) ? 'объявлений'
+            : last === 1 ? 'объявление'
+            : (last >= 2 && last <= 4) ? 'объявления' : 'объявлений';
+        count.textContent = n + ' ' + word;
+    }
+}
+
+// ---------- ПОИСК ----------
+function runSearch() {
+    const input = document.getElementById('searchInput');
+    if (!input) return;
+    const q = input.value.trim().toLowerCase();
+    if (!q) { showToast('Введите, что ищете'); return; }
+
+    const map = [
+        { room: 'work',   words: ['работ', 'ваканс', 'резюме', 'подработ', 'официант', 'повар'] },
+        { room: 'trips',  words: ['поезд', 'попутч', 'трансфер', 'такси', 'довез', 'аэропорт'] },
+        { room: 'market', words: ['продам', 'отдам', 'куплю', 'вещ', 'велосипед', 'мебель'] }
+    ];
+    const hit = map.find(m => m.words.some(w => q.includes(w)));
+
+    input.value = '';
+    input.blur();
+    openGroup(hit ? hit.room : 'housing');
+}
+
+const searchGo = document.getElementById('searchGo');
+const searchInput = document.getElementById('searchInput');
+if (searchGo) searchGo.addEventListener('click', runSearch);
+if (searchInput) searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+});
+
 // ---------- ЗАПУСК ----------
+renderFeatured();
 connectSocket();
 
 console.log('💬 Tell — приложение запущено');
