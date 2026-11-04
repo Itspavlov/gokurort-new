@@ -14,8 +14,12 @@
     <!-- Иконки -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+    <!-- Карта -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="features.css">
 </head>
 <body>
 
@@ -115,31 +119,15 @@
         <!-- ========== ВКЛАДКА 3: СООБЩЕНИЯ ========== -->
         <section class="tab-content" id="tab-messages" style="display:none;">
             <h1 class="page-title">Сообщения</h1>
-            <p class="page-subtitle">Входящие от пользователей</p>
-
-            <div class="placeholder fade-in">
-                <span class="placeholder-icon"><i class="fas fa-inbox"></i></span>
-                <h2 class="placeholder-title">Пока пусто</h2>
-                <p class="placeholder-text">Здесь будут появляться сообщения от других пользователей.<br>Начни общение — напиши кому-нибудь в группе.</p>
-            </div>
+            <p class="page-subtitle">Личные чаты с хозяевами</p>
+            <div id="dialogsRoot"></div>
         </section>
 
         <!-- ========== ВКЛАДКА 4: ПРОФИЛЬ ========== -->
         <section class="tab-content" id="tab-profile" style="display:none;">
             <h1 class="page-title">Профиль</h1>
-            <p class="page-subtitle">Твои настройки и фото</p>
-
-            <div class="profile-avatar-placeholder">
-                <div class="avatar-circle"><i class="fas fa-user"></i></div>
-                <div class="profile-name">Гость</div>
-                <div class="profile-id">ID: не задан</div>
-            </div>
-
-            <div class="placeholder fade-in">
-                <span class="placeholder-icon"><i class="fas fa-cog"></i></span>
-                <h2 class="placeholder-title">Настройки</h2>
-                <p class="placeholder-text">Картинки, настройки профиля, уведомления — скоро</p>
-            </div>
+            <p class="page-subtitle">Ваши данные и объявления</p>
+            <div id="profileRoot"></div>
         </section>
 
     </main>
@@ -169,6 +157,9 @@
 
 </div>
 
+<!-- Карта -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
 <!-- Socket.io клиент (для связи с бэкендом) -->
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
@@ -177,6 +168,8 @@
 
 <!-- Логика приложения -->
 <script src="app.js"></script>
+<script src="listing.js"></script>
+<script src="profile.js"></script>
 
 </body>
 </html>

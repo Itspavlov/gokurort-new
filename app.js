@@ -15,6 +15,62 @@ const messagesCache = {
     trips: null
 };
 
+// ---------- ДАННЫЕ ПОЛЬЗОВАТЕЛЯ И ОБЪЯВЛЕНИЯ ----------
+// Центр карты и ближайшая точка моря по умолчанию — поменяйте на свой город
+const MAP_DEFAULT = [44.8946, 37.3100];
+const BEACH_DEFAULT = [44.8928, 37.2990];
+
+function getProfile() {
+    try {
+        const p = JSON.parse(localStorage.getItem('tell-profile') || 'null');
+        if (p) return p;
+    } catch (e) {}
+    return { name: getUserName(), phone: '', city: '', about: '', avatar: '' };
+}
+
+function saveProfile(p) {
+    localStorage.setItem('tell-profile', JSON.stringify(p));
+    if (p.name) localStorage.setItem('tell-username', p.name);
+}
+
+function getMyAds() {
+    try { return JSON.parse(localStorage.getItem('tell-my-ads') || '[]'); } catch (e) { return []; }
+}
+
+function saveMyAds(list) {
+    try {
+        localStorage.setItem('tell-my-ads', JSON.stringify(list));
+        return true;
+    } catch (e) {
+        showToast('Не хватило места для фото. Уберите часть фото.');
+        return false;
+    }
+}
+
+function getAllAds() {
+    const base = typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [];
+    return [...getMyAds(), ...base];
+}
+
+function findAd(id) {
+    return getAllAds().find(a => String(a.id) === String(id));
+}
+
+// Хозяин объявления: для своих объявлений данные берутся из вашего профиля
+function getOwner(ad) {
+    if (!ad.mine) return ad.owner || {};
+    const p = getProfile();
+    return {
+        id: 'me', name: p.name || getUserName(), phone: p.phone || '', color: '#FF7A59',
+        since: ad.since, about: p.about || '', avatar: p.avatar || '', rating: null, reviews: 0, response: ''
+    };
+}
+
+function adImg(ad, alt) {
+    if (!ad.image) return '';
+    return `<img src="${ad.image}" alt="${escapeHtml(alt || ad.title || '')}" loading="lazy" onerror="this.style.display='none'">`;
+}
+
 // ---------- ТЕМА ----------
 const themeToggle = document.getElementById('themeToggle');
 const themeIcon = themeToggle.querySelector('i');
@@ -98,6 +154,10 @@ function switchTab(tabName, animate = true) {
     });
 
     moveNavIndicator(animate);
+
+    if (tabName === 'profile' && typeof renderProfile === 'function') renderProfile();
+    if (tabName === 'messages' && typeof renderDialogs === 'function') renderDialogs();
+    if (tabName === 'search') renderFeatured();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -291,7 +351,7 @@ function renderMessageHTML(message, userName) {
 // ---------- ОТКРЫТИЕ ГРУППЫ ----------
 function openGroup(groupId) {
     const rooms = {
-        housing: { name: 'Жильё', icon: 'fas fa-home', ads: typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [] },
+        housing: { name: 'Жильё', icon: 'fas fa-home', ads: getAllAds() },
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
         market: { name: 'Продам/Отдам', icon: 'fas fa-shopping-bag', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] }
@@ -304,8 +364,13 @@ function openGroup(groupId) {
 }
 
 // ---------- ОТКРЫТИЕ ЧАТА ----------
-function openChatRoom(roomId, roomName, roomIcon, ads) {
+function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
+    if (socket && currentRoom && currentRoom !== roomId) socket.emit('leave-room', currentRoom);
+
     tabContents.forEach(section => section.style.display = 'none');
+
+    const welcomeTitle = opts.welcomeTitle || `Добро пожаловать в чат «${roomName}»`;
+    const welcomeText = opts.welcomeText || 'Общайтесь, задавайте вопросы, делитесь фото.';
 
     let groupScreen = document.getElementById('group-screen');
     if (!groupScreen) {
@@ -317,7 +382,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
 
     // Проверяем кэш
     const cachedMessages = messagesCache[roomId];
-    const hasCache = cachedMessages !== null;
+    const hasCache = cachedMessages != null;
 
     groupScreen.innerHTML = `
         <div class="chat-header">
@@ -325,7 +390,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div class="chat-header-info">
-                <div class="chat-header-title">${roomName}</div>
+                <div class="chat-header-title">${escapeHtml(roomName)}</div>
                 <div class="chat-header-subtitle" id="chatStatus">подключение...</div>
             </div>
             <button class="chat-header-btn" onclick="showToast('Меню группы — скоро')">
@@ -336,8 +401,8 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
         <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome">
                 <div class="chat-welcome-icon"><i class="${roomIcon}"></i></div>
-                <div class="chat-welcome-title">Добро пожаловать в чат «${roomName}»</div>
-                <div class="chat-welcome-text">Общайтесь, задавайте вопросы, делитесь фото.</div>
+                <div class="chat-welcome-title">${escapeHtml(welcomeTitle)}</div>
+                <div class="chat-welcome-text">${escapeHtml(welcomeText)}</div>
             </div>
             ${ads.map(ad => renderHousingMessage(ad)).join('')}
         </div>
@@ -356,6 +421,11 @@ function openChatRoom(roomId, roomName, roomIcon, ads) {
 
     groupScreen.style.display = 'flex';
     currentRoom = roomId;
+
+    if (opts.prefill) {
+        const inp = document.getElementById('chatInput');
+        if (inp) inp.value = opts.prefill;
+    }
 
     // Если есть кэш — показываем мгновенно
     if (hasCache) {
@@ -401,32 +471,36 @@ async function loadHistoryHTTP(roomId) {
 
 // ---------- СООБЩЕНИЕ-ОБЪЯВЛЕНИЕ ----------
 function renderHousingMessage(ad) {
-    const colors = ['#E8643F', '#12A8A8', '#D98A1E', '#7C5CFF', '#3E7BFF', '#C2417A'];
-    const color = colors[ad.id % colors.length];
-    const userName = ['Александр', 'Мария', 'Дмитрий', 'Анна', 'Сергей', 'Елена'][ad.id % 6];
-    const time = ['10:23', '10:45', '11:12', '12:30', '13:15', '14:02'][ad.id % 6];
+    const owner = getOwner(ad);
+    const name = owner.name || 'Хозяин';
+    const color = owner.color || '#E8643F';
+    const time = ad.time || '';
+    const avatar = owner.avatar
+        ? `<img src="${owner.avatar}" alt="" class="chat-avatar-img">`
+        : escapeHtml(name[0] || '?');
 
     return `
-        <div class="chat-message">
-            <div class="chat-avatar" style="background: ${color};">${userName[0]}</div>
+        <div class="chat-message chat-message-ad" onclick="openListing('${ad.id}')">
+            <div class="chat-avatar" style="background: ${color};">${avatar}</div>
             <div class="chat-bubble-wrap">
                 <div class="chat-bubble-header">
-                    <span class="chat-user-name">${userName}</span>
-                    <span class="chat-time">${time}</span>
+                    <span class="chat-user-name">${escapeHtml(name)}</span>
+                    <span class="chat-time">${escapeHtml(time)}</span>
                 </div>
                 <div class="chat-bubble">
                     <div class="chat-ad-image">
-                        <img src="${ad.image}" loading="lazy" alt="${ad.title}" onerror="this.style.display='none'">
+                        ${adImg(ad)}
                         ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
                         ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
                     </div>
-                    <div class="chat-ad-title">${ad.title}</div>
-                    <div class="chat-ad-price">${ad.price}</div>
+                    <div class="chat-ad-title">${escapeHtml(ad.title)}</div>
+                    <div class="chat-ad-price">${escapeHtml(ad.price)}</div>
                     <div class="chat-ad-location">
                         <i class="fas fa-map-marker-alt"></i>
-                        <span>${ad.location}</span>
+                        <span>${escapeHtml(ad.location)}</span>
                     </div>
-                    <div class="chat-ad-desc">${ad.description}</div>
+                    <div class="chat-ad-desc">${escapeHtml(ad.description || '')}</div>
+                    <div class="chat-ad-more">Фото, карта, свободные даты <i class="fas fa-chevron-right"></i></div>
                 </div>
             </div>
         </div>
@@ -582,34 +656,38 @@ function showToast(message) {
 // ---------- ЛЕНТА «ГОРЯЧЕЕ СЕГОДНЯ» ----------
 function renderFeatured() {
     const list = document.getElementById('featuredList');
-    if (!list || typeof HOUSING_ADS === 'undefined') return;
-
-    const hot = [...HOUSING_ADS].sort((a, b) => b.views - a.views).slice(0, 6);
-
-    list.innerHTML = hot.map(ad => `
-        <div class="ad-card" onclick="openGroup('housing')">
-            <div class="ad-card-img">
-                <img src="${ad.image}" alt="${ad.title}" loading="lazy" onerror="this.style.display='none'">
-                ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
-                ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
-            </div>
-            <div class="ad-card-body">
-                <div class="ad-card-price">${ad.price}</div>
-                <div class="ad-card-title">${ad.title}</div>
-                <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${ad.location}</span></div>
-            </div>
-        </div>
-    `).join('');
+    const all = getAllAds();
 
     const count = document.getElementById('housingCount');
     if (count) {
-        const n = HOUSING_ADS.length;
+        const n = all.length;
         const last = n % 10, two = n % 100;
         const word = (two >= 11 && two <= 14) ? 'объявлений'
             : last === 1 ? 'объявление'
             : (last >= 2 && last <= 4) ? 'объявления' : 'объявлений';
         count.textContent = n + ' ' + word;
     }
+
+    if (!list) return;
+
+    const mine = getMyAds();
+    const top = [...(typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [])].sort((a, b) => b.views - a.views);
+    const hot = [...mine, ...top].slice(0, 7);
+
+    list.innerHTML = hot.map(ad => `
+        <div class="ad-card" onclick="openListing('${ad.id}')">
+            <div class="ad-card-img">
+                ${adImg(ad)}
+                ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
+                ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
+            </div>
+            <div class="ad-card-body">
+                <div class="ad-card-price">${escapeHtml(ad.price)}</div>
+                <div class="ad-card-title">${escapeHtml(ad.title)}</div>
+                <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
+            </div>
+        </div>
+    `).join('');
 }
 
 // ---------- ПОИСК ----------
