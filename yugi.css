@@ -98,10 +98,10 @@
 .vc-dur { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; padding: 3px 9px; border-radius: 12px; background: rgba(0, 0, 0, .5); color: #fff; font: 700 12px var(--font); }
 
 /* ===== поле ввода: компактное, без свечения ===== */
-#group-screen .chat-input-wrapper.compact { gap: 2px; padding: 3px 4px; margin-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); position: relative; box-shadow: none; }
-#group-screen .chat-input-wrapper.compact .chat-input { padding: 8px 6px; font-size: 16px; }
+#group-screen .chat-input-wrapper.compact { gap: 10px; padding-right: 8px !important; padding: 3px 4px; margin-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); position: relative; box-shadow: none; }
+#group-screen .chat-input-wrapper.compact .chat-input { padding: 8px 6px 8px 12px; font-size: 16px; }
 #group-screen .chat-input-wrapper.compact .chat-send-btn { width: 36px; height: 36px; font-size: 14px; box-shadow: none; background: var(--glass-strong, rgba(255,255,255,.16)); color: var(--text); border: 1px solid var(--glass-border); }
-.rec-btn { width: 36px; height: 36px; flex: none; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); font-size: 17px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; outline: none; box-shadow: none; transition: transform .15s, color .15s; }
+.rec-btn { width: 38px; height: 38px; flex: none; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); font-size: 17px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; outline: none; box-shadow: none; transition: transform .15s, color .15s; }
 .rec-btn:focus, .rec-btn:focus-visible, .rec-btn:active { outline: none; box-shadow: none; background: transparent; }
 .rec-btn.hold-active { color: var(--text); transform: scale(1.25); }
 #group-screen .chat-input-wrapper.compact .chat-send-btn:active, .rec-btn:active { box-shadow: none; }

@@ -5,7 +5,7 @@
 // ============================================
 
 const REC_LIMIT = { video: 60, voice: 120 };
-const CANCEL_PX = 90, LOCK_PX = 70, MIN_MS = 700;
+const CANCEL_PX = 70, LOCK_PX = 60, MIN_MS = 700;
 const VM_ID_RE = /^vm_[0-9a-f]{32}$/;
 let rec = null;
 
@@ -116,7 +116,9 @@ function syncInputBar() {
     const input = document.getElementById('chatInput');
     if (!w || !input) return;
     const send = w.querySelector('.chat-send-btn');
-    if (send) send.style.display = input.value.trim() ? '' : 'none';
+    const has = !!input.value.trim();
+    if (send) send.style.display = has ? '' : 'none';
+    w.querySelectorAll('.rec-btn').forEach(b => { b.style.display = has ? 'none' : ''; });
 }
 
 function setupInputBar() {
@@ -133,8 +135,9 @@ function setupInputBar() {
         bindHold(b, kind);
         return b;
     };
-    w.insertBefore(mk('video', 'fa-video', 'Видеокружок: удерживайте кнопку для записи'), input);
-    w.insertBefore(mk('voice', 'fa-microphone', 'Голосовое сообщение: удерживайте кнопку для записи'), w.firstChild);
+    const sendBtn = w.querySelector('.chat-send-btn');
+    w.insertBefore(mk('video', 'fa-video', 'Видеокружок: удерживайте кнопку для записи'), sendBtn);
+    w.insertBefore(mk('voice', 'fa-microphone', 'Голосовое сообщение: удерживайте кнопку для записи'), sendBtn);
     input.addEventListener('input', syncInputBar);
     syncInputBar();
     setTimeout(() => runTour('hold', [{ sel: '.rec-btn[data-kind="voice"]', title: 'Голос и видеокружки', text: 'Удерживайте микрофон — запишется голосовое, камеру — видеокружок. Отпустили — отправилось. Смахните влево — отмена, вверх — запись без удержания.' }]), 900);
@@ -166,15 +169,28 @@ function bindHold(btn, kind) {
         ev.preventDefault();
         try { btn.setPointerCapture(ev.pointerId); } catch (e) {}
         startHold(kind, btn, ev.clientX, ev.clientY, false);
+        if (rec) trackPointer(ev.pointerId);
     });
-    btn.addEventListener('pointermove', (ev) => moveHold(ev.clientX, ev.clientY));
-    btn.addEventListener('pointerup', () => endHold(false));
-    btn.addEventListener('pointercancel', () => endHold(true));
     // с клавиатуры: Enter/пробел запускают запись без удержания
     btn.addEventListener('keydown', (ev) => {
         if ((ev.key === 'Enter' || ev.key === ' ') && !ev.repeat) { ev.preventDefault(); startHold(kind, btn, 0, 0, true); }
     });
 }
+
+// Следим за пальцем на уровне документа: не зависит от захвата указателя и перекрывающего оверлея
+let trackOff = null;
+function trackPointer(id) {
+    untrackPointer();
+    const mv = (e) => { if (e.pointerId === id) moveHold(e.clientX, e.clientY); };
+    const up = (e) => { if (e.pointerId === id) { untrackPointer(); endHold(e.type === 'pointercancel'); } };
+    const tm = (e) => { if (rec && !rec.released) e.preventDefault(); };
+    document.addEventListener('pointermove', mv);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+    document.addEventListener('touchmove', tm, { passive: false });
+    trackOff = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); document.removeEventListener('touchmove', tm); };
+}
+function untrackPointer() { if (trackOff) { trackOff(); trackOff = null; } }
 
 function buildRecUI() {
     const s = rec;
@@ -297,6 +313,7 @@ function onRecStopped(s) {
 function recCleanup() {
     const s = rec; if (!s) return;
     rec = null;
+    untrackPointer();
     clearInterval(s.timer);
     if (s.recorder) { s.recorder.onstop = null; try { if (s.recorder.state !== 'inactive') s.recorder.stop(); } catch (e) {} }
     if (s.stream) s.stream.getTracks().forEach(t => t.stop());
@@ -308,8 +325,8 @@ function recCleanup() {
 function moveHold(x, y) {
     const s = rec; if (!s || s.released || s.locked) return;
     const dx = x - s.sx, dy = y - s.sy;
-    const cancelling = dx < -CANCEL_PX;
-    if (dy < -LOCK_PX && !cancelling) { s.locked = true; paintHint(); return; }
+    const cancelling = dx < -CANCEL_PX && Math.abs(dx) > Math.abs(dy);
+    if (dy < -LOCK_PX && Math.abs(dy) >= Math.abs(dx)) { s.locked = true; s.cancelling = false; s.el.style.setProperty('--dx', '0px'); untrackPointer(); paintHint(); return; }
     if (cancelling !== s.cancelling) { s.cancelling = cancelling; paintHint(); }
     s.el.style.setProperty('--dx', Math.max(-140, Math.min(0, dx)) + 'px');
 }
