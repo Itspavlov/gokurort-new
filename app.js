@@ -789,7 +789,7 @@ function hashCode(str) {
 
 // ---------- КОПИРОВАТЬ ССЫЛКУ ----------
 function copyInviteLink() {
-    const link = 'https://gokurort-new.onrender.com';
+    const link = /^https?:$/.test(location.protocol) && location.hostname !== 'localhost' ? location.origin : 'https://yugiyugi.ru';
     navigator.clipboard.writeText(link).then(() => {
         showToast('Ссылка скопирована!');
     }).catch(() => {
