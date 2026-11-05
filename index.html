@@ -8,8 +8,8 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Tell">
-    <title>Tell — общение и поиск</title>
+    <meta name="apple-mobile-web-app-title" content="YuGi YuGi">
+    <title>YuGi YuGi — жильё, работа и попутчики у моря</title>
 
     <!-- Шрифты, иконки, карта — свои копии из папки vendor/ (создаётся командой node tools/fetch-vendor.js) -->
     <link rel="stylesheet" href="vendor/fonts.css">
@@ -19,6 +19,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="features.css">
+    <link rel="stylesheet" href="yugi.css">
 </head>
 <body>
 
@@ -27,8 +28,8 @@
     <!-- ХЕДЕР -->
     <header class="app-header">
         <div class="app-logo">
-            <div class="app-logo-icon">💬</div>
-            <span class="app-logo-text">Tell</span>
+            <div class="app-logo-icon" aria-hidden="true"><svg viewBox="0 0 48 48" width="34" height="34"><defs><linearGradient id="lgS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC15C"/><stop offset="1" stop-color="#FF7A3D"/></linearGradient><linearGradient id="lgW" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3FD0E0"/><stop offset="1" stop-color="#2B6BFF"/></linearGradient></defs><path d="M6 27a18 18 0 0 1 36 0z" fill="url(#lgS)"/><path d="M3 31c4 0 4-3 8-3s4 3 8 3 4-3 8-3 4 3 8 3 4-3 8-3 2 1 4 2v4c-2-1-2-2-4-2-4 0-4 3-8 3s-4-3-8-3-4 3-8 3-4-3-8-3-4 3-8 3z" fill="url(#lgW)"/><path d="M3 40c4 0 4-3 8-3s4 3 8 3 4-3 8-3 4 3 8 3 4-3 8-3 2 1 4 2v4c-2-1-2-2-4-2-4 0-4 3-8 3s-4-3-8-3-4 3-8 3-4-3-8-3-4 3-8 3z" fill="url(#lgW)" opacity=".75"/></svg></div>
+            <span class="app-logo-text">YuGi <span class="logo-accent">YuGi</span></span>
         </div>
         <div class="app-header-actions">
             <button class="header-btn" id="themeToggle" title="Переключить тему">
@@ -43,7 +44,7 @@
         <!-- ========== ВКЛАДКА 1: КОНТАКТЫ ========== -->
         <section class="tab-content" id="tab-contacts" style="display:none;">
             <h1 class="page-title">Контакты</h1>
-            <p class="page-subtitle">Пригласи друзей в Tell</p>
+            <p class="page-subtitle">Пригласи друзей в YuGi YuGi</p>
 
             <div class="placeholder fade-in">
                 <span class="placeholder-icon"><i class="fas fa-address-book"></i></span>
@@ -65,21 +66,32 @@
 
         <!-- ========== ВКЛАДКА 2: ОНЛАЙН ПОИСК ========== -->
         <section class="tab-content" id="tab-search" style="display:none;">
-            <h1 class="hero-title">Найди своё место у моря</h1>
-            <p class="hero-sub">Жильё, работа, попутчики и вещи рядом — всё в одном чате.</p>
+            <div class="hero-scene" aria-hidden="true">
+                <img class="hero-photo" src="images/hero.jpg" alt="" onerror="this.remove()">
+                <svg class="hero-art" viewBox="0 0 400 300" preserveAspectRatio="xMaxYMin slice">
+                    <defs>
+                        <radialGradient id="hgSun" cx="0.72" cy="0.78" r="0.7"><stop offset="0" stop-color="#FFD58A" stop-opacity=".95"/><stop offset=".25" stop-color="#FF9A5C" stop-opacity=".55"/><stop offset="1" stop-color="#FF7A59" stop-opacity="0"/></radialGradient>
+                        <linearGradient id="hgSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9A5C" stop-opacity=".55"/><stop offset="1" stop-color="#0B2540" stop-opacity="0"/></linearGradient>
+                    </defs>
+                    <rect width="400" height="300" fill="url(#hgSun)"/>
+                    <circle cx="290" cy="212" r="17" fill="#FFE2A8"/>
+                    <rect y="214" width="400" height="86" fill="url(#hgSea)"/>
+                    <g stroke="#FFE2A8" stroke-linecap="round" opacity=".7"><path d="M262 226h56M270 236h40M276 246h28" stroke-width="2"/></g>
+                </svg>
+            </div>
+
+            <h1 class="hero-title">Твоё место<br>у <em>моря</em></h1>
+            <p class="hero-sub">Жильё, работа, попутчики и вещи — в одном приложении.</p>
 
             <div class="search-pill">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Квартира, работа, попутчик…" enterkeyhint="search">
-                <button class="search-go" id="searchGo" aria-label="Искать">
-                    <i class="fas fa-arrow-right"></i>
-                </button>
+                <input type="text" id="searchInput" placeholder="Что ищешь?" enterkeyhint="search">
+                <button class="search-go" id="searchGo" aria-label="Найти">Найти</button>
             </div>
 
             <div class="group-grid">
-                <div class="group-card gc-housing wide" onclick="openGroup('housing')">
+                <div class="group-card gc-housing" onclick="openGroup('housing')">
                     <img class="group-photo" src="images/house6.jpg" alt="" onerror="this.style.display='none'">
-                    <i class="fas fa-home group-ghost"></i>
                     <div class="group-icon"><i class="fas fa-home"></i></div>
                     <div class="group-count" id="housingCount">6 объявлений</div>
                     <div class="group-title">Жильё</div>
@@ -87,30 +99,30 @@
                 </div>
 
                 <div class="group-card gc-work" onclick="openGroup('work')">
-                    <i class="fas fa-briefcase group-ghost"></i>
+                    <img class="group-photo" src="images/work.jpg" alt="" onerror="this.style.display='none'">
                     <div class="group-icon"><i class="fas fa-briefcase"></i></div>
                     <div class="group-title">Работа</div>
-                    <div class="group-desc">Вакансии, резюме</div>
+                    <div class="group-desc">Вакансии на курортах</div>
+                </div>
+
+                <div class="group-card gc-trips" onclick="openGroup('trips')">
+                    <img class="group-photo" src="images/trips.jpg" alt="" onerror="this.style.display='none'">
+                    <div class="group-icon"><i class="fas fa-car"></i></div>
+                    <div class="group-title">Поездки</div>
+                    <div class="group-desc">Попутчики, трансфер</div>
                 </div>
 
                 <div class="group-card gc-market" onclick="openGroup('market')">
-                    <i class="fas fa-shopping-bag group-ghost"></i>
+                    <img class="group-photo" src="images/market.jpg" alt="" onerror="this.style.display='none'">
                     <div class="group-icon"><i class="fas fa-shopping-bag"></i></div>
                     <div class="group-title">Продам / Отдам</div>
-                    <div class="group-desc">Вещи рядом</div>
-                </div>
-
-                <div class="group-card gc-trips wide" onclick="openGroup('trips')">
-                    <i class="fas fa-car group-ghost"></i>
-                    <div class="group-icon"><i class="fas fa-car"></i></div>
-                    <div class="group-title">Поездки</div>
-                    <div class="group-desc">Попутчики и трансфер</div>
+                    <div class="group-desc">Вещи рядом, выгодно</div>
                 </div>
             </div>
 
             <div class="section-head">
-                <h2 class="section-title">Горячее сегодня</h2>
-                <button class="section-link" onclick="openGroup('housing')">Все в «Жилье»</button>
+                <h2 class="section-title">Актуальные объявления</h2>
+                <button class="section-link" onclick="openGroup('housing')">Смотреть все →</button>
             </div>
             <div class="featured-list" id="featuredList"></div>
         </section>

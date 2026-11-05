@@ -60,7 +60,7 @@ function openAuthSheet(onDone, mode = 'login') {
         <div class="auth-error" id="authError"></div>
         <button class="primary-btn wide-btn" id="authSubmit"></button>
         <p class="auth-note">Аккаунт нужен для личных сообщений и чтобы никто не писал под вашим именем. Восстановления пароля пока нет — запомните его.</p>`;
-    openSheet('Аккаунт Tell', body, (el) => {
+    openSheet('Аккаунт YuGi YuGi', body, (el) => {
         let m = mode;
         const submit = el.querySelector('#authSubmit');
         const err = el.querySelector('#authError');
@@ -504,12 +504,12 @@ function openInviteSheet(group, afterDone) {
     const membersHTML = (list) => list.map(m => `<div class="member-row"><div class="chat-avatar" style="background:${dmColor(m.name)}">${e(Array.from(m.name)[0] || '?')}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
     openSheet('Пригласить в «' + e(group.name) + '»', `
         <div class="members" id="invMembers">${membersHTML(group.members)}</div>
-        <label class="field"><span>Имя друга в Tell</span><input id="invName" maxlength="24" placeholder="Как он зарегистрирован"></label>
+        <label class="field"><span>Имя друга в YuGi YuGi</span><input id="invName" maxlength="24" placeholder="Как он зарегистрирован"></label>
         <div class="auth-error" id="invErr"></div>
         <button class="primary-btn wide-btn" id="invAdd"><i class="fas fa-user-plus"></i> Добавить</button>
         <button class="ghost-btn wide-btn" id="invShare" style="margin-top:10px"><i class="fas fa-share-nodes"></i> Поделиться ссылкой</button>
         <button class="ghost-btn wide-btn" id="invDone" style="margin-top:10px">Готово — открыть чат</button>
-        <p class="auth-note">Друг должен зарегистрироваться в Tell. Ссылка-приглашение работает после входа в аккаунт.</p>`, (el) => {
+        <p class="auth-note">Друг должен зарегистрироваться в YuGi YuGi. Ссылка-приглашение работает после входа в аккаунт.</p>`, (el) => {
         const err = el.querySelector('#invErr');
         el.querySelector('#invAdd').addEventListener('click', () => {
             const name = el.querySelector('#invName').value.trim();
@@ -525,9 +525,9 @@ function openInviteSheet(group, afterDone) {
         });
         el.querySelector('#invShare').addEventListener('click', async () => {
             const url = inviteLink(group.code);
-            const text = 'Присоединяйся к группе «' + group.name + '» в Tell — выберем жильё вместе';
+            const text = 'Присоединяйся к группе «' + group.name + '» в YuGi YuGi — выберем жильё вместе';
             try {
-                if (navigator.share) { await navigator.share({ title: 'Tell', text, url }); return; }
+                if (navigator.share) { await navigator.share({ title: 'YuGi YuGi', text, url }); return; }
             } catch (ex) { if (ex && ex.name === 'AbortError') return; }
             try { await navigator.clipboard.writeText(text + '\n' + url); showToast('Ссылка скопирована'); }
             catch (ex) { showToast(url); }
