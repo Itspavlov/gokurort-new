@@ -144,20 +144,20 @@
     </main>
 
     <!-- НИЖНЯЯ НАВИГАЦИЯ -->
-    <nav class="bottom-nav">
+    <nav class="bottom-nav" aria-label="Основная навигация">
         <div class="bottom-nav-inner">
             <span class="nav-indicator"></span>
-            <button class="nav-item" data-tab="contacts">
-                <span class="nav-icon"><i class="fas fa-address-book"></i></span>
-                <span class="nav-label">Контакты</span>
-            </button>
             <button class="nav-item active" data-tab="search">
-                <span class="nav-icon"><i class="fas fa-search"></i></span>
-                <span class="nav-label">Онлайн поиск</span>
+                <span class="nav-icon"><i class="fas fa-house"></i></span>
+                <span class="nav-label">Главная</span>
             </button>
             <button class="nav-item" data-tab="messages">
                 <span class="nav-icon"><i class="fas fa-comment-dots"></i></span>
                 <span class="nav-label">Сообщения</span>
+            </button>
+            <button class="nav-item" data-tab="contacts">
+                <span class="nav-icon"><i class="fas fa-address-book"></i></span>
+                <span class="nav-label">Контакты</span>
             </button>
             <button class="nav-item" data-tab="profile">
                 <span class="nav-icon"><i class="fas fa-user"></i></span>
@@ -178,6 +178,7 @@
 <script src="data/housing.js"></script>
 
 <!-- Логика приложения -->
+<script src="rooms.js"></script>
 <script src="app.js"></script>
 <script src="listing.js"></script>
 <script src="profile.js"></script>

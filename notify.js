@@ -142,7 +142,7 @@ window.showToast = function (message) {
 };
 
 // ---------- ПЕРЕХОД ПО УВЕДОМЛЕНИЮ ----------
-const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing|work|market|trips)|profile)$/;
+const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|trips)|profile)$/;
 
 function openTarget(target) {
     if (typeof target !== 'string' || !OPEN_RE.test(target)) return;
@@ -283,6 +283,7 @@ function notifyCardHTML() {
             <button type="button" class="ghost-btn" id="pushBtn" style="display:none"></button>
         </div>
         <button type="button" class="notify-test" onclick="testBanner()"><i class="fas fa-bell"></i> Показать пример уведомления</button>
+        <button type="button" class="notify-test" onclick="resetTips()"><i class="fas fa-circle-question"></i> Показать подсказки снова</button>
     </div>`;
 }
 

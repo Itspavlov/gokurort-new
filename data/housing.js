@@ -33,6 +33,7 @@ const HOUSING_ADS = [
     {
         id: 1,
         type: 'rent',
+        category: 'apartment',
         title: 'Сдам 1-комн. квартиру',
         price: '2500 ₽/сут',
         priceNum: 2500,
@@ -70,6 +71,7 @@ const HOUSING_ADS = [
     {
         id: 2,
         type: 'rent',
+        category: 'apartment',
         title: 'Сдам студию у моря',
         price: '3000 ₽/сут',
         priceNum: 3000,
@@ -107,6 +109,7 @@ const HOUSING_ADS = [
     {
         id: 3,
         type: 'rent',
+        category: 'guest',
         title: 'Гостевой дом «Уют»',
         price: 'от 2000 ₽/сут',
         priceNum: 2000,
@@ -144,6 +147,7 @@ const HOUSING_ADS = [
     {
         id: 4,
         type: 'sale',
+        category: 'house',
         title: 'Продам дом 120 м²',
         price: '5 500 000 ₽',
         priceNum: 5500000,
@@ -180,6 +184,7 @@ const HOUSING_ADS = [
     {
         id: 5,
         type: 'rent',
+        category: 'apartment',
         title: '2-комн. квартира',
         price: '3500 ₽/сут',
         priceNum: 3500,
@@ -217,6 +222,7 @@ const HOUSING_ADS = [
     {
         id: 6,
         type: 'rent',
+        category: 'hotel',
         title: 'Отель «Волна»',
         price: 'от 3500 ₽/сут',
         priceNum: 3500,

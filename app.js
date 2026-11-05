@@ -493,8 +493,19 @@ function renderMessageHTML(message, userName) {
 
 // ---------- ОТКРЫТИЕ ГРУППЫ ----------
 function openGroup(groupId, opts) {
+    // чаты жилья: общий и по типам (квартиры, дома, отели, комнаты, гостевые)
+    if (isHousingRoom(groupId)) {
+        const cat = housingCatByRoom(groupId);
+        const local = getAllAds().filter(a => !(typeof isRemoteAdId === 'function' && isRemoteAdId(a.id)));
+        const all = cat.id === 'all';
+        openChatRoom(groupId, all ? 'Жильё' : 'Жильё · ' + cat.label, 'fas ' + (all ? 'fa-home' : cat.icon), adsForRoom(groupId)(local), Object.assign({
+            noAttach: true, chips: true,
+            welcomeTitle: all ? 'Жильё у моря: все объявления' : 'Чат «' + cat.label + '»',
+            welcomeText: all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху.' : 'Здесь только объявления этого типа и общение с хозяевами.'
+        }, opts || {}));
+        return;
+    }
     const rooms = {
-        housing: { name: 'Жильё', icon: 'fas fa-home', ads: getAllAds().filter(a => !(typeof isRemoteAdId === 'function' && isRemoteAdId(a.id))), noAttach: true, hint: true },
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
         market: { name: 'Продам/Отдам', icon: 'fas fa-shopping-bag', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] }
@@ -536,10 +547,11 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
                 <div class="chat-header-title">${escapeHtml(roomName)}</div>
                 <div class="chat-header-subtitle" id="chatStatus">подключение...</div>
             </div>
-            <button class="chat-header-btn" onclick="showToast('Меню группы — скоро')">
-                <i class="fas fa-ellipsis-v"></i>
-            </button>
+            ${opts.chips
+                ? `<button class="chat-header-btn chat-help-btn" onclick="housingTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>`
+                : `<button class="chat-header-btn" onclick="showToast('Меню группы — скоро')"><i class="fas fa-ellipsis-v"></i></button>`}
         </div>
+        ${opts.chips ? housingChipsHTML(roomId) : ''}
 
         <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome">
@@ -547,11 +559,6 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
                 <div class="chat-welcome-title">${escapeHtml(welcomeTitle)}</div>
                 <div class="chat-welcome-text">${escapeHtml(welcomeText)}</div>
             </div>
-            ${opts.hint ? `<div class="housing-hint">
-                <i class="fas fa-circle-info"></i>
-                <div><b>Хотите разместить жильё?</b> Это делается во вкладке «Профиль» — кнопка «Добавить жильё». Объявления могут публиковать только проверенные хозяева.</div>
-                <button type="button" onclick="goToProfileFromChat()">В профиль</button>
-            </div>` : ''}
             ${ads.map(ad => renderHousingMessage(ad)).join('')}
         </div>
 
@@ -590,6 +597,8 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
         socket.emit('join-room', roomId);
         document.getElementById('chatStatus').textContent = 'онлайн';
     }
+
+    if (opts.chips) { centerActiveChip(); setTimeout(housingTour, 700); }
 
     // Скролл вниз после отрисовки (несколько раз)
     setTimeout(() => scrollChatToBottom(), 100);
@@ -855,6 +864,9 @@ function runSearch() {
     const q = input.value.trim().toLowerCase();
     if (!q) { showToast('Введите, что ищете'); return; }
 
+    // «дом», «отель» и т. п. ведут сразу в нужный чат жилья
+    const cats = [['guest', ['гостев', 'хостел']], ['hotel', ['отел', 'гостиниц']], ['room', ['комнат']], ['house', ['дом', 'коттедж', 'вилл', 'дач']], ['apartment', ['квартир', 'студи', 'апарт']]];
+    const cat = cats.find(c => c[1].some(w => q.includes(w)));
     const map = [
         { room: 'work',   words: ['работ', 'ваканс', 'резюме', 'подработ', 'официант', 'повар'] },
         { room: 'trips',  words: ['поезд', 'попутч', 'трансфер', 'такси', 'довез', 'аэропорт'] },
@@ -864,7 +876,7 @@ function runSearch() {
 
     input.value = '';
     input.blur();
-    openGroup(hit ? hit.room : 'housing');
+    openGroup(hit ? hit.room : (cat ? 'housing-' + cat[0] : 'housing'));
 }
 
 const searchGo = document.getElementById('searchGo');

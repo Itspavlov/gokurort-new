@@ -91,11 +91,12 @@ function renderProfile() {
             <div class="placeholder">
                 <span class="placeholder-icon"><i class="fas fa-house-chimney"></i></span>
                 <h2 class="placeholder-title">Сдаёте или продаёте жильё?</h2>
-                <p class="placeholder-text">Добавьте фото, условия заселения, место на карте и свободные даты. Объявление появится в чате «Жильё».</p>
+                <p class="placeholder-text">Добавьте фото, условия заселения, место на карте и свободные даты. Объявление появится в чате выбранного типа: квартиры, дома, отели, комнаты или гостевые.</p>
             </div>`}
         <button class="primary-btn wide-btn" onclick="openAdForm()"><i class="fas fa-plus"></i> Добавить жильё</button>
         <p class="profile-foot">Профиль и объявления сохраняются на этом устройстве.</p>
     `;
+    setTimeout(() => { const r = document.getElementById('profileRoot'); if (r && r.offsetParent !== null) hostProfileTip(); }, 800);
 }
 
 // ---------- РЕДАКТОР ПРОФИЛЯ ----------
@@ -197,7 +198,8 @@ function openAdForm(editId) {
         busy: new Set(old ? old.busy : []),
         coords: old && old.coords ? old.coords.slice() : MAP_DEFAULT.slice(),
         beach: old && old.beach ? old.beach.slice() : BEACH_DEFAULT.slice(),
-        pick: 'home'
+        pick: 'home',
+        category: old ? adCategory(old) : 'apartment'
     };
 
     let screen = document.getElementById('form-screen');
@@ -215,6 +217,12 @@ function openAdForm(editId) {
         </div>
 
         <div class="listing-scroll form-scroll" id="formScroll">
+            <div class="form-block">
+                <div class="form-h">Тип жилья</div>
+                <div class="chip-row" id="fmCat">${AD_CATS.map(c => `<button type="button" class="chip chip-toggle ${formState.category === c.id ? 'on' : ''}" data-cat="${c.id}"><i class="fas ${c.icon}"></i>${c.one}</button>`).join('')}</div>
+                <div class="form-hint" id="fmCatHint"></div>
+            </div>
+
             <div class="seg" id="fmType">
                 <button type="button" data-type="rent" class="${formState.type === 'rent' ? 'on' : ''}">Сдаю</button>
                 <button type="button" data-type="sale" class="${formState.type === 'sale' ? 'on' : ''}">Продаю</button>
@@ -289,6 +297,7 @@ function openAdForm(editId) {
     renderFormPhotos();
     formCal = buildCalendar(document.getElementById('fmCal'), { busy: formState.busy, edit: true });
     setTimeout(initPickMap, 80);
+    setTimeout(hostFormTip, 700);
 }
 
 function applyFormType(screen) {
@@ -300,7 +309,21 @@ function applyFormType(screen) {
     document.querySelectorAll('#fmType button').forEach(b => b.classList.toggle('on', b.dataset.type === formState.type));
 }
 
+function catHint() {
+    const c = AD_CATS.find(x => x.id === formState.category) || AD_CATS[0];
+    return 'Объявление появится в чатах «Жильё · ' + c.label + '» и «Жильё» (все).';
+}
+
 function wireAdForm(screen) {
+    const catBox = screen.querySelector('#fmCat'), catHintEl = screen.querySelector('#fmCatHint');
+    if (catHintEl) catHintEl.textContent = catHint();
+    catBox.onclick = (ev) => {
+        const b = ev.target.closest('button[data-cat]');
+        if (!b) return;
+        formState.category = b.dataset.cat;
+        catBox.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+        catHintEl.textContent = catHint();
+    };
     screen.querySelector('#fmType').onclick = (ev) => {
         const b = ev.target.closest('button[data-type]');
         if (!b) return;
@@ -449,6 +472,7 @@ function saveAdForm() {
         mine: true,
         since: formState.since,
         type: formState.type,
+        category: formState.category,
         title,
         priceNum,
         price: sale ? fmtMoney(priceNum) : fmtMoney(priceNum) + '/сут',
@@ -480,7 +504,7 @@ function saveAdForm() {
         closeAdForm();
         renderProfile();
         renderFeatured();
-        showToast('Готово: объявление видят все в чате «Жильё»');
+        showToast('Готово: объявление видно в чате «Жильё · ' + (AD_CATS.find(c => c.id === formState.category) || AD_CATS[0]).label + '»');
     });
 }
 

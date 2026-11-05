@@ -1047,7 +1047,7 @@ function attachChatGestures() {
         closeMsgMenu();
         origOpen.apply(this, arguments);
         attachChatGestures();
-        if (roomId === 'housing') {
+        if (isHousingRoom(roomId)) {
             placeRemoteAds();
             whenSocketReady(fetchAdReactions, () => {});
         }
@@ -1140,18 +1140,19 @@ async function fetchFullAd(id, cb) {
 // Обновляем карточки объявлений в открытом чате «Жильё»
 function refreshHousingAds() {
     const box = document.getElementById('chatMessages');
-    if (!box || currentRoom !== 'housing') return;
+    if (!box || !isHousingRoom(currentRoom)) return;
     placeRemoteAds();
+    refreshHousingChips();
     fetchAdReactions();
 }
 
 // Объявления с сервера стоят в ленте по времени публикации: новые — внизу, как обычные сообщения
 function placeRemoteAds() {
     const box = document.getElementById('chatMessages');
-    if (!box || currentRoom !== 'housing') return;
+    if (!box || !isHousingRoom(currentRoom)) return;
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 160;
     box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
-    const sorted = [...remoteAds].sort((a, b) => (a.created || 0) - (b.created || 0));
+    const sorted = adsForRoom(currentRoom)([...remoteAds]).sort((a, b) => (a.created || 0) - (b.created || 0));
     let added = false;
     for (const ad of sorted) {
         const tpl = document.createElement('template');
@@ -1174,7 +1175,7 @@ function placeRemoteAds() {
     const orig = renderHistory;
     renderHistory = function () {
         orig.apply(this, arguments);
-        if (currentRoom === 'housing') placeRemoteAds();
+        if (isHousingRoom(currentRoom)) placeRemoteAds();
     };
 })();
 
