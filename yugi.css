@@ -96,28 +96,59 @@
 .vc-play { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(0, 0, 0, .45); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; padding-left: 3px; box-sizing: border-box; transition: opacity .2s; }
 .vc.playing .vc-play { opacity: 0; }
 .vc-dur { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; padding: 3px 9px; border-radius: 12px; background: rgba(0, 0, 0, .5); color: #fff; font: 700 12px var(--font); }
-.chat-video-btn { background: var(--sun); }
 
-.vr-overlay { position: fixed; inset: 0; z-index: 99995; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 26px);
-    background: rgba(4, 9, 20, .94); color: #fff; }
-.vr-top { width: 100%; max-width: 420px; display: flex; align-items: center; justify-content: space-between; }
-.vr-x, .vr-flip { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .12); color: #fff; font-size: 18px; cursor: pointer; }
-.vr-time { font: 800 18px var(--font); font-variant-numeric: tabular-nums; }
-.vr-stage { position: relative; width: min(78vw, 340px); height: min(78vw, 340px); }
-.vr-circle { position: absolute; inset: 6px; border-radius: 50%; overflow: hidden; background: #000; }
-.vr-circle video { width: 100%; height: 100%; object-fit: cover; }
-.vr-circle video.mirror { transform: scaleX(-1); }
+/* ===== поле ввода: компактное, без свечения ===== */
+#group-screen .chat-input-wrapper.compact { gap: 2px; padding: 3px 4px; margin-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); position: relative; box-shadow: none; }
+#group-screen .chat-input-wrapper.compact .chat-input { padding: 8px 6px; font-size: 16px; }
+#group-screen .chat-input-wrapper.compact .chat-send-btn { width: 36px; height: 36px; font-size: 14px; box-shadow: none; background: var(--glass-strong, rgba(255,255,255,.16)); color: var(--text); border: 1px solid var(--glass-border); }
+.rec-btn { width: 36px; height: 36px; flex: none; border: 0; border-radius: 50%; background: transparent; color: var(--text-secondary); font-size: 17px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; outline: none; box-shadow: none; transition: transform .15s, color .15s; }
+.rec-btn:focus, .rec-btn:focus-visible, .rec-btn:active { outline: none; box-shadow: none; background: transparent; }
+.rec-btn.hold-active { color: var(--text); transform: scale(1.25); }
+#group-screen .chat-input-wrapper.compact .chat-send-btn:active, .rec-btn:active { box-shadow: none; }
+
+/* ===== запись голоса ===== */
+.rec-strip { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 16px; border-radius: inherit;
+    background: var(--glass-strong, rgba(20, 30, 48, .82)); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); color: var(--text); font: 600 14px var(--font); }
+.chat-input-wrapper.recording > :not(.rec-strip) { visibility: hidden; }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #FF4B4B; animation: recBlink 1s infinite; flex: none; }
+.rec-time { font-variant-numeric: tabular-nums; font-weight: 800; min-width: 38px; }
+.rec-hint { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); font-weight: 500; transform: translateX(calc(var(--dx, 0px) * .5)); }
+.rec-strip[data-cancel="1"] .rec-hint { color: #FF6B6B; }
+.rec-lock { display: none; gap: 6px; align-items: center; }
+.rec-strip[data-locked="1"] .rec-lock { display: flex; }
+.rec-cancel { border: 0; background: transparent; color: #FF6B6B; font: 700 14px var(--font); padding: 8px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; outline: none; }
+.rec-send { border: 0; width: 36px; height: 36px; border-radius: 50%; background: var(--text); color: var(--bg, #0b1626); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; outline: none; -webkit-tap-highlight-color: transparent; }
+@keyframes recBlink { 50% { opacity: .25; } }
+
+/* ===== запись кружка: размытый прозрачный фон ===== */
+.vr-overlay { position: fixed; inset: 0; z-index: 99995; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 20px;
+    background: rgba(20, 28, 44, .28); backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2); color: #fff; touch-action: none; }
+.vr-time { font: 800 18px var(--font); font-variant-numeric: tabular-nums; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.vr-stage { position: relative; width: min(74vw, 320px); height: min(74vw, 320px); transform: translateX(calc(var(--dx, 0px) * .4)); transition: transform .05s; }
+.vr-circle { position: absolute; inset: 5px; border-radius: 50%; overflow: hidden; background: rgba(0,0,0,.25); }
+.vr-circle video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.vr-overlay[data-cancel="1"] .vr-stage { opacity: .55; }
 .vr-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); --p: 0; }
-.vr-ring circle { fill: none; stroke: #FF4B4B; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 301.6; stroke-dashoffset: calc(301.6 * (1 - var(--p))); }
-.vr-hint { min-height: 40px; max-width: 18em; text-align: center; font-size: 15px; line-height: 1.35; color: rgba(236, 243, 255, .8); }
-.vr-actions { width: 100%; max-width: 420px; display: flex; align-items: center; justify-content: center; gap: 18px; min-height: 76px; }
-.vr-rec { width: 76px; height: 76px; border-radius: 50%; border: 4px solid #fff; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.vr-rec span { width: 52px; height: 52px; border-radius: 50%; background: #FF4B4B; transition: all .2s; }
-.vr-overlay[data-mode="recording"] .vr-rec span { width: 28px; height: 28px; border-radius: 8px; }
-.vr-again, .vr-send { height: 48px; padding: 0 20px; border-radius: 24px; border: 0; font: 800 15px var(--font); cursor: pointer; display: none; gap: 8px; align-items: center; }
-.vr-again { background: rgba(255, 255, 255, .14); color: #fff; }
-.vr-send { background: var(--sun); color: #3A1406; }
-.vr-overlay[data-mode="review"] .vr-rec, .vr-overlay[data-mode="sending"] .vr-rec { display: none; }
-.vr-overlay[data-mode="review"] .vr-again, .vr-overlay[data-mode="review"] .vr-send, .vr-overlay[data-mode="sending"] .vr-send, .vr-overlay[data-mode="sending"] .vr-again { display: inline-flex; }
-.vr-overlay[data-mode="sending"] .vr-send, .vr-overlay[data-mode="sending"] .vr-again { opacity: .5; pointer-events: none; }
-.vr-overlay:not([data-mode="preview"]) .vr-flip { visibility: hidden; }
+.vr-ring circle { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 301.6; stroke-dashoffset: calc(301.6 * (1 - var(--p))); }
+.vr-hint { min-height: 22px; max-width: 18em; text-align: center; font-size: 14px; line-height: 1.35; color: rgba(255,255,255,.92); text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.vr-overlay[data-cancel="1"] .vr-hint { color: #FF8A8A; }
+.vr-actions { display: none; gap: 14px; }
+.vr-overlay[data-locked="1"] .vr-actions { display: flex; }
+.vr-actions .rec-cancel { background: rgba(255,255,255,.16); color: #fff; border-radius: 22px; height: 44px; padding: 0 20px; }
+.vr-actions .rec-send { width: auto; height: 44px; padding: 0 20px; border-radius: 22px; gap: 8px; font: 700 14px var(--font); background: #fff; color: #10203a; }
+
+/* ===== голосовое сообщение ===== */
+.vm { --p: 0; display: flex; align-items: center; gap: 10px; min-width: 210px; max-width: 260px; cursor: pointer; -webkit-tap-highlight-color: transparent; outline: none; }
+.vm-play { width: 36px; height: 36px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.26); color: inherit; font-size: 13px; }
+.vm-wave { flex: 1; height: 26px; display: flex; align-items: center; gap: 2px; }
+.vm-wave b { flex: 1; min-width: 2px; border-radius: 2px; background: currentColor; opacity: .35; transition: opacity .15s; }
+.vm-wave b.on { opacity: 1; }
+.vm-dur { font: 600 12px var(--font); font-variant-numeric: tabular-nums; opacity: .8; min-width: 32px; text-align: right; }
+
+/* ===== «Моя группа»: узкая строка ===== */
+.my-group-card.slim { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; margin-bottom: 10px; border-radius: 18px; background: var(--glass); }
+.my-group-card.slim .my-group-icon { width: 30px; height: 30px; border-radius: 10px; font-size: 14px; flex: none; }
+.my-group-card.slim .slim-text { flex: 1; min-width: 0; font: 700 14px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.my-group-card.slim .slim-text small { display: block; font-weight: 500; font-size: 11px; color: var(--text-secondary); }
+.my-group-card.slim .primary-btn { width: auto; margin: 0; height: 34px; padding: 0 14px; font-size: 13px; box-shadow: none; flex: none; }
+

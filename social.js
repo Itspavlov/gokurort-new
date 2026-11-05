@@ -610,12 +610,12 @@ function renderDialogs() {
     if (!root) return;
 
     const banner = (hasGroups) => `
-        <div class="my-group-card">
-            <div class="my-group-head"><span class="my-group-icon"><i class="fas fa-users"></i></span><h2>Моя группа</h2></div>
-            <p>Создайте группу и добавляйте тех, с кем планируете отдыхать. Скидывайте объявления, ставьте реакции и выбирайте жильё и развлечения вместе.</p>
+        <div class="my-group-card slim">
+            <span class="my-group-icon"><i class="fas fa-users"></i></span>
+            <div class="slim-text">Моя группа<small>Друзья и совместный отдых</small></div>
             ${getAccount()
-                ? `<button class="primary-btn" onclick="openCreateGroupSheet()"><i class="fas fa-plus"></i> ${hasGroups ? 'Ещё одна группа' : 'Создать группу'}</button>`
-                : `<button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти, чтобы создать</button>`}
+                ? `<button class="primary-btn" onclick="openCreateGroupSheet()"><i class="fas fa-plus"></i> ${hasGroups ? 'Ещё' : 'Создать'}</button>`
+                : `<button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти</button>`}
         </div>`;
 
     if (!getAccount()) {
