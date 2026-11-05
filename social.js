@@ -321,8 +321,6 @@ function onDmMessage(m) {
         }
         return;
     }
-    const me = getAccount();
-    if (me && m.from && m.from.id !== me.id) showToast('Новое сообщение от ' + m.from.name);
     const dlg = document.getElementById('dialogsRoot');
     if (dlg && dlg.offsetParent !== null) renderDialogs();
 }
@@ -834,9 +832,6 @@ function onSocialEvent(ev, d) {
                 if (box) { box.insertAdjacentHTML('beforeend', renderGroupMessage(d)); scrollChatToBottomSmooth(); }
             }
         } else {
-            const me = getAccount();
-            const g = groupsCache.find(x => x.id === d.groupId);
-            if (me && d.from && d.from.id !== me.id) showToast((g ? '«' + g.name + '»: ' : 'Группа: ') + d.from.name);
             const dlg = document.getElementById('dialogsRoot');
             if (dlg && dlg.offsetParent !== null) renderDialogs();
         }

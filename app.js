@@ -379,15 +379,17 @@ function scrollChatToBottom() {
     });
 }
 
+let scrollRaf = 0;
 function scrollChatToBottomSmooth() {
-    const messages = document.getElementById('chatMessages');
-    if (!messages) return;
-
-    requestAnimationFrame(() => {
-        messages.scrollTo({
-            top: messages.scrollHeight,
-            behavior: 'smooth'
-        });
+    // Одно прокручивание за кадр. Если сообщения идут подряд — прыгаем сразу:
+    // «плавная» прокрутка, которую перезапускают каждые 200 мс, как раз и даёт подвисание.
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        const messages = document.getElementById('chatMessages');
+        if (!messages) return;
+        const gap = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+        messages.scrollTo({ top: messages.scrollHeight, behavior: gap < 160 ? 'smooth' : 'auto' });
     });
 }
 
@@ -677,8 +679,7 @@ function sendMessage() {
         if (typeof clearReply === 'function') clearReply();
         input.value = '';
 
-        // Разфокусируем инпут — чтобы кнопка "Назад" сразу сработала
-        input.blur();
+        input.focus(); // клавиатура остаётся открытой — можно писать подряд
     } else {
         showToast('Сервер недоступен. Проверьте интернет.');
     }
