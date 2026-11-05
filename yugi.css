@@ -84,3 +84,40 @@
 .tip-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(236, 243, 255, .6); cursor: pointer; }
 [data-theme="light"] .tip, [data-theme="light"] .tip::before { background: #1B2740; }
 @media (prefers-reduced-motion: reduce) { .tip, .tip-spot { transition: opacity .15s; } }
+
+/* ===== видеокружки ===== */
+.vc { --p: 0; position: relative; width: 210px; height: 210px; border-radius: 50%; overflow: hidden; cursor: pointer; background: #0B1626; flex: none;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, .35); -webkit-tap-highlight-color: transparent; }
+.chat-message-mine .vc { margin-left: auto; }
+.vc video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vc-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+.vc-ring circle { fill: none; stroke: rgba(255, 255, 255, .95); stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 301.6; stroke-dashoffset: calc(301.6 * (1 - var(--p))); opacity: 0; transition: opacity .2s; }
+.vc.playing .vc-ring circle { opacity: 1; }
+.vc-play { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(0, 0, 0, .45); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; padding-left: 3px; box-sizing: border-box; transition: opacity .2s; }
+.vc.playing .vc-play { opacity: 0; }
+.vc-dur { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; padding: 3px 9px; border-radius: 12px; background: rgba(0, 0, 0, .5); color: #fff; font: 700 12px var(--font); }
+.chat-video-btn { background: var(--sun); }
+
+.vr-overlay { position: fixed; inset: 0; z-index: 99995; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 26px);
+    background: rgba(4, 9, 20, .94); color: #fff; }
+.vr-top { width: 100%; max-width: 420px; display: flex; align-items: center; justify-content: space-between; }
+.vr-x, .vr-flip { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .12); color: #fff; font-size: 18px; cursor: pointer; }
+.vr-time { font: 800 18px var(--font); font-variant-numeric: tabular-nums; }
+.vr-stage { position: relative; width: min(78vw, 340px); height: min(78vw, 340px); }
+.vr-circle { position: absolute; inset: 6px; border-radius: 50%; overflow: hidden; background: #000; }
+.vr-circle video { width: 100%; height: 100%; object-fit: cover; }
+.vr-circle video.mirror { transform: scaleX(-1); }
+.vr-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); --p: 0; }
+.vr-ring circle { fill: none; stroke: #FF4B4B; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 301.6; stroke-dashoffset: calc(301.6 * (1 - var(--p))); }
+.vr-hint { min-height: 40px; max-width: 18em; text-align: center; font-size: 15px; line-height: 1.35; color: rgba(236, 243, 255, .8); }
+.vr-actions { width: 100%; max-width: 420px; display: flex; align-items: center; justify-content: center; gap: 18px; min-height: 76px; }
+.vr-rec { width: 76px; height: 76px; border-radius: 50%; border: 4px solid #fff; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.vr-rec span { width: 52px; height: 52px; border-radius: 50%; background: #FF4B4B; transition: all .2s; }
+.vr-overlay[data-mode="recording"] .vr-rec span { width: 28px; height: 28px; border-radius: 8px; }
+.vr-again, .vr-send { height: 48px; padding: 0 20px; border-radius: 24px; border: 0; font: 800 15px var(--font); cursor: pointer; display: none; gap: 8px; align-items: center; }
+.vr-again { background: rgba(255, 255, 255, .14); color: #fff; }
+.vr-send { background: var(--sun); color: #3A1406; }
+.vr-overlay[data-mode="review"] .vr-rec, .vr-overlay[data-mode="sending"] .vr-rec { display: none; }
+.vr-overlay[data-mode="review"] .vr-again, .vr-overlay[data-mode="review"] .vr-send, .vr-overlay[data-mode="sending"] .vr-send, .vr-overlay[data-mode="sending"] .vr-again { display: inline-flex; }
+.vr-overlay[data-mode="sending"] .vr-send, .vr-overlay[data-mode="sending"] .vr-again { opacity: .5; pointer-events: none; }
+.vr-overlay:not([data-mode="preview"]) .vr-flip { visibility: hidden; }

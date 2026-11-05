@@ -158,7 +158,7 @@ function openTarget(target) {
 // ---------- ВХОДЯЩЕЕ УВЕДОМЛЕНИЕ ----------
 function viewingTarget(p) {
     if (!p.open) return false;
-    if (typeof currentDm !== 'undefined' && currentDm && p.open === 'dm:' + currentDm.id) return true;
+    if (typeof currentDm !== 'undefined' && currentDm && p.open === 'dm:' + currentDm.convId) return true;
     if (typeof currentGroup !== 'undefined' && currentGroup && p.open === 'group:' + currentGroup.id) return true;
     if (typeof currentRoom !== 'undefined' && currentRoom && p.open === 'room:' + currentRoom) return true;
     return false;
