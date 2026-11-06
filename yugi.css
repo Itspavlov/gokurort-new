@@ -152,3 +152,44 @@
 .my-group-card.slim .slim-text small { display: block; font-weight: 500; font-size: 11px; color: var(--text-secondary); }
 .my-group-card.slim .primary-btn { width: auto; margin: 0; height: 34px; padding: 0 14px; font-size: 13px; box-shadow: none; flex: none; }
 
+
+/* ===== Ищут / Предлагают, запросы арендаторов ===== */
+.seek-bar { flex: none; display: flex; align-items: center; gap: 8px; margin: 4px 14px 2px; }
+.seek-tabs { flex: 1; min-width: 0; display: flex; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); }
+.seek-tab { flex: 1; height: 34px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font: 700 13px var(--font); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; -webkit-tap-highlight-color: transparent; outline: none; }
+.seek-tab.on { background: var(--glass-strong); color: var(--text); }
+.seek-tab b { font-size: 11px; opacity: .8; }
+.seek-tab b:empty { display: none; }
+.seek-add { flex: none; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--text); color: #0b1626; font: 800 13px var(--font); cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; outline: none; font-variant-numeric: tabular-nums; }
+#chatMessages.view-seek > :not(#reqBlock) { display: none !important; }
+#chatMessages.view-offer #reqBlock { display: none; }
+#reqBlock { display: flex; flex-direction: column; gap: 10px; margin: 0 0 6px; }
+#reqBlock:empty { display: none; }
+.req-card { padding: 12px 14px; border-radius: 20px; background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.req-card.mine { border-color: rgba(255, 255, 255, .28); }
+.req-head { display: flex; align-items: center; gap: 10px; }
+.req-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.req-title b { font-size: 15px; }
+.req-title small { font-size: 11px; color: var(--text-secondary); }
+.req-status { font: 700 11px var(--font); font-style: normal; padding: 3px 9px; border-radius: 999px; background: var(--glass-strong); }
+.req-lines { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13px; color: var(--text-secondary); }
+.req-lines i { margin-right: 6px; opacity: .8; }
+.req-text { margin: 8px 0 0; font-size: 14px; line-height: 1.4; }
+.req-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.req-actions button { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); font: 700 13px var(--font); cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.req-actions button.main { background: var(--text); color: #0b1626; border-color: transparent; }
+.req-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 26px 18px; color: var(--text-secondary); font-size: 14px; }
+.req-empty i { font-size: 26px; opacity: .6; }
+.req-empty b { color: var(--text); }
+.req-mine { display: flex; flex-direction: column; gap: 10px; }
+.rq-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sheet-panel select, .sheet-panel textarea { width: 100%; box-sizing: border-box; }
+.quota-line { margin: 0 4px 10px; font: 600 13px var(--font); color: var(--text-secondary); text-align: center; }
+.quota-line.full { color: #FF8A6B; }
+#form-screen .quota-line { margin: 10px 18px; }
+.rq-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.rq-row .field { min-width: 0; margin-bottom: 14px; }
+.field select { width: 100%; box-sizing: border-box; padding: 13px 16px; border-radius: var(--r-md); background: var(--glass); border: 1px solid var(--glass-border); color: var(--text); font: 16px var(--font); outline: none; appearance: none; -webkit-appearance: none; }
+.field select option { color: #10203a; }
+.field input[type="date"] { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.seek-tab { font-size: 12.5px; padding: 0 4px; }
