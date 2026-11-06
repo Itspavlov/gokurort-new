@@ -229,3 +229,10 @@
 .pref-sw::after { content: ''; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .2s; }
 .pref-row input:checked + .pref-sw { background: #22C55E; }
 .pref-row input:checked + .pref-sw::after { transform: translateX(18px); }
+
+/* ===== избранное ===== */
+.listing-actions .act-fav { flex: none; height: 52px; padding: 0 16px; border-radius: 26px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 700 14px var(--font); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.listing-actions .act-fav i { transition: transform .2s, color .2s; }
+.listing-actions .act-fav.on i { color: #FF5A6E; transform: scale(1.15); }
+.listing-actions .act-fav span { white-space: nowrap; }
+@media (max-width: 380px) { .listing-actions .act-fav span { display: none; } }
