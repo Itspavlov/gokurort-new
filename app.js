@@ -289,21 +289,18 @@ function connectSocket() {
     socket.on('connect', () => {
         serverProtocol = 1; // уточнится после server-hello
         console.log('🟢 Подключено к серверу:', socket.id);
-        const statusEl = document.getElementById('chatStatus');
-        if (statusEl) statusEl.textContent = 'онлайн';
+        setChatStatus('онлайн');
         if (currentRoom) socket.emit('join-room', currentRoom);
     });
 
     socket.on('disconnect', () => {
         console.log('🔴 Отключено от сервера');
-        const statusEl = document.getElementById('chatStatus');
-        if (statusEl) statusEl.textContent = 'отключено';
+        setChatStatus('отключено');
     });
 
     socket.on('connect_error', (err) => {
         console.error('Ошибка подключения:', err);
-        const statusEl = document.getElementById('chatStatus');
-        if (statusEl) statusEl.textContent = 'ошибка подключения';
+        setChatStatus('ошибка подключения');
     });
 
     socket.on('new-message', (message) => {
@@ -356,6 +353,14 @@ function connectSocket() {
 }
 
 // ---------- СКРОЛЛ ВНИЗ ----------
+// Статус соединения. В чатах комнат заголовка нет, поэтому показываем его только когда связи нет.
+function setChatStatus(text) {
+    const el = document.getElementById('chatStatus');
+    if (el) el.textContent = text;
+    const head = document.querySelector('#group-screen .room-head');
+    if (head) head.classList.toggle('offline', text !== 'онлайн');
+}
+
 function scrollChatToBottom() {
     const messages = document.getElementById('chatMessages');
     if (!messages) return;
@@ -527,17 +532,15 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
     const hasCache = cachedMessages != null;
 
     groupScreen.innerHTML = `
-        <div class="chat-header">
-            <button class="chat-back-btn" onclick="closeGroup()">
+        <div class="chat-header room-head">
+            <button class="chat-back-btn" onclick="closeGroup()" aria-label="Назад">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <div class="chat-header-info">
                 <div class="chat-header-title">${escapeHtml(roomName)}</div>
                 <div class="chat-header-subtitle" id="chatStatus">подключение...</div>
             </div>
-            ${opts.chips
-                ? `<button class="chat-header-btn chat-help-btn" onclick="housingTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>`
-                : `<button class="chat-header-btn" onclick="showToast('Меню группы — скоро')"><i class="fas fa-ellipsis-v"></i></button>`}
+            ${opts.chips ? `<button class="chat-header-btn chat-help-btn" onclick="housingTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>` : ''}
         </div>
         ${opts.chips ? housingChipsHTML(roomId) : ''}
 
@@ -583,7 +586,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
     connectSocket();
     if (socket && socket.connected) {
         socket.emit('join-room', roomId);
-        document.getElementById('chatStatus').textContent = 'онлайн';
+        setChatStatus('онлайн');
     }
 
     if (opts.chips) { centerActiveChip(); setTimeout(housingTour, 700); }
