@@ -27,7 +27,8 @@ function paintFav(btn, id) {
     const on = favIds.has(id);
     btn.classList.toggle('on', on);
     btn.setAttribute('aria-pressed', on);
-    btn.innerHTML = `<i class="fas fa-heart"></i><span>${on ? 'В избранном' : 'В избранное'}</span>`;
+    btn.setAttribute('aria-label', on ? 'Убрать из избранного' : 'В избранное');
+    btn.innerHTML = '<i class="fas fa-heart"></i>';
 }
 
 const _openListingFav = openListing;
@@ -35,13 +36,13 @@ openListing = function (adId) {
     const r = _openListingFav.apply(this, arguments);
     setTimeout(() => {
         const ad = typeof listingAd !== 'undefined' ? listingAd : null;
-        const bar = document.querySelector('#listing-screen .listing-actions, .listing-actions');
-        if (!ad || String(ad.id) !== String(adId) || !bar || bar.querySelector('.act-fav')) return;
+        const gal = document.querySelector('#listing-screen .listing-gallery');
+        if (!ad || String(ad.id) !== String(adId) || !gal || gal.querySelector('.gallery-fav')) return;
         pushRecent(ad);
         if (String(ad.id).startsWith('my-')) return;       // локальные черновики в избранное не добавляем
         const b = document.createElement('button');
-        b.type = 'button'; b.className = 'act-fav';
-        bar.insertBefore(b, bar.querySelector('.act-write'));
+        b.type = 'button'; b.className = 'gallery-fav';
+        gal.appendChild(b);
         paintFav(b, ad.id);
         loadFavIds(() => paintFav(b, ad.id));
         b.addEventListener('click', () => {
