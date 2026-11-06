@@ -203,6 +203,9 @@ function openRequestSheet(edit) {
                     reqView = reqEditing ? reqView : 'seek';
                     applyReqView();
                     loadRequests(refreshMyRequests);
+                    // после публикации сразу показываем найденные варианты во всплывающем окне
+                    if (!reqEditing && d.matches) setTimeout(() => openOptionsSheet(d.request), 350);
+                    else if (!reqEditing) setTimeout(() => openNoMatchSheet(), 350);
                 }).catch(() => { err.textContent = 'Нет связи с сервером'; label(); });
             });
         });
@@ -382,3 +385,8 @@ renderProfile = function () {
     });
     refreshMatchingRequests();
 };
+
+function openNoMatchSheet() {
+    openSheet('Запрос опубликован', `<p class="opt-empty" style="padding:6px 4px 14px">Подходящего жилья в базе пока нет. Хозяева видят ваш запрос и могут предложить варианты: они появятся в карточке запроса, в кнопке «Варианты».</p>
+        <button class="primary-btn wide-btn" id="nmOk">Понятно</button>`, (el) => { el.querySelector('#nmOk').onclick = closeSheet; });
+}
