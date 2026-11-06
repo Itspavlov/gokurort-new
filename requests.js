@@ -49,7 +49,7 @@ function reqCardHTML(r, opts = {}) {
     const found = r.mine && r.status === 'active'
         ? `<button type="button" class="main" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}${r.offerCount ? ' · предложений ' + r.offerCount : ''}</button>` : '';
     const actions = r.mine
-        ? (r.status === 'active' ? found + `<button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
+        ? (r.status === 'active' ? found + `<button type="button" data-act="notify" aria-label="${r.notify === false ? 'Включить уведомления' : 'Выключить уведомления'}" title="${r.notify === false ? 'Уведомления выключены' : 'Уведомлять о подходящем жилье'}"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i></button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` : '');
     return `<div class="req-card${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="req-head"><div class="chat-avatar" style="background:${dmColor(r.ownerName)}">${e(Array.from(r.ownerName)[0] || '?')}</div>
@@ -143,6 +143,14 @@ function onReqCardClick(ev) {
         startDm(r.ownerName, { id: 'req_' + r.id.slice(2, 30), title: 'Запрос: ' + (r.city || 'жильё') + dates },
             `Здравствуйте! Видел ваш запрос${r.city ? ' (' + r.city + ')' : ''}${dates}. Могу предложить жильё: `);
     } else if (act === 'edit') openRequestSheet(r);
+    else if (act === 'notify') {
+        const on = r.notify === false;
+        apiPost(`/api/requests/${encodeURIComponent(r.id)}/notify`, { on }).then(d => {
+            if (!d.ok) { showToast(d.message || 'Не удалось изменить'); return; }
+            showToast(on ? 'Сообщим, когда появится подходящее жильё' : 'Уведомления по этому запросу выключены');
+            loadRequests(refreshMyRequests);
+        }).catch(() => showToast('Нет связи с сервером'));
+    }
     else if (act === 'found' || act === 'closed') {
         fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}/status`, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify({ status: act }) })
             .then(x => x.json()).then(d => {
@@ -223,7 +231,10 @@ function refreshMyRequests() {
 function paintMyRequests() {
     const box = document.getElementById('myReqBox');
     if (!box) return;
-    box.innerHTML = myReqs.length ? myReqs.slice(0, 20).map(r => reqCardHTML(r)).join('') : '<p class="profile-foot" style="margin:6px 0 0">Здесь появятся ваши запросы на жильё.</p>';
+    if (!myReqs.length) { box.innerHTML = '<p class="profile-foot" style="margin:6px 0 0">Здесь появятся ваши запросы на жильё. Когда подходящее жильё появится, мы сообщим.</p>'; return; }
+    const act = myReqs.filter(r => r.status === 'active'), hist = myReqs.filter(r => r.status !== 'active');
+    box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(r => reqCardHTML(r)).join('') : '')
+        + (hist.length ? '<div class="opt-sec" style="margin-top:8px">История</div>' + hist.slice(0, 15).map(r => reqCardHTML(r)).join('') : '');
 }
 
 // ---------- счётчик объявлений («Сегодня опубликовано: 2 из 3») ----------
@@ -282,7 +293,7 @@ function tickCooldown() {
 // ---------- обновление в реальном времени ----------
 const _onSocialEventReq = onSocialEvent;
 onSocialEvent = function (ev, d) {
-    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('seekBar')) loadRequests(); }, 400); return; }
+    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('seekBar')) loadRequests(); if (document.getElementById('myReqBox')) refreshMyRequests(); if (document.getElementById('matchReqBox')) refreshMatchingRequests(); }, 400); return; }
     return _onSocialEventReq.apply(this, arguments);
 };
 
