@@ -4,8 +4,8 @@
 // ============================================
 let inboxUnread = 0;
 let inboxTimer = 0;
-const INBOX_ICONS = { dm: 'fa-comment', group: 'fa-user-group', reply: 'fa-reply', invite: 'fa-user-plus', verify: 'fa-shield-halved', listing: 'fa-house-circle-xmark', offer: 'fa-house-circle-check', match: 'fa-magnifying-glass-location', request: 'fa-clock' };
-const INBOX_GROUPS = [['messages', 'Сообщения', 'Личные, групповые и ответы'], ['offers', 'Предложения жилья', 'Хозяева предложили вам жильё'], ['matches', 'Подходящее жильё', 'Появилось жильё под ваш запрос'], ['requests', 'Запросы', 'Срок запроса закончился']];
+const INBOX_ICONS = { dm: 'fa-comment', group: 'fa-user-group', reply: 'fa-reply', invite: 'fa-user-plus', verify: 'fa-shield-halved', listing: 'fa-house-circle-xmark', offer: 'fa-house-circle-check', match: 'fa-magnifying-glass-location', request: 'fa-clock', review: 'fa-star' };
+const INBOX_GROUPS = [['messages', 'Сообщения', 'Личные, групповые и ответы'], ['offers', 'Предложения жилья', 'Хозяева предложили вам жильё'], ['matches', 'Подходящее жильё', 'Появилось жильё под ваш запрос'], ['requests', 'Запросы', 'Срок запроса закончился'], ['reviews', 'Отзывы', 'Новые отзывы и ответы хозяев']];
 
 const inboxHeaders = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });
 const inboxApi = (path, body) => fetch(SERVER_URL + path, body === undefined ? { headers: inboxHeaders() } : { method: 'POST', headers: inboxHeaders(), body: JSON.stringify(body) }).then(r => r.json());

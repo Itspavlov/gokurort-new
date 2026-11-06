@@ -840,7 +840,7 @@ function renderFeatured() {
                 ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
             </div>
             <div class="ad-card-body">
-                <div class="ad-card-price">${escapeHtml(ad.price)}</div>
+                <div class="ad-card-price">${escapeHtml(ad.price)}${typeof ratingBadge === 'function' ? ratingBadge(ad) : ''}</div>
                 <div class="ad-card-title">${escapeHtml(ad.title)}</div>
                 <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
             </div>

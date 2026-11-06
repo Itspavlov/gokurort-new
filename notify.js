@@ -142,12 +142,13 @@ window.showToast = function (message) {
 };
 
 // ---------- ПЕРЕХОД ПО УВЕДОМЛЕНИЮ ----------
-const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|trips)|profile)$/;
+const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|trips)|listing:l_[\w-]{1,40}|profile)$/;
 
 function openTarget(target) {
     if (typeof target !== 'string' || !OPEN_RE.test(target)) return;
     const [kind, id] = target.split(':');
     if (kind === 'profile') { switchTab('profile'); return; }
+    if (kind === 'listing') { if (typeof openListingById === 'function') openListingById(id); return; }
     whenSocketReady(() => {
         if (kind === 'dm') openDmById(id);
         else if (kind === 'group') openGroupById(id);

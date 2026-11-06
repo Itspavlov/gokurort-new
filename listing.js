@@ -375,10 +375,9 @@ function updateCalSummary() {
 }
 
 // ---------- КАРТА ----------
-// Подложка: тёмная или светлая в тон темы (CARTO на данных OpenStreetMap), ключ API не нужен.
+// Подложка: спутниковые снимки Esri World Imagery, ключ API не нужен.
 function mapTiles() {
-    const dark = document.documentElement.getAttribute('data-theme') !== 'light';
-    return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + (dark ? 'dark_all' : 'rastertiles/voyager') + '/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '© OpenStreetMap © CARTO' });
+    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
 }
 
 function initListingMap(ad) {
