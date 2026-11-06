@@ -75,7 +75,7 @@ function openInbox() {
 
 function openInboxPrefs(prefs) {
     prefs = prefs || {};
-    openSheet('Какие уведомления получать', `<div class="pref-list">${INBOX_GROUPS.map(([k, t, s]) => `
+    openSheet('Настройки уведомлений', `${typeof notifyCardHTML === 'function' ? notifyCardHTML() : ''}<div class="sheet-sub">Какие уведомления получать</div><div class="pref-list">${INBOX_GROUPS.map(([k, t, s]) => `
         <label class="pref-row"><span><b>${t}</b><small>${s}</small></span><input type="checkbox" data-g="${k}" ${prefs[k] === false ? '' : 'checked'}><i class="pref-sw"></i></label>`).join('')}</div>
         <p class="profile-foot" style="margin-top:12px">Важные служебные сообщения (проверка хозяина, решения модератора) приходят всегда.</p>
         <button class="primary-btn wide-btn" id="prefBack" style="margin-top:12px">Готово</button>`, (el) => {

@@ -163,31 +163,18 @@ function adImg(ad, alt) {
 }
 
 // ---------- ТЕМА ----------
-const themeToggle = document.getElementById('themeToggle');
-const themeIcon = themeToggle.querySelector('i');
 const html = document.documentElement;
 const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-const savedTheme = localStorage.getItem('tell-theme') || 'dark';
-setTheme(savedTheme);
-
+function getTheme() { return html.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; }
 function setTheme(theme) {
+    theme = theme === 'light' ? 'light' : 'dark';
     html.setAttribute('data-theme', theme);
-    localStorage.setItem('tell-theme', theme);
-
-    if (theme === 'dark') {
-        themeIcon.className = 'fas fa-moon';
-        metaTheme.setAttribute('content', '#060F1C');
-    } else {
-        themeIcon.className = 'fas fa-sun';
-        metaTheme.setAttribute('content', '#E9F5F7');
-    }
+    try { localStorage.setItem('tell-theme', theme); } catch (e) {}
+    if (metaTheme) metaTheme.setAttribute('content', theme === 'dark' ? '#060F1C' : '#E9F5F7');
+    document.querySelectorAll('.theme-seg button').forEach(b => b.classList.toggle('on', b.dataset.theme === theme));
 }
-
-themeToggle.addEventListener('click', () => {
-    const current = html.getAttribute('data-theme');
-    setTheme(current === 'dark' ? 'light' : 'dark');
-});
+setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'dark');
 
 // ---------- ИМЯ ПОЛЬЗОВАТЕЛЯ ----------
 function getUserName() {

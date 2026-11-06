@@ -19,7 +19,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="features.css">
-    <link rel="stylesheet" href="yugi.css?v=7">
+    <link rel="stylesheet" href="yugi.css?v=8">
 </head>
 <body>
 
@@ -32,11 +32,9 @@
             <span class="app-logo-text">YuGi <span class="logo-accent">YuGi</span></span>
         </div>
         <div class="app-header-actions">
+            <button class="header-btn" id="favBtn" aria-label="Избранное" title="Избранное"><i class="fas fa-heart"></i></button>
             <button class="header-btn bell-btn" id="bellBtn" aria-label="Уведомления" title="Уведомления">
                 <i class="fas fa-bell"></i><span class="bell-badge" id="bellBadge" hidden>0</span>
-            </button>
-            <button class="header-btn" id="themeToggle" title="Переключить тему">
-                <i class="fas fa-moon"></i>
             </button>
         </div>
     </header>
@@ -139,8 +137,6 @@
 
         <!-- ========== ВКЛАДКА 4: ПРОФИЛЬ ========== -->
         <section class="tab-content" id="tab-profile" style="display:none;">
-            <h1 class="page-title">Профиль</h1>
-            <p class="page-subtitle">Ваши данные и объявления</p>
             <div id="profileRoot"></div>
         </section>
 
@@ -184,13 +180,13 @@
 <script src="rooms.js"></script>
 <script src="app.js"></script>
 <script src="listing.js"></script>
-<script src="profile.js"></script>
+<script src="profile.js?v=2"></script>
     <script src="social.js"></script>
     <script src="notify.js"></script>
 <script src="circles.js?v=3"></script>
-<script src="requests.js?v=5"></script>
-<script src="inbox.js?v=1"></script>
-<script src="favorites.js?v=1"></script>
+<script src="requests.js?v=6"></script>
+<script src="inbox.js?v=2"></script>
+<script src="favorites.js?v=2"></script>
 
 </body>
 </html>

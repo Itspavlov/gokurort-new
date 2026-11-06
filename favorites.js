@@ -76,8 +76,9 @@ function favCardHTML(l, withRemove) {
 let favList = [];
 function paintFavSections() {
     const fav = document.getElementById('favBox'), rec = document.getElementById('recentBox');
-    if (fav) fav.innerHTML = favList.length ? favList.map(l => favCardHTML(l, true)).join('') : '<p class="profile-foot" style="margin:6px 0 0">Нажмите «В избранное» в карточке жилья, чтобы вернуться к нему позже.</p>';
-    const secF = document.getElementById('favSec'); if (secF) secF.querySelector('h2').textContent = 'Избранное' + (favList.length ? ': ' + favList.length : '');
+    if (fav) fav.innerHTML = favList.length ? favList.map(l => favCardHTML(l, true)).join('')
+        : `<div class="req-empty"><i class="fas fa-heart"></i><b>Пока пусто</b><span>${getToken() ? 'Нажмите «В избранное» в карточке жилья, чтобы вернуться к нему позже.' : 'Войдите в аккаунт, чтобы сохранять жильё в избранное.'}</span></div>`;
+    const secF = document.getElementById('favHead'); if (secF) secF.textContent = 'Избранное' + (favList.length ? ': ' + favList.length : '');
     const r = getRecent();
     if (rec) { rec.innerHTML = r.map(x => favCardHTML(x, false)).join(''); const s = document.getElementById('recentSec'); if (s) s.hidden = !r.length; }
 }
@@ -88,28 +89,28 @@ function refreshFavSections() {
     favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; paintFavSections(); } }).catch(() => {});
 }
 
-const _renderProfileFav = renderProfile;
-renderProfile = function () {
-    _renderProfileFav.apply(this, arguments);
-    const root = document.getElementById('profileRoot');
-    if (!root) return;
-    const foot = Array.from(root.children).reverse().find(c => c.classList.contains('profile-foot'));
-    const html = `<div id="favSec"><div class="section-head" style="margin-top:22px"><h2 class="section-title">Избранное</h2></div><div id="favBox" class="req-mine"></div></div>
-        <div id="recentSec" hidden><div class="section-head" style="margin-top:22px"><h2 class="section-title">Недавно смотрели</h2></div><div id="recentBox" class="req-mine"></div></div>`;
-    if (foot) foot.insertAdjacentHTML('beforebegin', html); else root.insertAdjacentHTML('beforeend', html);
-    if (!root._favBound) { root._favBound = true; root.addEventListener('click', onFavClick); }
-    paintFavSections(); refreshFavSections();
-};
+// ---------- окно «Избранное» (сердечко в шапке) ----------
+function openFavorites() {
+    openSheet('Избранное', `<div class="opt-sec" id="favHead">Избранное</div><div id="favBox" class="req-mine"></div>
+        <div id="recentSec" hidden><div class="opt-sec" style="margin-top:16px">Недавно смотрели</div><div id="recentBox" class="req-mine"></div></div>`, (el) => {
+        el.addEventListener('click', onFavClick);
+        paintFavSections(); refreshFavSections();
+    });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const b = document.getElementById('favBtn');
+    if (b) b.addEventListener('click', openFavorites);
+});
 
 function onFavClick(ev) {
     const b = ev.target.closest('#favBox button[data-a], #recentBox button[data-a]'); if (!b) return;
     const card = b.closest('.opt-card'); const id = card.dataset.lid;
     if (b.dataset.a === 'open') {
         const l = favList.find(x => x.id === id);
-        if (l) { openAdFromCard(l); return; }
+        if (l) { closeSheet(); openAdFromCard(l); return; }
         // из «недавно смотрели»: берём объявление с сервера, если его ещё нет в памяти
-        if (typeof findAd === 'function' && findAd(id)) openListing(id);
-        else if (typeof fetchFullAd === 'function') fetchFullAd(id, (ok) => { if (ok) openListing(id); else showToast('Объявление больше недоступно'); });
+        if (typeof findAd === 'function' && findAd(id)) { closeSheet(); openListing(id); }
+        else if (typeof fetchFullAd === 'function') fetchFullAd(id, (ok) => { if (ok) { closeSheet(); openListing(id); } else showToast('Объявление больше недоступно'); });
     } else if (b.dataset.a === 'unfav') {
         favApi('/api/favorites', { id, on: false }).then(d => { if (d.ok) { favIds = new Set(d.ids); favList = favList.filter(x => x.id !== id); paintFavSections(); } else showToast(d.message || 'Не удалось'); }).catch(() => showToast('Нет связи с сервером'));
     }

@@ -229,12 +229,47 @@ function refreshMyRequests() {
     }).catch(() => {});
 }
 function paintMyRequests() {
+    const act = myReqs.filter(r => r.status === 'active');
+    const cnt = document.getElementById('rowReqCount');
+    if (cnt) { cnt.hidden = !act.length; cnt.textContent = String(act.length); }
     const box = document.getElementById('myReqBox');
     if (!box) return;
-    if (!myReqs.length) { box.innerHTML = '<p class="profile-foot" style="margin:6px 0 0">Здесь появятся ваши запросы на жильё. Когда подходящее жильё появится, мы сообщим.</p>'; return; }
-    const act = myReqs.filter(r => r.status === 'active'), hist = myReqs.filter(r => r.status !== 'active');
-    box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(r => reqCardHTML(r)).join('') : '')
-        + (hist.length ? '<div class="opt-sec" style="margin-top:8px">История</div>' + hist.slice(0, 15).map(r => reqCardHTML(r)).join('') : '');
+    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Ищу жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
+    const hist = myReqs.filter(r => r.status !== 'active');
+    const row = (r) => `<div class="req-row">${reqCardHTML(r)}<button type="button" class="req-del" data-del="${escapeHtml(r.id)}" aria-label="Удалить запрос"><i class="fas fa-trash"></i><span>Удалить</span></button></div>`;
+    box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(row).join('') : '')
+        + (hist.length ? '<div class="opt-sec" style="margin-top:8px">История</div>' + hist.slice(0, 15).map(row).join('') : '');
+}
+
+function openMyRequests() {
+    loginRequired(() => {
+        openSheet('Мои запросы', `<div id="myReqBox" class="req-mine"><p class="opt-empty">Загружаю…</p></div>
+            <button class="primary-btn wide-btn" id="myReqAdd" style="margin-top:12px"><i class="fas fa-magnifying-glass"></i> Ищу жильё</button>`, (el) => {
+            paintMyRequests(); refreshMyRequests();
+            el.querySelector('#myReqAdd').onclick = () => openRequestSheet();
+            el.querySelector('#myReqBox').addEventListener('click', (ev) => {
+                const del = ev.target.closest('.req-del');
+                if (del) {
+                    if (!del.classList.contains('sure')) {      // первое нажатие — просим подтвердить
+                        del.classList.add('sure'); del.querySelector('span').textContent = 'Точно?';
+                        setTimeout(() => { if (del.isConnected) { del.classList.remove('sure'); del.querySelector('span').textContent = 'Удалить'; } }, 3000);
+                        return;
+                    }
+                    del.disabled = true;
+                    fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(del.dataset.del)}`, { method: 'DELETE', headers: reqAuthHeaders() }).then(r => r.json()).then(d => {
+                        if (!d.ok) { del.disabled = false; showToast(d.message || 'Не удалось удалить'); return; }
+                        myReqs = myReqs.filter(x => x.id !== del.dataset.del);
+                        paintMyRequests(); showToast('Запрос удалён'); loadRequests();
+                    }).catch(() => { del.disabled = false; showToast('Нет связи с сервером'); });
+                    return;
+                }
+                const btn = ev.target.closest('button[data-act]'), card = ev.target.closest('.req-card');
+                if (!btn || !card) return;
+                const r = myReqs.find(x => x.id === card.dataset.rid); if (!r) return;
+                if (btn.dataset.act === 'edit') openRequestSheet(r); else onReqCardClick(ev);
+            });
+        });
+    });
 }
 
 // ---------- счётчик объявлений («Сегодня опубликовано: 2 из 3») ----------
@@ -248,22 +283,14 @@ const _renderProfileReq = renderProfile;
 renderProfile = function () {
     _renderProfileReq.apply(this, arguments);
     const root = document.getElementById('profileRoot');
-    if (!root || !getToken()) return;
-    const add = Array.from(root.querySelectorAll('.wide-btn')).find(b => /Добавить жильё/.test(b.textContent));
+    if (!root) return;
+    if (!getToken()) { const r = document.getElementById('rowReq'); if (r) r.hidden = true; return; }
+    const add = root.querySelector('.pf-add');
     if (add) {
-        add.insertAdjacentHTML('beforebegin', '<div class="quota-line" id="quotaLine"></div>');
-        loadQuota((q) => { const el = document.getElementById('quotaLine'); if (el) { el.textContent = quotaText(q); el.classList.toggle('full', q.left === 0); } });
-        add.insertAdjacentHTML('afterend', `<div class="section-head" style="margin-top:22px"><h2 class="section-title">Мои запросы</h2></div><div id="myReqBox" class="req-mine"></div>
-            <button class="ghost-btn wide-btn" onclick="openRequestSheet()" style="margin-top:10px"><i class="fas fa-magnifying-glass"></i> Ищу жильё</button>`);
-        document.getElementById('myReqBox').addEventListener('click', (ev) => {
-            const btn = ev.target.closest('button[data-act]'), card = ev.target.closest('.req-card');
-            if (!btn || !card) return;
-            const r = myReqs.find(x => x.id === card.dataset.rid); if (!r) return;
-            if (btn.dataset.act === 'edit') openRequestSheet(r);
-            else onReqCardClick(ev);
-        });
-        paintMyRequests(); refreshMyRequests();
+        add.insertAdjacentHTML('beforebegin', '<div class="quota-line" id="quotaLineProf"></div>');
+        loadQuota((q) => { const el = document.getElementById('quotaLineProf'); if (el) { el.textContent = quotaText(q); el.classList.toggle('full', q.left === 0); } });
     }
+    paintMyRequests(); refreshMyRequests(); refreshMatchingRequests();
 };
 
 const _openAdFormQuota = openAdForm;
@@ -293,7 +320,7 @@ function tickCooldown() {
 // ---------- обновление в реальном времени ----------
 const _onSocialEventReq = onSocialEvent;
 onSocialEvent = function (ev, d) {
-    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('seekBar')) loadRequests(); if (document.getElementById('myReqBox')) refreshMyRequests(); if (document.getElementById('matchReqBox')) refreshMatchingRequests(); }, 400); return; }
+    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('seekBar')) loadRequests(); if (document.getElementById('myReqBox') || document.getElementById('rowReq')) refreshMyRequests(); if (document.getElementById('matchReqBox') || document.getElementById('rowMatch')) refreshMatchingRequests(); }, 400); return; }
     return _onSocialEventReq.apply(this, arguments);
 };
 
@@ -369,33 +396,34 @@ function openOfferSheet(r) {
     });
 }
 
-// --- профиль хозяина: «Подходящие арендаторы» ---
+// --- профиль хозяина: «Подходящие арендаторы» (отдельное окно) ---
+let matchReqs = [];
+function paintMatchRow() {
+    const row = document.getElementById('rowMatch'), cnt = document.getElementById('rowMatchCount');
+    if (row) row.hidden = !matchReqs.length;
+    if (cnt) { cnt.hidden = !matchReqs.length; cnt.textContent = String(matchReqs.length); }
+}
 function refreshMatchingRequests() {
-    const box = document.getElementById('matchReqBox');
-    if (!box || !getToken()) return;
+    if (!getToken()) { matchReqs = []; paintMatchRow(); return; }
     apiGet('/api/requests/matching').then(d => {
-        const sec = document.getElementById('matchReqSec');
-        if (!d.ok || !d.requests.length) { if (sec) sec.hidden = true; return; }
-        if (sec) { sec.hidden = false; sec.querySelector('h2').textContent = 'Подходящие арендаторы: ' + d.requests.length; }
-        box.innerHTML = d.requests.slice(0, 10).map(r => `<div class="req-item-s">${reqCardHTML({ ...r, mine: false })}</div>`).join('');
-        box.querySelectorAll('.req-card').forEach(c => { const x = d.requests.find(q => q.id === c.dataset.rid); if (x) c._r = x; });
+        matchReqs = d.ok ? d.requests : [];
+        paintMatchRow();
+        const box = document.getElementById('matchReqBox');
+        if (box) {
+            box.innerHTML = matchReqs.length ? matchReqs.slice(0, 10).map(r => `<div class="req-item-s">${reqCardHTML({ ...r, mine: false })}</div>`).join('') : '<p class="opt-empty">Сейчас нет запросов под ваше жильё.</p>';
+            box.querySelectorAll('.req-card').forEach(c => { const x = matchReqs.find(q => q.id === c.dataset.rid); if (x) c._r = x; });
+        }
     }).catch(() => {});
 }
-
-const _renderProfileMatch = renderProfile;
-renderProfile = function () {
-    _renderProfileMatch.apply(this, arguments);
-    const root = document.getElementById('profileRoot');
-    if (!root || !getToken()) return;
-    const anchor = document.getElementById('quotaLine');
-    if (!anchor) return;
-    anchor.insertAdjacentHTML('beforebegin', '<div id="matchReqSec" hidden><div class="section-head"><h2 class="section-title"></h2></div><div id="matchReqBox" class="req-mine" style="margin-bottom:16px"></div></div>');
-    document.getElementById('matchReqBox').addEventListener('click', (ev) => {
-        const btn = ev.target.closest('button[data-act="write"]'), card = ev.target.closest('.req-card');
-        if (btn && card && card._r) openOfferSheet(card._r);
+function openMatchingSheet() {
+    openSheet('Подходящие арендаторы', '<p class="auth-note" style="margin:0 4px 12px">Эти люди ищут жильё, которое подходит под ваши объявления.</p><div id="matchReqBox" class="req-mine"><p class="opt-empty">Загружаю…</p></div>', (el) => {
+        el.querySelector('#matchReqBox').addEventListener('click', (ev) => {
+            const btn = ev.target.closest('button[data-act="write"]'), card = ev.target.closest('.req-card');
+            if (btn && card && card._r) openOfferSheet(card._r);
+        });
+        refreshMatchingRequests();
     });
-    refreshMatchingRequests();
-};
+}
 
 function openNoMatchSheet() {
     openSheet('Запрос опубликован', `<p class="opt-empty" style="padding:6px 4px 14px">Подходящего жилья в базе пока нет. Хозяева видят ваш запрос и могут предложить варианты: они появятся в карточке запроса, в кнопке «Варианты».</p>

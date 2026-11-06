@@ -56,12 +56,12 @@ function renderProfile() {
     if (!root) return;
     const e = escapeHtml;
     const p = getProfile();
+    const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = myAdsAll();
+    const verified = !!(acc && acc.verified);
+    const theme = typeof getTheme === 'function' ? getTheme() : 'dark';
 
-    const meta = [
-        p.city ? `<span><i class="fas fa-location-dot"></i>${e(p.city)}</span>` : '',
-        p.phone ? `<span><i class="fas fa-phone"></i>${e(p.phone)}</span>` : ''
-    ].join('');
+    const meta = [p.city ? `<span><i class="fas fa-location-dot"></i>${e(p.city)}</span>` : '', p.phone ? `<span><i class="fas fa-phone"></i>${e(p.phone)}</span>` : ''].join('');
 
     const rows = mine.map(ad => `
         <div class="my-ad">
@@ -69,7 +69,6 @@ function renderProfile() {
             <div class="my-ad-info" onclick="openListing('${ad.id}')">
                 <div class="my-ad-title">${e(ad.title)}</div>
                 <div class="my-ad-price">${e(ad.price)}</div>
-                <div class="my-ad-loc">${e(ad.location || '')}</div>
             </div>
             <div class="my-ad-actions">
                 <button onclick="openAdForm('${ad.id}')" aria-label="Изменить"><i class="fas fa-pen"></i></button>
@@ -77,24 +76,31 @@ function renderProfile() {
             </div>
         </div>`).join('');
 
-    root.innerHTML = (typeof accountCardHTML === 'function' ? accountCardHTML() : '') + (typeof notifyCardHTML === 'function' ? notifyCardHTML() : '') + `
-        <div class="profile-hero">
-            <div class="avatar-circle profile-avatar">${p.avatar ? `<img src="${p.avatar}" alt="">` : '<i class="fas fa-user"></i>'}</div>
-            <div class="profile-name">${e(p.name || 'Гость')}</div>
-            ${meta ? `<div class="profile-meta">${meta}</div>` : ''}
-            <p class="profile-about ${p.about ? '' : 'muted'}">${p.about ? e(p.about) : 'Расскажите о себе: с теми, кого видно, общаются охотнее.'}</p>
-            <button class="ghost-btn" onclick="openProfileEditor()"><i class="fas fa-pen"></i> Редактировать профиль</button>
+    const name = p.name || (acc && acc.name) || 'Гость';
+    root.innerHTML = `
+        <div class="pf-top">
+            <div class="avatar-circle profile-avatar pf-av">${p.avatar ? `<img src="${p.avatar}" alt="">` : '<i class="fas fa-user"></i>'}</div>
+            <div class="pf-id">
+                <div class="pf-name"><span class="pf-nick">${e(name)}</span>${verified ? '<i class="fas fa-circle-check pf-check" aria-label="Проверенный хозяин"></i><span class="pf-badge">Проверенный хозяин</span>' : ''}</div>
+                ${meta ? `<div class="pf-meta">${meta}</div>` : ''}
+                ${p.about ? `<p class="pf-about">${e(p.about)}</p>` : ''}
+            </div>
+            <button class="pf-edit" onclick="openProfileEditor()" aria-label="Редактировать профиль"><i class="fas fa-pen"></i></button>
+        </div>
+        ${acc ? '' : `<div class="pf-login"><span>Войдите, чтобы писать хозяевам и занять своё имя</span><button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти</button></div>`}
+
+        <div class="pf-menu">
+            <button type="button" class="pf-row" id="rowReq" onclick="openMyRequests()"><i class="fas fa-magnifying-glass"></i><span>Мои запросы</span><em id="rowReqCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
+            <button type="button" class="pf-row" id="rowMatch" onclick="openMatchingSheet()" hidden><i class="fas fa-users"></i><span>Подходящие арендаторы</span><em id="rowMatchCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
+            <div class="pf-row pf-static"><i class="fas fa-circle-half-stroke"></i><span>Тема</span>
+                <div class="theme-seg" role="group" aria-label="Тема"><button type="button" data-theme="dark" class="${theme === 'dark' ? 'on' : ''}" onclick="setTheme('dark')"><i class="fas fa-moon"></i> Тёмная</button><button type="button" data-theme="light" class="${theme === 'light' ? 'on' : ''}" onclick="setTheme('light')"><i class="fas fa-sun"></i> Светлая</button></div>
+            </div>
         </div>
 
-        <div class="section-head"><h2 class="section-title">Мои объявления</h2></div>
-        ${mine.length ? `<div class="my-ads">${rows}</div>` : `
-            <div class="placeholder">
-                <span class="placeholder-icon"><i class="fas fa-house-chimney"></i></span>
-                <h2 class="placeholder-title">Сдаёте или продаёте жильё?</h2>
-                <p class="placeholder-text">Добавьте фото, условия заселения, место на карте и свободные даты. Объявление появится в чате выбранного типа: квартиры, дома, отели, комнаты или гостевые.</p>
-            </div>`}
-        <button class="primary-btn wide-btn" onclick="openAdForm()"><i class="fas fa-plus"></i> Добавить жильё</button>
-        <p class="profile-foot">Профиль и объявления сохраняются на этом устройстве.</p>
+        <div class="section-head pf-head"><h2 class="section-title">Мои объявления${mine.length ? ': ' + mine.length : ''}</h2></div>
+        ${mine.length ? `<div class="my-ads">${rows}</div>` : '<p class="pf-empty">Сдаёте или продаёте жильё? Добавьте объявление: оно появится в чате выбранного типа.</p>'}
+        <button class="primary-btn wide-btn pf-add" onclick="openAdForm()"><i class="fas fa-plus"></i> Добавить жильё</button>
+        ${acc ? '<button class="pf-logout" onclick="doLogout()"><i class="fas fa-arrow-right-from-bracket"></i> Выйти из аккаунта</button>' : ''}
     `;
     setTimeout(() => { const r = document.getElementById('profileRoot'); if (r && r.offsetParent !== null) hostProfileTip(); }, 800);
 }
