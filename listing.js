@@ -375,6 +375,13 @@ function updateCalSummary() {
 }
 
 // ---------- КАРТА ----------
+// Подложка: «схема» (тёмная или светлая в тон темы, CARTO на данных OpenStreetMap) или «спутник» (Esri).
+function mapTiles(mode) {
+    if (mode === 'sat') return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+    const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+    return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + (dark ? 'dark_all' : 'rastertiles/voyager') + '/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20, attribution: '© OpenStreetMap © CARTO' });
+}
+
 function initListingMap(ad) {
     const el = document.getElementById('listingMap');
     if (!el) return;
@@ -392,10 +399,8 @@ function initListingMap(ad) {
         tap: false
     }).setView(ad.coords, 16);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    if (map.attributionControl) map.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
+    mapTiles('scheme').addTo(map);
 
     const pin = (cls, icon) => L.divIcon({
         className: 'map-pin-wrap',

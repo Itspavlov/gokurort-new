@@ -407,7 +407,8 @@ function initPickMap() {
     }
 
     pickMap = L.map(el, { zoomControl: false, tap: false }).setView(formState.coords, 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(pickMap);
+    if (pickMap.attributionControl) pickMap.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
+    mapTiles('scheme').addTo(pickMap);
     L.control.zoom({ position: 'bottomright' }).addTo(pickMap);
 
     const pin = (cls, icon) => L.divIcon({
