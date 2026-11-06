@@ -49,7 +49,7 @@ function reqCardHTML(r, opts = {}) {
     const found = r.mine && r.status === 'active'
         ? `<button type="button" class="main" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}${r.offerCount ? ' · предложений ' + r.offerCount : ''}</button>` : '';
     const actions = r.mine
-        ? (r.status === 'active' ? found + `<button type="button" data-act="notify" aria-label="${r.notify === false ? 'Включить уведомления' : 'Выключить уведомления'}" title="${r.notify === false ? 'Уведомления выключены' : 'Уведомлять о подходящем жилье'}"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i></button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
+        ? (r.status === 'active' ? found + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` : '');
     return `<div class="req-card${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="req-head"><div class="chat-avatar" style="background:${dmColor(r.ownerName)}">${e(Array.from(r.ownerName)[0] || '?')}</div>

@@ -19,7 +19,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="features.css">
-    <link rel="stylesheet" href="yugi.css?v=5">
+    <link rel="stylesheet" href="yugi.css?v=6">
 </head>
 <body>
 
@@ -32,6 +32,9 @@
             <span class="app-logo-text">YuGi <span class="logo-accent">YuGi</span></span>
         </div>
         <div class="app-header-actions">
+            <button class="header-btn bell-btn" id="bellBtn" aria-label="Уведомления" title="Уведомления">
+                <i class="fas fa-bell"></i><span class="bell-badge" id="bellBadge" hidden>0</span>
+            </button>
             <button class="header-btn" id="themeToggle" title="Переключить тему">
                 <i class="fas fa-moon"></i>
             </button>
@@ -185,7 +188,8 @@
     <script src="social.js"></script>
     <script src="notify.js"></script>
 <script src="circles.js?v=3"></script>
-<script src="requests.js?v=4"></script>
+<script src="requests.js?v=5"></script>
+<script src="inbox.js?v=1"></script>
 
 </body>
 </html>
