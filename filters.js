@@ -128,14 +128,6 @@ function openFilterSheet() {
 
 // ---------- карта ----------
 let adMap = null, adMapLayer = null, adMapFx = null, adMapSel = null, adMapTiles = null;
-function mapMode() { try { return localStorage.getItem('yy-map-mode') === 'scheme' ? 'scheme' : 'sat'; } catch (e) { return 'sat'; } }
-function setMapMode(mode) {
-    try { localStorage.setItem('yy-map-mode', mode); } catch (e) {}
-    if (!adMap) return;
-    if (adMapTiles) { try { adMapTiles.remove(); } catch (e) {} }
-    adMapTiles = mapTiles(mode).addTo(adMap);
-    const v = document.getElementById('adMapView'); if (v) v.classList.toggle('sat', mode === 'sat');
-}
 function shortPrice(ad) {
     const n = Number(ad.priceNum) || 0;
     if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' млн';
@@ -149,21 +141,20 @@ function openAdMap() {
     view.id = 'adMapView'; view.className = 'admap';
     view.innerHTML = `<div class="admap-top"><button type="button" class="chat-back-btn" data-m="close" aria-label="Закрыть карту"><i class="fas fa-xmark"></i></button>
         <div class="admap-title" id="adMapTitle">Жильё на карте</div>
-        <div class="admap-tools"><button type="button" class="chat-header-btn" data-m="layer" aria-label="Схема или спутник"><i class="fas fa-layer-group"></i></button><button type="button" class="chat-header-btn" data-m="filters" aria-label="Фильтры"><i class="fas fa-sliders"></i></button></div></div>
+        <button type="button" class="chat-header-btn" data-m="filters" aria-label="Фильтры"><i class="fas fa-sliders"></i></button></div>
         <div class="admap-map" id="adMapBox"></div><div class="admap-card" id="adMapCard" hidden></div>`;
     document.body.appendChild(view);
     view.addEventListener('click', (ev) => {
         const b = ev.target.closest('[data-m]'); if (!b) return;
         if (b.dataset.m === 'close') closeAdMap();
         else if (b.dataset.m === 'filters') openFilterSheet();
-        else if (b.dataset.m === 'layer') setMapMode(mapMode() === 'sat' ? 'scheme' : 'sat');
         else if (b.dataset.m === 'open') { const id = b.dataset.id; closeAdMap(); openListing(id); }
     });
     const box = document.getElementById('adMapBox');
     if (typeof L === 'undefined') { box.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>'; return; }
     adMap = L.map(box, { zoomControl: false, tap: false }).setView([44.8928, 37.299], 11);
     if (adMap.attributionControl) adMap.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
-    setMapMode(mapMode());
+    adMapTiles = mapTiles().addTo(adMap);
     adMapLayer = L.layerGroup().addTo(adMap);
     adMapFx = L.layerGroup().addTo(adMap);
     adMap.on('click', () => { adMapSel = null; paintAdMapCard(); markSelected(); });

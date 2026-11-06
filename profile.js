@@ -408,7 +408,7 @@ function initPickMap() {
 
     pickMap = L.map(el, { zoomControl: false, tap: false }).setView(formState.coords, 15);
     if (pickMap.attributionControl) pickMap.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
-    mapTiles('scheme').addTo(pickMap);
+    mapTiles().addTo(pickMap);
     L.control.zoom({ position: 'bottomright' }).addTo(pickMap);
 
     const pin = (cls, icon) => L.divIcon({

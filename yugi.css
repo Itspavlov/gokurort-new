@@ -355,9 +355,16 @@
 .admap-card .primary-btn { flex-shrink: 0; padding: 10px 14px; font-size: 13.5px; }
 
 /* ===== v11: катер и подложка карты ===== */
-.admap-tools { display: flex; gap: 8px; }
-.admap.sat .admap-title { background: rgba(8, 18, 32, .72); color: #fff; }
 .admap.intro .ad-pin:not(.show) { opacity: 0; transform: scale(.3); }
 .ad-pin { transition: opacity .35s ease, transform .45s cubic-bezier(.2, 1.5, .4, 1); }
 .ad-pin.show { opacity: 1; }
 .boat-fx { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 450; pointer-events: none; }
+
+/* ===== v12: экранная клавиатура (см. keyboard.js) ===== */
+.group-screen { top: var(--vvtop, 0px); height: var(--vvh, 100dvh); }
+.sheet-overlay { top: var(--vvtop, 0px); bottom: auto; height: var(--vvh, 100dvh); }
+.sheet-panel { max-height: calc(var(--vvh, 100dvh) * .9); }
+/* поле ввода прижимается к клавиатуре: нижний отступ «домашней полосы» iPhone при клавиатуре не нужен */
+.kb-open #group-screen .chat-input-wrapper, .kb-open #group-screen .chat-input-wrapper.compact { margin-bottom: 8px; }
+.kb-open .bottom-nav { display: none; }
+.kb-open .dm-blocked { margin-bottom: 8px; }
