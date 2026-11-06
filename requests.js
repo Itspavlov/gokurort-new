@@ -89,10 +89,10 @@ function paintRequests() {
     if (added && (nearBottom || reqView === 'seek')) msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ---------- переключатель Все / Ищут / Предлагают ----------
+// ---------- переключатель Ищут / Предлагают (повторное нажатие — показать всё) ----------
 function seekBarHTML() {
     const t = (v, l) => `<button type="button" role="tab" class="seek-tab ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}">${l}${v === 'seek' ? '<b></b>' : ''}</button>`;
-    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('all', 'Все')}${t('seek', 'Ищут')}${t('offer', 'Предлагают')}</div>
+    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', 'Ищут')}${t('offer', 'Предлагают')}</div>
         <button type="button" class="seek-add" id="seekAdd"><i class="fas fa-plus"></i> Ищу жильё</button></div>`;
 }
 
@@ -116,7 +116,7 @@ function setupSeekBar() {
     msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden><i class="fas fa-magnifying-glass"></i><b>Пока нет запросов</b><span>Ищете жильё? Нажмите «Ищу жильё»: хозяева увидят запрос и предложат варианты.</span></div>');
     document.getElementById('seekBar').addEventListener('click', (ev) => {
         const tab = ev.target.closest('.seek-tab');
-        if (tab) { reqView = tab.dataset.v; applyReqView(); return; }
+        if (tab) { reqView = reqView === tab.dataset.v ? 'all' : tab.dataset.v; applyReqView(); return; }   // повторное нажатие снимает фильтр
         if (ev.target.closest('#seekAdd')) openRequestSheet();
     });
     msgs.addEventListener('click', (ev) => { if (ev.target.closest('.req-card')) onReqCardClick(ev); });

@@ -652,9 +652,9 @@ function renderDialogs() {
                         <div class="chat-avatar dialog-avatar" style="background:${dmColor(c.with)}">${escapeHtml(Array.from(c.with || '?')[0] || '?')}</div>
                         <div class="dialog-info">
                             <div class="dialog-name">${escapeHtml(c.with)}</div>
-                            <div class="dialog-ad">${escapeHtml(c.last ? (c.last.mine ? 'Вы: ' : '') + c.last.text : (c.adTitle || ''))}</div>
+                            <div class="dialog-ad ${c.unread ? 'unread' : ''}">${escapeHtml(c.last ? (c.last.mine ? 'Вы: ' : '') + c.last.text : (c.adTitle || ''))}</div>
                         </div>
-                        <div class="dialog-time">${c.last ? fmtAgo(c.last.time) : ''}</div>
+                        <div class="dialog-side"><div class="dialog-time">${c.last ? fmtAgo(c.last.time) : ''}</div>${c.unread ? `<span class="dlg-unread">${c.unread > 99 ? '99+' : c.unread}</span>` : (c.blockedByMe ? '<i class="fas fa-ban dlg-ban" title="Заблокирован"></i>' : '')}</div>
                     </div></div>`).join('');
                 root.innerHTML = banner(groups.length > 0) +
                     (groups.length ? `<div class="section-head"><h2 class="section-title">Мои группы</h2></div><div class="dialogs">${groupRows}</div>` : '') +

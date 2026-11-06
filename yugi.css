@@ -298,3 +298,18 @@
 .req-del i { font-size: 16px; }
 .req-del.sure { background: #ff5a4d; color: #fff; }
 .req-del:disabled { opacity: .5; }
+
+/* ===== v9: личные сообщения — прочитано, блокировки ===== */
+.dm-tick { font-size: 10px; margin-left: 3px; opacity: .65; }
+.dm-tick.read { color: #3FA9FF; opacity: 1; }
+.dialog-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.dlg-unread { min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px; background: #FF5A4D; color: #fff; font: 800 11px/20px var(--font); text-align: center; }
+.dlg-ban { font-size: 12px; color: var(--text-muted); }
+.dialog-ad.unread { color: var(--text); font-weight: 700; }
+.chat-header #dmMenuBtn { margin-left: auto; }
+.dm-blocked { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px)); padding: 10px 12px; border-radius: 16px; background: var(--glass); border: 1px solid var(--glass-border); font-size: 13.5px; color: var(--text-secondary); }
+.dm-blocked .ghost-btn { padding: 8px 12px; font-size: 13px; flex-shrink: 0; }
+.dm-blocked i { margin-right: 6px; color: var(--danger, #ff5a4d); }
+.rp-dot { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--text-muted); box-sizing: border-box; position: relative; }
+.pref-row input:checked + .rp-dot { border-color: #2BC4D6; }
+.pref-row input:checked + .rp-dot::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: #2BC4D6; }
