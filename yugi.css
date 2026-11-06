@@ -161,10 +161,21 @@
 .seek-tab b { font-size: 11px; opacity: .8; }
 .seek-tab b:empty { display: none; }
 .seek-add { flex: none; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--text); color: #0b1626; font: 800 13px var(--font); cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; outline: none; font-variant-numeric: tabular-nums; }
-#chatMessages.view-seek > :not(#reqBlock) { display: none !important; }
-#chatMessages.view-offer #reqBlock { display: none; }
-#reqBlock { display: flex; flex-direction: column; gap: 10px; margin: 0 0 6px; }
-#reqBlock:empty { display: none; }
+#chatMessages.view-seek > :not(.req-item):not(#reqEmpty) { display: none !important; }
+#chatMessages.view-offer .req-item, #chatMessages.view-offer #reqEmpty { display: none; }
+#chatMessages:not(.view-seek) #reqEmpty { display: none; }
+.req-item { margin: 4px 0 10px; }
+.opt-sec { margin: 4px 2px 8px; font: 800 13px var(--font); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+.opt-card { display: flex; gap: 12px; padding: 10px; border-radius: 18px; background: var(--glass); border: 1px solid var(--glass-border); margin-bottom: 10px; }
+.opt-thumb { width: 64px; height: 64px; flex: none; border-radius: 14px; background: var(--glass-strong) center/cover; }
+.opt-info { flex: 1; min-width: 0; }
+.opt-info b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt-info small { display: block; font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.opt-btns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.opt-btns button { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--glass-border); background: transparent; color: var(--text); font: 700 12.5px var(--font); cursor: pointer; outline: none; }
+.opt-btns button.main { background: var(--text); color: #0b1626; border-color: transparent; }
+.opt-btns button:disabled { opacity: .5; }
+.opt-empty { padding: 14px 4px; font-size: 14px; color: var(--text-secondary); text-align: center; }
 .req-card { padding: 12px 14px; border-radius: 20px; background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .req-card.mine { border-color: rgba(255, 255, 255, .28); }
 .req-head { display: flex; align-items: center; gap: 10px; }
@@ -193,3 +204,4 @@
 .field select option { color: #10203a; }
 .field input[type="date"] { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .seek-tab { font-size: 12.5px; padding: 0 4px; }
+.req-empty[hidden] { display: none !important; }

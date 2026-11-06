@@ -46,8 +46,10 @@ function reqCardHTML(r, opts = {}) {
         r.budget ? `<span><i class="fas fa-ruble-sign"></i>до ${Number(r.budget).toLocaleString('ru-RU')} ₽/сутки</span>` : ''
     ].join('');
     const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : '';
+    const found = r.mine && r.status === 'active'
+        ? `<button type="button" class="main" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}${r.offerCount ? ' · предложений ' + r.offerCount : ''}</button>` : '';
     const actions = r.mine
-        ? (r.status === 'active' ? `<button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
+        ? (r.status === 'active' ? found + `<button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` : '');
     return `<div class="req-card${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="req-head"><div class="chat-avatar" style="background:${dmColor(r.ownerName)}">${e(Array.from(r.ownerName)[0] || '?')}</div>
@@ -57,14 +59,34 @@ function reqCardHTML(r, opts = {}) {
         ${actions ? `<div class="req-actions">${actions}</div>` : ''}</div>`;
 }
 
+// Время элемента ленты: у карточек запросов data-ts, у сообщений — из id вида msg_<время>_...
+function itemTs(el) {
+    if (el.dataset && el.dataset.ts) return Number(el.dataset.ts);
+    const m = /^msg_(\d{10,})_/.exec((el.dataset && el.dataset.id) || '');
+    return m ? Number(m[1]) : 0;
+}
+
+// Запросы встают в ленту по времени, как сообщения: новые внизу
 function paintRequests() {
-    const box = document.getElementById('reqBlock');
-    if (!box) return;
-    box.innerHTML = reqList.length
-        ? reqList.map(r => reqCardHTML(r)).join('')
-        : `<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Пока нет запросов</b><span>Ищете жильё? Нажмите «Ищу жильё» — хозяева увидят запрос и предложат варианты.</span></div>`;
+    const msgs = document.getElementById('chatMessages');
+    if (!msgs) return;
+    const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 120;
+    msgs.querySelectorAll('.req-item').forEach(n => n.remove());
+    const sorted = reqList.slice().sort((x, y) => x.created - y.created);
+    let added = 0;
+    for (const r of sorted) {
+        const w = document.createElement('div');
+        w.className = 'req-item'; w.dataset.ts = r.created; w.dataset.rid = r.id;
+        w.innerHTML = reqCardHTML(r);
+        const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > r.created);
+        if (after) msgs.insertBefore(w, after); else msgs.appendChild(w);
+        added++;
+    }
+    const empty = document.getElementById('reqEmpty');
+    if (empty) empty.hidden = reqList.length > 0;
     const cnt = document.querySelector('.seek-tab[data-v="seek"] b');
     if (cnt) cnt.textContent = reqList.length ? reqList.length : '';
+    if (added && (nearBottom || reqView === 'seek')) msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ---------- переключатель Все / Ищут / Предлагают ----------
@@ -80,7 +102,7 @@ function applyReqView() {
     msgs.classList.toggle('view-seek', reqView === 'seek');
     msgs.classList.toggle('view-offer', reqView === 'offer');
     document.querySelectorAll('.seek-tab').forEach(b => { const on = b.dataset.v === reqView; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-    if (reqView === 'seek') msgs.scrollTop = 0;
+    msgs.scrollTop = msgs.scrollHeight;
 }
 
 function setupSeekBar() {
@@ -90,15 +112,14 @@ function setupSeekBar() {
     if (!wrap || !msgs) return;
     wrap.insertAdjacentHTML('afterend', seekBarHTML());
     const welcome = msgs.querySelector('.chat-welcome');
-    const box = document.createElement('div');
-    box.id = 'reqBlock';
-    if (welcome) welcome.insertAdjacentElement('afterend', box); else msgs.prepend(box);
+    const box = msgs;
+    msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden><i class="fas fa-magnifying-glass"></i><b>Пока нет запросов</b><span>Ищете жильё? Нажмите «Ищу жильё»: хозяева увидят запрос и предложат варианты.</span></div>');
     document.getElementById('seekBar').addEventListener('click', (ev) => {
         const tab = ev.target.closest('.seek-tab');
         if (tab) { reqView = tab.dataset.v; applyReqView(); return; }
         if (ev.target.closest('#seekAdd')) openRequestSheet();
     });
-    box.addEventListener('click', onReqCardClick);
+    msgs.addEventListener('click', (ev) => { if (ev.target.closest('.req-card')) onReqCardClick(ev); });
     applyReqView();
     paintRequests();
     loadRequests();
@@ -112,10 +133,12 @@ function onReqCardClick(ev) {
     const btn = ev.target.closest('button[data-act]');
     const card = ev.target.closest('.req-card');
     if (!btn || !card) return;
-    const r = reqList.find(x => x.id === card.dataset.rid);
+    const r = reqList.find(x => x.id === card.dataset.rid) || myReqs.find(x => x.id === card.dataset.rid);
     if (!r) return;
     const act = btn.dataset.act;
-    if (act === 'write') {
+    if (act === 'write') { openOfferSheet(r); return; }
+    if (act === 'options') { openOptionsSheet(r); return; }
+    if (act === 'write-dm') {
         const dates = r.dateFrom ? ' на ' + fmtShortDate(r.dateFrom) + (r.dateTo ? '–' + fmtShortDate(r.dateTo) : '') : '';
         startDm(r.ownerName, { id: 'req_' + r.id.slice(2, 30), title: 'Запрос: ' + (r.city || 'жильё') + dates },
             `Здравствуйте! Видел ваш запрос${r.city ? ' (' + r.city + ')' : ''}${dates}. Могу предложить жильё: `);
@@ -176,7 +199,7 @@ function openRequestSheet(edit) {
                     }
                     if (!reqEditing) setCooldown(d.cooldown || 60);
                     closeSheet();
-                    showToast(reqEditing ? 'Запрос обновлён' : 'Запрос опубликован. Хозяева его увидят');
+                    showToast(reqEditing ? 'Запрос обновлён' : (d.matches ? 'Мы нашли ' + d.matches + ' ' + plural(d.matches, 'вариант', 'варианта', 'вариантов') + ' под ваш запрос' : 'Запрос опубликован. Хозяева его увидят'));
                     reqView = reqEditing ? reqView : 'seek';
                     applyReqView();
                     loadRequests(refreshMyRequests);
@@ -223,7 +246,7 @@ renderProfile = function () {
             if (!btn || !card) return;
             const r = myReqs.find(x => x.id === card.dataset.rid); if (!r) return;
             if (btn.dataset.act === 'edit') openRequestSheet(r);
-            else { reqList = myReqs; onReqCardClick(ev); }
+            else onReqCardClick(ev);
         });
         paintMyRequests(); refreshMyRequests();
     }
@@ -256,6 +279,106 @@ function tickCooldown() {
 // ---------- обновление в реальном времени ----------
 const _onSocialEventReq = onSocialEvent;
 onSocialEvent = function (ev, d) {
-    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('reqBlock')) loadRequests(); }, 400); return; }
+    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('seekBar')) loadRequests(); }, 400); return; }
     return _onSocialEventReq.apply(this, arguments);
+};
+
+
+// ============================================
+// АВТОПОДБОР: варианты для арендатора и «Подходящие арендаторы» для хозяина
+// ============================================
+const plural = (n, a, b, c) => { const m = n % 100, k = n % 10; return (m > 10 && m < 15) ? c : k === 1 ? a : (k > 1 && k < 5) ? b : c; };
+const apiGet = (path) => fetch(SERVER_URL + path, { headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.json());
+const apiPost = (path, body) => fetch(SERVER_URL + path, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify(body || {}) }).then(r => r.json());
+
+function listingMiniHTML(l, btns) {
+    const e = escapeHtml;
+    return `<div class="opt-card" data-lid="${e(l.id)}"><div class="opt-thumb" style="${l.thumb ? 'background-image:url(' + e(l.thumb) + ')' : ''}"></div>
+        <div class="opt-info"><b>${e(l.title)}</b><small>${e(l.price || '')}${l.location ? ' · ' + e(l.location) : ''}</small>
+        <div class="opt-btns">${btns}</div></div></div>`;
+}
+
+// --- арендатор: предложения хозяев и подходящее жильё ---
+function openOptionsSheet(r) {
+    openSheet('Варианты под ваш запрос', '<div id="optBox"><p class="opt-empty">Загружаю…</p></div>', (el) => {
+        const box = el.querySelector('#optBox');
+        Promise.all([apiGet(`/api/requests/${encodeURIComponent(r.id)}/offers`), apiGet(`/api/requests/${encodeURIComponent(r.id)}/matches`)]).then(([o, m]) => {
+            if (!o.ok || !m.ok) { box.innerHTML = '<p class="opt-empty">Не удалось загрузить</p>'; return; }
+            const offered = new Set(o.offers.map(x => x.listing.id));
+            const offHTML = o.offers.length ? o.offers.map(x => listingMiniHTML(x.listing,
+                `<button class="main" data-a="view">Посмотреть</button><button data-a="dm" data-owner="${escapeHtml(x.ownerName)}">Начать диалог</button><button data-a="no" data-oid="${escapeHtml(x.id)}">Не подходит</button>`)).join('') : '<p class="opt-empty">Предложений от хозяев пока нет</p>';
+            const rest = m.listings.filter(l => !offered.has(l.id));
+            const matHTML = rest.length ? rest.map(l => listingMiniHTML(l, `<button class="main" data-a="view">Посмотреть</button><button data-a="dm" data-owner="${escapeHtml(l.owner.name)}">Написать</button>`)).join('') : '<p class="opt-empty">Подходящего жилья пока нет. Как только хозяева опубликуют объявление, оно появится здесь</p>';
+            box.innerHTML = `<div class="opt-sec">Предложения хозяев</div>${offHTML}<div class="opt-sec" style="margin-top:14px">Подходящее жильё: ${rest.length}</div>${matHTML}`;
+        }).catch(() => { box.innerHTML = '<p class="opt-empty">Нет связи с сервером</p>'; });
+        el.addEventListener('click', (ev) => {
+            const b = ev.target.closest('button[data-a]'); if (!b) return;
+            const card = b.closest('.opt-card'); const lid = card.dataset.lid;
+            if (b.dataset.a === 'view') { closeSheet(); if (typeof openListing === 'function') openListing(lid); }
+            else if (b.dataset.a === 'dm') {
+                const title = card.querySelector('b').textContent;
+                closeSheet(); startDm(b.dataset.owner, { id: lid, title }, 'Здравствуйте! Интересует «' + title + '»' + (r.dateFrom ? ' на ' + fmtShortDate(r.dateFrom) + (r.dateTo ? '–' + fmtShortDate(r.dateTo) : '') : '') + '. ');
+            } else if (b.dataset.a === 'no') {
+                b.disabled = true;
+                apiPost(`/api/requests/${encodeURIComponent(r.id)}/offers/${encodeURIComponent(b.dataset.oid)}/reject`).then(d => {
+                    if (d.ok) { card.remove(); loadRequests(refreshMyRequests); } else { b.disabled = false; showToast(d.message || 'Не удалось'); }
+                }).catch(() => { b.disabled = false; });
+            }
+        });
+    });
+}
+
+// --- хозяин: предложить своё жильё под запрос ---
+function openOfferSheet(r) {
+    loginRequired(() => {
+        openSheet('Предложить жильё', '<div id="offBox"><p class="opt-empty">Проверяю ваши объявления…</p></div>', (el) => {
+            const box = el.querySelector('#offBox');
+            const dm = () => { closeSheet(); startDm(r.ownerName, { id: 'req_' + r.id.slice(2, 30), title: 'Запрос: ' + (r.city || 'жильё') }, 'Здравствуйте! Видел ваш запрос' + (r.city ? ' (' + r.city + ')' : '') + '. '); };
+            apiGet('/api/requests/matching').then((d) => {
+                const hit = d.ok && d.requests.find(x => x.id === r.id);
+                const list = hit ? hit.myMatches.map(m => `<div class="opt-card" data-lid="${escapeHtml(m.id)}"><div class="opt-info"><b>${escapeHtml(m.title)}</b><small>${escapeHtml(m.price || '')}</small>
+                    <div class="opt-btns"><button class="main" data-a="offer" ${m.offered ? 'disabled' : ''}>${m.offered ? 'Уже предложено' : 'Предложить'}</button></div></div></div>`).join('') : '';
+                box.innerHTML = (hit ? `<p class="auth-note" style="margin:0 4px 12px">Эти ваши объекты подходят под запрос: свободны на даты и укладываются в бюджет.</p>${list}`
+                    : '<p class="opt-empty">Под этот запрос у вас нет подходящего жилья: оно занято на эти даты, дороже бюджета или другого типа. Можно просто написать человеку.</p>')
+                    + '<button class="ghost-btn wide-btn" data-a="dm" style="margin-top:6px"><i class="fas fa-paper-plane"></i> Просто написать</button>';
+            }).catch(() => { box.innerHTML = '<p class="opt-empty">Нет связи с сервером</p><button class="ghost-btn wide-btn" data-a="dm">Просто написать</button>'; });
+            el.addEventListener('click', (ev) => {
+                const b = ev.target.closest('button[data-a]'); if (!b) return;
+                if (b.dataset.a === 'dm') { dm(); return; }
+                b.disabled = true;
+                apiPost(`/api/requests/${encodeURIComponent(r.id)}/offers`, { listingId: b.closest('.opt-card').dataset.lid }).then(d => {
+                    if (d.ok) { b.textContent = 'Отправлено'; showToast('Предложение отправлено. Арендатор получил уведомление'); refreshMatchingRequests(); }
+                    else { b.disabled = false; showToast(d.message || 'Не удалось отправить'); }
+                }).catch(() => { b.disabled = false; showToast('Нет связи с сервером'); });
+            });
+        });
+    });
+}
+
+// --- профиль хозяина: «Подходящие арендаторы» ---
+function refreshMatchingRequests() {
+    const box = document.getElementById('matchReqBox');
+    if (!box || !getToken()) return;
+    apiGet('/api/requests/matching').then(d => {
+        const sec = document.getElementById('matchReqSec');
+        if (!d.ok || !d.requests.length) { if (sec) sec.hidden = true; return; }
+        if (sec) { sec.hidden = false; sec.querySelector('h2').textContent = 'Подходящие арендаторы: ' + d.requests.length; }
+        box.innerHTML = d.requests.slice(0, 10).map(r => `<div class="req-item-s">${reqCardHTML({ ...r, mine: false })}</div>`).join('');
+        box.querySelectorAll('.req-card').forEach(c => { const x = d.requests.find(q => q.id === c.dataset.rid); if (x) c._r = x; });
+    }).catch(() => {});
+}
+
+const _renderProfileMatch = renderProfile;
+renderProfile = function () {
+    _renderProfileMatch.apply(this, arguments);
+    const root = document.getElementById('profileRoot');
+    if (!root || !getToken()) return;
+    const anchor = document.getElementById('quotaLine');
+    if (!anchor) return;
+    anchor.insertAdjacentHTML('beforebegin', '<div id="matchReqSec" hidden><div class="section-head"><h2 class="section-title"></h2></div><div id="matchReqBox" class="req-mine" style="margin-bottom:16px"></div></div>');
+    document.getElementById('matchReqBox').addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-act="write"]'), card = ev.target.closest('.req-card');
+        if (btn && card && card._r) openOfferSheet(card._r);
+    });
+    refreshMatchingRequests();
 };
