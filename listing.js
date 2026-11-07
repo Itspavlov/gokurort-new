@@ -376,8 +376,8 @@ function updateCalSummary() {
 
 // ---------- КАРТА ----------
 // Подложка: спутниковые снимки Esri World Imagery, ключ API не нужен.
-function mapTiles() {
-    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+function mapTiles(opts) {
+    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', Object.assign({ maxZoom: 19, attribution: 'Tiles © Esri' }, opts || {}));
 }
 
 function initListingMap(ad) {

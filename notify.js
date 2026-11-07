@@ -142,7 +142,7 @@ window.showToast = function (message) {
 };
 
 // ---------- ПЕРЕХОД ПО УВЕДОМЛЕНИЮ ----------
-const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|trips)|listing:l_[\w-]{1,40}|profile)$/;
+const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|services|dating|trips)|listing:l_[\w-]{1,40}|profile)$/;
 
 function openTarget(target) {
     if (typeof target !== 'string' || !OPEN_RE.test(target)) return;

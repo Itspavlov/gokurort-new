@@ -155,15 +155,19 @@ function openAdMap() {
     });
     const box = document.getElementById('adMapBox');
     if (typeof L === 'undefined') { box.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>'; return; }
-    adMap = L.map(box, { zoomControl: false, tap: false }).setView([44.8928, 37.299], 11);
+    adMap = L.map(box, { zoomControl: false, tap: false, fadeAnimation: false, zoomAnimation: true });
+    // сразу ставим итоговый вид, без «наезда»: иначе карта сначала грузит квадрат плиток на дальнем зуме, потом приближается
+    const first = filteredAds().filter(a => Array.isArray(a.coords)).map(a => a.coords);
+    if (first.length) adMap.fitBounds(first, { padding: [50, 50], maxZoom: 15, animate: false });
+    else adMap.setView([44.8928, 37.299], 11, { animate: false });
     if (adMap.attributionControl) adMap.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
-    adMapTiles = mapTiles().addTo(adMap);
+    adMapTiles = mapTiles({ keepBuffer: 4, updateWhenIdle: false }).addTo(adMap);
     adMapLayer = L.layerGroup().addTo(adMap);
     adMapFx = L.layerGroup().addTo(adMap);
     adMap.on('click', () => { adMapSel = null; paintAdMapCard(); markSelected(); });
     view.classList.add('intro');
-    refreshAdMap(true, true);
-    setTimeout(() => { if (adMap) { adMap.invalidateSize(); startBoat(); } }, 80);
+    refreshAdMap(false, true);
+    setTimeout(() => { if (adMap) { adMap.invalidateSize({ animate: false }); startBoat(); } }, 80);
 }
 
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && document.getElementById('adMapView') && !document.getElementById('sheet')) closeAdMap(); });

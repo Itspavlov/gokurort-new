@@ -17,10 +17,10 @@ const REQ_STATUS = { active: 'Активен', found: 'Найдено', closed: 
 const SEC = {
     work:   { seek: { head: 'Ищу работу', ph: 'Например: официант, опыт 2 года' }, offer: { head: 'Предоставляю работу', ph: 'Например: нужен повар на лето' }, price: 'Оплата, ₽', date: '', seats: '' },
     trips:  { seek: { head: 'Ищу поездку', ph: 'Например: ищу попутчиков Сочи → Адлер' }, offer: { head: 'Предоставляю поездку', ph: 'Например: еду в Краснодар, есть 2 места' }, price: 'Цена, ₽', date: 'Дата поездки', seats: 'Мест' },
-    market: { seek: { head: 'Ищу вещь', ph: 'Например: ищу детский велосипед' }, offer: { head: 'Предоставляю: продам или отдам', ph: 'Например: продам самокат' }, price: 'Цена, ₽ (пусто — отдам даром)', date: '', seats: '' }
+    services: { seek: { head: 'Ищу услугу', ph: 'Например: нужен электрик или мастер маникюра' }, offer: { head: 'Предоставляю услугу', ph: 'Например: делаю массаж, ремонт, уборку' }, price: 'Цена, ₽', date: '', seats: '' }
 };
 const isHousingReq = (r) => !r || !r.section || r.section === 'housing';
-// Раздел открытой комнаты: housing, work, trips или market
+// Раздел открытой комнаты: housing, work, trips или services
 const reqSection = () => (typeof currentRoom === 'string' && SEC[currentRoom]) ? currentRoom : 'housing';
 
 const reqAuthHeaders = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });

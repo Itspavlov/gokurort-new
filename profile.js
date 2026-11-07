@@ -34,10 +34,11 @@ function openSheet(title, bodyHTML, onMount) {
     el.innerHTML = `
         <div class="sheet-panel">
             <div class="sheet-grab"></div>
-            <div class="sheet-title">${title}</div>
+            <div class="sheet-head"><button type="button" class="sheet-back" data-sheet-close aria-label="Закрыть"><i class="fas fa-arrow-left"></i></button>
+                <div class="sheet-title">${title}</div></div>
             ${bodyHTML}
         </div>`;
-    el.addEventListener('click', (ev) => { if (ev.target === el) closeSheet(); });
+    el.addEventListener('click', (ev) => { if (ev.target === el || ev.target.closest('[data-sheet-close]')) closeSheet(); });
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add('open'));
     if (onMount) onMount(el);
@@ -110,6 +111,8 @@ function renderProfile() {
 // ---------- РЕДАКТОР ПРОФИЛЯ ----------
 function openProfileEditor() {
     const p = getProfile();
+    const accNow = typeof getAccount === 'function' ? getAccount() : null;
+    if (accNow) p.name = accNow.name;      // у аккаунта имя одно: его видят в чатах, отзывах и объявлениях
     let avatar = p.avatar || '';
     const e = escapeHtml;
 
@@ -122,7 +125,7 @@ function openProfileEditor() {
             </div>
             <input type="file" id="pfFile" accept="image/*" hidden>
         </div>
-        <label class="field"><span>Имя</span><input id="pfName" maxlength="30" value="${e(p.name || '')}" placeholder="Как к вам обращаться"></label>
+        <label class="field"><span>Имя</span><input id="pfName" maxlength="${accNow ? 24 : 30}" value="${e(p.name || '')}" placeholder="Как к вам обращаться">${accNow ? '<small class="field-hint">Имя видят все: в чатах, отзывах и объявлениях. Менять можно раз в сутки.</small>' : ''}</label>
         <label class="field"><span>Телефон</span><input id="pfPhone" type="tel" maxlength="20" value="${e(p.phone || '')}" placeholder="+7 900 000-00-00"></label>
         <label class="field"><span>Город</span><input id="pfCity" maxlength="40" value="${e(p.city || '')}" placeholder="Где живёте"></label>
         <label class="field"><span>О себе</span><textarea id="pfAbout" rows="3" maxlength="300" placeholder="Пара слов для гостей и хозяев">${e(p.about || '')}</textarea></label>
@@ -139,9 +142,24 @@ function openProfileEditor() {
                 box.innerHTML = `<img src="${avatar}" alt="">`;
             } catch (err) { showToast('Не удалось открыть фото'); }
         };
-        root.querySelector('#pfSave').onclick = () => {
-            const name = root.querySelector('#pfName').value.trim();
+        root.querySelector('#pfSave').onclick = async () => {
+            const btn = root.querySelector('#pfSave');
+            let name = root.querySelector('#pfName').value.trim();
             if (!name) { showToast('Укажите имя'); return; }
+            const acc = typeof getAccount === 'function' ? getAccount() : null;
+            // Имя в аккаунте — это и логин, и подпись в чатах, отзывах и объявлениях: меняем его на сервере
+            if (acc && name !== acc.name) {
+                btn.disabled = true;
+                try {
+                    const r = await fetch(`${SERVER_URL}/api/auth/rename`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() }, body: JSON.stringify({ name }) });
+                    let d = null; try { d = await r.json(); } catch (_) {}
+                    if (r.status === 401) { clearSession(); closeSheet(); showToast('Сессия истекла. Войдите снова'); return; }
+                    if (!d || !d.ok) { showToast((d && d.message) || 'Не удалось сменить имя'); btn.disabled = false; return; }
+                    name = d.user.name;
+                    try { localStorage.setItem('tell-account', JSON.stringify({ ...acc, name })); localStorage.setItem('tell-username', name); } catch (_) {}
+                    if (typeof reconnectSocket === 'function') reconnectSocket();   // сервер увидит новое имя
+                } catch (err) { showToast('Нет связи с сервером'); btn.disabled = false; return; }
+            }
             saveProfile({
                 name,
                 phone: root.querySelector('#pfPhone').value.trim(),

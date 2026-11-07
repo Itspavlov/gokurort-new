@@ -99,7 +99,8 @@ function emitMessage(payload, onDone) {
 const messagesCache = {
     housing: null,
     work: null,
-    market: null,
+    services: null,
+    dating: null,
     trips: null
 };
 
@@ -335,6 +336,14 @@ function connectSocket() {
         addMessageToChat(message);
     });
 
+    // имя сменили на другом устройстве: подхватываем без перезахода
+    socket.on('account-renamed', (d) => {
+        const acc = typeof getAccount === 'function' ? getAccount() : null;
+        if (!acc || !d || d.id !== acc.id || typeof d.name !== 'string') return;
+        try { localStorage.setItem('tell-account', JSON.stringify({ ...acc, name: d.name })); localStorage.setItem('tell-username', d.name); } catch (e) {}
+        if (typeof renderProfile === 'function') renderProfile();
+    });
+
     socket.on('room-history', (history) => {
         console.log('📜 История (socket):', history.length);
         history.forEach(m => { if (m && m.id && Array.isArray(m.mine)) myReacts[m.id] = m.mine; });
@@ -523,16 +532,19 @@ function openGroup(groupId, opts) {
     }
     const rooms = {
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
-        market: { name: 'Продам/Отдам', icon: 'fas fa-shopping-bag', ads: [] },
-        trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] }
+        services: { name: 'Услуги', icon: 'fas fa-screwdriver-wrench', ads: [] },
+        trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] },
+        dating: { name: 'Знакомства и общение', icon: 'fas fa-comments', ads: [] }
     };
 
     const room = rooms[groupId];
     if (!room) return;
 
     openChatRoom(groupId, room.name, room.icon, room.ads, Object.assign({
-        noAttach: !!room.noAttach, hint: !!room.hint, cards: true,
-        welcomeText: 'Переписки в разделе нет: нажмите «Ищу» или «Предоставляю» и добавьте карточку. Договариваться можно в личных сообщениях.'
+        noAttach: !!room.noAttach, hint: !!room.hint, cards: groupId !== 'dating',
+        welcomeText: groupId === 'dating'
+            ? 'Раздел для тех, кому 18+. Здесь можно знакомиться и общаться. Не публикуйте телефон и адрес, а о подозрительных людях сообщайте через жалобу на сообщение.'
+            : 'Переписки в разделе нет: нажмите «Ищу» или «Предоставляю» и добавьте карточку. Договариваться можно в личных сообщениях.'
     }, opts || {}));
 }
 
@@ -542,7 +554,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
 
     tabContents.forEach(section => section.style.display = 'none');
 
-    const welcomeTitle = opts.welcomeTitle || `Добро пожаловать в чат «${roomName}»`;
+    const welcomeTitle = opts.welcomeTitle || (opts.cards ? `Раздел «${roomName}»` : `Добро пожаловать в чат «${roomName}»`);
     const welcomeText = opts.welcomeText || 'Общайтесь, задавайте вопросы, делитесь фото.';
 
     let groupScreen = document.getElementById('group-screen');
@@ -888,7 +900,8 @@ function runSearch() {
     const map = [
         { room: 'work',   words: ['работ', 'ваканс', 'резюме', 'подработ', 'официант', 'повар'] },
         { room: 'trips',  words: ['поезд', 'попутч', 'трансфер', 'такси', 'довез', 'аэропорт'] },
-        { room: 'market', words: ['продам', 'отдам', 'куплю', 'вещ', 'велосипед', 'мебель'] }
+        { room: 'services', words: ['услуг', 'мастер', 'ремонт', 'массаж', 'маникюр', 'уборк', 'электрик', 'сантехник', 'репетитор'] },
+        { room: 'dating', words: ['знаком', 'общени', 'компани'] }
     ];
     const hit = map.find(m => m.words.some(w => q.includes(w)));
 
