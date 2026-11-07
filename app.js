@@ -166,15 +166,36 @@ function adImg(ad, alt) {
 const html = document.documentElement;
 const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-function getTheme() { return html.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; }
-function setTheme(theme) {
-    theme = theme === 'light' ? 'light' : 'dark';
-    html.setAttribute('data-theme', theme);
-    try { localStorage.setItem('tell-theme', theme); } catch (e) {}
-    if (metaTheme) metaTheme.setAttribute('content', theme === 'dark' ? '#060F1C' : '#E9F5F7');
-    document.querySelectorAll('.theme-seg button').forEach(b => b.classList.toggle('on', b.dataset.theme === theme));
+// Темы: sea — «Морской вечер» (по умолчанию), sand — «Песок», surf — «Прибой», dusk — «Закат».
+// Старое значение «light» переносится на «Прибой», «dark» на «Морской вечер».
+const THEMES = {
+    sea:  { name: 'Вечер',  meta: '#060F1C', bg: '#060F1C', accent: '#FF9A5C' },
+    sand: { name: 'Песок',  meta: '#FBF3E4', bg: '#FBF3E4', accent: '#F08A24' },
+    surf: { name: 'Прибой', meta: '#F2F6FB', bg: '#F2F6FB', accent: '#2F7BFF' },
+    dusk: { name: 'Закат',  meta: '#121216', bg: '#121216', accent: '#FF5E8A' }
+};
+const THEME_FONTS = {
+    sand: 'family=Fraunces:wght@600;700&family=Nunito:wght@500;600;700;800',
+    surf: 'family=Inter:wght@500;600;700;800',
+    dusk: 'family=Space+Grotesk:wght@500;600;700'
+};
+const normTheme = (t) => t === 'light' ? 'surf' : (THEMES[t] ? t : 'sea');
+function getTheme() { return normTheme(html.getAttribute('data-theme')); }
+function loadThemeFont(theme) {
+    const q = THEME_FONTS[theme]; if (!q || document.getElementById('font-' + theme)) return;
+    const l = document.createElement('link'); l.id = 'font-' + theme; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?' + q + '&display=swap';
+    document.head.appendChild(l);
 }
-setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'dark');
+function setTheme(theme) {
+    theme = normTheme(theme);
+    html.setAttribute('data-theme', theme === 'sea' ? 'dark' : theme);   // «dark» остаётся для основной, тёмной темы
+    try { localStorage.setItem('tell-theme', theme); } catch (e) {}
+    if (metaTheme) metaTheme.setAttribute('content', THEMES[theme].meta);
+    loadThemeFont(theme);
+    document.querySelectorAll('.theme-grid button').forEach(b => b.classList.toggle('on', b.dataset.th === theme));
+}
+setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'sea');
 
 // ---------- ИМЯ ПОЛЬЗОВАТЕЛЯ ----------
 function getUserName() {
