@@ -419,3 +419,28 @@
 .up-list { display: flex; flex-direction: column; gap: 12px; }
 .rv-on { margin-top: 4px; font-size: 12px; color: var(--text-muted); }
 .rv-sel { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 12px; border-radius: 12px; border: 1px solid var(--border, #444); background: transparent; color: inherit; font: inherit; font-size: 15px; }
+
+/* ---- v17: кабинет хозяина ---- */
+.st-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.st-tile { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); }
+.st-tile i { color: var(--sea); font-size: 15px; margin-bottom: 4px; }
+.st-tile b { font-size: 22px; font-weight: 800; }
+.st-tile span { font-size: 12px; color: var(--text-muted); line-height: 1.3; }
+.st-h { margin: 16px 2px 8px; font-size: 14px; font-weight: 700; }
+.st-chart { margin-top: 4px; }
+.st-bars { display: flex; align-items: flex-end; gap: 4px; height: 34px; }
+.st-bars.big { height: 110px; padding: 6px 4px 0; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); }
+.st-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; }
+.st-bar { width: 100%; max-width: 26px; border-radius: 5px 5px 2px 2px; background: var(--sea, #2BC4D6); opacity: .85; }
+.st-val { font-size: 10px; color: var(--text-muted); min-height: 12px; }
+.st-bars:not(.big) .st-val { display: none; }
+.st-day { font-size: 10px; color: var(--text-muted); padding-bottom: 4px; }
+.st-list { display: flex; flex-direction: column; gap: 8px; }
+.st-ad { display: block; width: 100%; box-sizing: border-box; padding: 12px; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.st-ad-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+.st-ad-top span { color: var(--sun-2, #FFB35C); font-weight: 700; white-space: nowrap; }
+.st-ad-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 10px; }
+.st-ad-grid div { display: flex; flex-direction: column; }
+.st-ad-grid b { font-size: 16px; }
+.st-ad-grid span { font-size: 11px; color: var(--text-muted); }
+.st-note { margin: 14px 2px 4px; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
