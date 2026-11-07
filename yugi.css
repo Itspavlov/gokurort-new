@@ -561,3 +561,58 @@
 .group-card.strip .group-desc { max-width: none; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .group-card.strip .strip-go { position: relative; z-index: 2; flex: none; opacity: .8; font-size: 14px; }
 .group-card.strip::after { background: linear-gradient(90deg, rgba(5, 14, 30, .28) 0%, rgba(5, 14, 30, 0) 70%); }
+
+/* ===== v23: нижние панели чуть ниже + карточки услуг ===== */
+.bottom-nav { padding-bottom: max(4px, calc(env(safe-area-inset-bottom, 0px) - 14px)); }
+.chat-input-wrapper { margin-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 12px)); }
+#group-screen .chat-input-wrapper.compact { margin-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 12px)); }
+.cards-dock { margin-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) - 12px)); }
+.kb-open #group-screen .chat-input-wrapper, .kb-open #group-screen .chat-input-wrapper.compact { margin-bottom: 8px; }
+
+.sv-list { display: flex; flex-direction: column; gap: 8px; }
+.sv-card { border-radius: 20px; background: var(--glass); border: 1px solid var(--glass-border); padding: 8px; }
+.sv-card.sv-feed { padding: 12px 14px; }
+.sv-card.sv-feed .req-head { margin-bottom: 10px; }
+.sv-main { display: flex; gap: 12px; cursor: pointer; align-items: flex-start; }
+.sv-thumb { position: relative; flex: none; width: 74px; height: 74px; border-radius: 14px; overflow: hidden; background: var(--glass-strong, rgba(255,255,255,.12)); display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.sv-feed .sv-thumb { width: 88px; height: 88px; }
+.sv-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sv-thumb em { position: absolute; right: 4px; bottom: 4px; min-width: 18px; padding: 1px 6px; border-radius: 9px; background: rgba(8,18,32,.72); color: #fff; font-style: normal; font-size: 11px; font-weight: 700; text-align: center; }
+.sv-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sv-title { font-size: 14.5px; line-height: 1.25; color: var(--text); overflow-wrap: anywhere; }
+.sv-price { font-size: 13.5px; font-weight: 700; color: var(--accent, var(--sun)); }
+.sv-text { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sv-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11.5px; color: var(--text-muted); }
+.sv-meta i { margin-right: 4px; }
+.sv-actions { display: flex; gap: 6px; margin-top: 8px; }
+.sv-actions button { flex: 1; height: 34px; border-radius: 17px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 600 12.5px var(--font); cursor: pointer; }
+.sv-actions button[data-sv="del"] { flex: none; width: 38px; }
+.sv-actions button:active { transform: scale(.97); }
+.sv-add { margin-top: 8px; }
+.sv-photo-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.sv-photo-grid .photo-tile, .sv-photo-grid .photo-add { border-radius: 14px; }
+.sv-gallery { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -2px 12px; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.sv-gallery img { flex: none; width: 86%; max-height: 260px; object-fit: cover; border-radius: 18px; scroll-snap-align: center; }
+.sv-gallery img:only-child { width: 100%; }
+.sv-view-price { font-size: 20px; font-weight: 800; color: var(--accent, var(--sun)); margin: 2px 2px 6px; }
+.sv-view-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 2px 10px; font-size: 12.5px; color: var(--text-secondary); }
+.sv-tag { padding: 2px 10px; border-radius: 10px; background: var(--glass); border: 1px solid var(--glass-border); }
+.sv-view-text { margin: 0 2px 14px; font-size: 14px; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sv-owner { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; margin-bottom: 12px; border-radius: 16px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font-family: var(--font); text-align: left; cursor: pointer; }
+.sv-owner .chat-avatar { flex: none; }
+.sv-owner > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sv-owner small { color: var(--text-muted); font-size: 11.5px; }
+.sv-view-btns { display: flex; gap: 8px; }
+.sv-view-btns > * { flex: 1; }
+
+/* выбор: опубликовать старое или создать новое */
+.rp-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.rp-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 16px; background: var(--glass); border: 1px solid var(--glass-border); }
+.rp-thumb { flex: none; width: 46px; height: 46px; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--glass-strong, rgba(255,255,255,.12)); color: var(--text-muted); }
+.rp-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.rp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rp-info b { font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-info small { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-btns { flex: none; display: flex; gap: 6px; }
+.rp-btns button { height: 34px; min-width: 34px; padding: 0 12px; border-radius: 17px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 600 12.5px var(--font); cursor: pointer; }
+.rp-btns button.rp-main { background: var(--sea, #1d6fa5); border-color: transparent; color: var(--on-sea, #fff); }

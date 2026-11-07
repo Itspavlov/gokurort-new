@@ -104,13 +104,19 @@ function paintRequests() {
     if (!msgs) return;
     const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 120;
     msgs.querySelectorAll('.req-item').forEach(n => n.remove());
-    const sorted = reqList.slice().sort((x, y) => x.created - y.created);
+    // карточки запросов и (в разделе «Услуги») карточки услуг встают в ленту по времени вместе
+    const items = reqList.map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
+    if (reqSection() === 'services' && typeof serviceFeed !== 'undefined') {
+        serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, html: serviceFeedHTML(sv) }));
+    }
+    items.sort((x, y) => x.ts - y.ts);
     let added = 0;
-    for (const r of sorted) {
+    for (const it of items) {
         const w = document.createElement('div');
-        w.className = 'req-item'; w.dataset.ts = r.created; w.dataset.rid = r.id; w.dataset.kind = r.kind === 'offer' ? 'offer' : 'seek';
-        w.innerHTML = reqCardHTML(r);
-        const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > r.created);
+        w.className = 'req-item'; w.dataset.ts = it.ts; w.dataset.kind = it.kind;
+        if (it.rid) w.dataset.rid = it.rid; else w.dataset.sid = it.sid;
+        w.innerHTML = it.html;
+        const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > it.ts);
         if (after) msgs.insertBefore(w, after); else msgs.appendChild(w);
         added++;
     }
@@ -170,8 +176,13 @@ function setupCards() {
     dock.addEventListener('click', (ev) => {
         const tab = ev.target.closest('.seek-tab');
         if (tab) { reqView = reqView === tab.dataset.v ? 'all' : tab.dataset.v; applyReqView(); return; }   // повторное нажатие снимает фильтр
-        if (ev.target.closest('#dockSeek')) { reqSection() === 'housing' ? openRequestSheet() : openCardSheet('seek'); return; }
-        if (ev.target.closest('#dockOffer')) { reqSection() === 'housing' ? openAdForm() : openCardSheet('offer'); }
+        if (ev.target.closest('#dockSeek')) { reqSection() === 'housing' ? openRequestSheet() : openCardFlow('seek'); return; }
+        if (ev.target.closest('#dockOffer')) {
+            const sec = reqSection();
+            if (sec === 'housing') openAdForm();                 // у хозяина с объявлениями спросит: поднять старое или создать новое
+            else if (sec === 'services') openServiceFlow();
+            else openCardFlow('offer');
+        }
     });
     msgs.addEventListener('click', (ev) => { if (ev.target.closest('.req-card')) onReqCardClick(ev); });
     applyReqView();
@@ -283,14 +294,14 @@ function openRequestSheet(edit) {
 
 
 // ---------- форма карточки «Ищу / Предоставляю» для работы, поездок и вещей ----------
-function openCardSheet(kind, edit) {
+function openCardSheet(kind, edit, prefill) {
     loginRequired(() => {
         const r = edit && edit.id ? edit : null;
         const section = r ? r.section : reqSection();
         const sec = SEC[section];
         if (!sec) return;
         kind = kind === 'offer' ? 'offer' : 'seek';
-        const cfg = sec[kind], e = escapeHtml, v0 = r || {};
+        const cfg = sec[kind], e = escapeHtml, v0 = r || (prefill ? { ...prefill, dateFrom: prefill.dateFrom && prefill.dateFrom >= todayISO() ? prefill.dateFrom : '' } : {});
         openSheet(r ? 'Изменить карточку' : cfg.head, `
             <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
             <label class="field"><span>Заголовок</span><input id="cdTitle" maxlength="80" placeholder="${e(cfg.ph)}" value="${e(v0.title || '')}"></label>

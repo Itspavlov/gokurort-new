@@ -1096,7 +1096,7 @@ function myAdsAll() {
 function normalizeRemoteAd(a) {
     const acc = getAccount();
     a.mine = !!(acc && a.ownerId === acc.id);
-    const d = new Date(a.created || Date.now());
+    const d = new Date(a.updated || a.created || Date.now());   // поднятое объявление показывается со временем поднятия
     const today = new Date();
     const p2 = (n) => String(n).padStart(2, '0');
     a.time = p2(d.getHours()) + ':' + p2(d.getMinutes());

@@ -671,7 +671,7 @@ function renderHousingMessage(ad) {
         : escapeHtml(name[0] || '?');
 
     return `
-        <div class="chat-message chat-message-ad" data-id="ad_${escapeHtml(String(ad.id))}" data-ad-id="${escapeHtml(String(ad.id))}"${ad.created ? ` data-ts="${Number(ad.created)}"` : ''} onclick="openListing('${ad.id}')">
+        <div class="chat-message chat-message-ad" data-id="ad_${escapeHtml(String(ad.id))}" data-ad-id="${escapeHtml(String(ad.id))}"${(ad.updated || ad.created) ? ` data-ts="${Number(ad.updated || ad.created)}"` : ''} onclick="openListing('${ad.id}')">
             <div class="chat-avatar" style="background: ${color};">${avatar}</div>
             <div class="chat-bubble-wrap">
                 <div class="chat-bubble-header">
