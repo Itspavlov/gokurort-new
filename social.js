@@ -960,7 +960,7 @@ function attachChatGestures() {
         if (ev.button > 0) return;
         held = false; swiped = false; swipeState = 0; swipeDx = 0;
         resetSwipe(false);
-        if (ev.target.closest('.react-chip, .reply-quote')) return;
+        if (ev.target.closest('.react-chip, .reply-quote, .ad-slides')) return;   // по фото листаем, а не отвечаем
         const msgEl = ev.target.closest('.chat-message[data-id]');
         if (!msgEl || !ev.target.closest('.chat-bubble')) return;
         startX = ev.clientX; startY = ev.clientY;

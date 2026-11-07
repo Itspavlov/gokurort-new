@@ -661,6 +661,49 @@ function adChipsHTML(adId) {
     return renderReactionChips({ id: 'ad_' + adId, reactions: st.counts, mine: st.mine });
 }
 
+// ---------- фото в карточке: листаются прямо в ленте ----------
+// В списке сервер присылает одну обложку, остальные фото подгружаются при первом касании.
+const adPhotoCache = {};
+function adSlidesHTML(ad) {
+    const id = String(ad.id);
+    const cached = adPhotoCache[id] || (ad.photos && ad.photos.length > 1 ? ad.photos : null);
+    const n = cached ? cached.length : (Number(ad.photoCount) || (ad.image ? 1 : 0));
+    const first = cached ? cached[0] : ad.image;
+    const slide = (src) => src ? `<div class="ad-slide"><img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.style.display='none'"></div>` : '<div class="ad-slide ph"></div>';
+    let html = slide(first);
+    for (let i = 1; i < n; i++) html += slide(cached ? cached[i] : '');
+    return { n, html: `<div class="ad-slides" data-slides="${escapeHtml(id)}" data-n="${n}" data-loaded="${cached || n <= 1 ? 1 : 0}">${html}</div>` };
+}
+
+function loadAdSlides(box) {
+    if (!box || box.dataset.loaded === '1' || box.dataset.loading === '1') return;
+    const id = box.dataset.slides;
+    if (!(typeof isRemoteAdId === 'function' && isRemoteAdId(id))) { box.dataset.loaded = '1'; return; }
+    box.dataset.loading = '1';
+    fetch(`${SERVER_URL}/api/listings/${encodeURIComponent(id)}`).then(r => r.json()).then(d => {
+        const photos = d && d.ok && d.listing && Array.isArray(d.listing.photos) ? d.listing.photos.filter(Boolean) : [];
+        if (!photos.length) { box.dataset.loading = ''; return; }
+        adPhotoCache[id] = photos;
+        document.querySelectorAll(`.ad-slides[data-slides="${CSS.escape(id)}"]`).forEach(el => {
+            const slides = el.querySelectorAll('.ad-slide');
+            photos.forEach((src, i) => {
+                const sl = slides[i]; if (!sl || (i === 0 && sl.querySelector('img'))) return;
+                sl.classList.remove('ph'); sl.innerHTML = `<img src="${escapeHtml(src)}" alt="" onerror="this.style.display='none'">`;
+            });
+            el.dataset.loaded = '1'; el.dataset.loading = '';
+        });
+    }).catch(() => { box.dataset.loading = ''; });
+}
+document.addEventListener('pointerdown', (ev) => { const b = ev.target.closest && ev.target.closest('.ad-slides'); if (b) loadAdSlides(b); }, true);
+document.addEventListener('mouseover', (ev) => { const b = ev.target.closest && ev.target.closest('.ad-slides'); if (b && b.dataset.loaded !== '1') loadAdSlides(b); });
+document.addEventListener('scroll', (ev) => {
+    const b = ev.target;
+    if (!b || !b.classList || !b.classList.contains('ad-slides')) return;
+    const i = Math.round(b.scrollLeft / Math.max(1, b.clientWidth)) + 1;
+    const cur = b.parentElement && b.parentElement.querySelector('.ph-count .cur');
+    if (cur && cur.textContent !== String(i)) cur.textContent = i;
+}, true);
+
 // Главные удобства показываем первыми: Wi-Fi, парковка, бассейн
 const AMEN_FIRST = ['Wi-Fi', 'Парковка', 'Бассейн', 'Кондиционер', 'Кухня'];
 function adAmenBadges(ad, max) {
@@ -675,12 +718,9 @@ function adAmenBadges(ad, max) {
 }
 
 function renderHousingMessage(ad) {
-    const owner = getOwner(ad);
-    const name = owner.name || 'Хозяин';
-    const time = ad.time || '';
     const id = escapeHtml(String(ad.id));
     const remote = typeof isRemoteAdId === 'function' && isRemoteAdId(ad.id);
-    const photos = Number(ad.photoCount) || (ad.photos && ad.photos.length) || (ad.image ? 1 : 0);
+    const sl = adSlidesHTML(ad);
     const sea = (typeof distMeters === 'function' && ad.coords && ad.beach) ? fmtDist(distMeters(ad.coords, ad.beach)) : '';
     const fav = remote && typeof favIds !== 'undefined' && favIds.has(ad.id);
     const rating = ad.rating ? `<span class="ad-rate"><i class="fas fa-star"></i>${Number(ad.rating).toFixed(1).replace('.', ',')}${ad.reviewCount ? `<small>(${ad.reviewCount})</small>` : ''}</span>` : '';
@@ -690,18 +730,17 @@ function renderHousingMessage(ad) {
             <div class="chat-bubble-wrap">
                 <div class="chat-bubble">
                     <div class="chat-ad-image">
-                        ${adImg(ad)}
+                        ${sl.html}
                         ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
                         ${remote ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
-                        ${photos ? `<span class="ph-count"><i class="fas fa-camera"></i>${photos}</span>` : ''}
+                        ${sl.n ? `<span class="ph-count"><i class="fas fa-camera"></i><span><b class="cur">1</b>/${sl.n}</span></span>` : ''}
                         ${sea ? `<span class="sea-dist"><i class="fas fa-umbrella-beach"></i>${escapeHtml(sea)} до моря</span>` : ''}
                     </div>
                     <div class="ad-info">
-                        <div class="ad-row1"><div class="chat-ad-price">${escapeHtml(ad.price)}</div>${rating}</div>
+                        <div class="ad-row1"><div class="chat-ad-price">${escapeHtml(ad.price)}${ad.isVerified ? ' <i class="fas fa-circle-check ad-ok" aria-label="Проверенный хозяин"></i>' : ''}</div>${rating}</div>
                         <div class="chat-ad-title">${escapeHtml(ad.title)}</div>
                         <div class="chat-ad-location"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
                         ${adAmenBadges(ad, 3)}
-                        <div class="ad-owner"><span>${escapeHtml(name)}${ad.isVerified ? ' <i class="fas fa-circle-check"></i>' : ''}</span><span>${escapeHtml(time)}</span></div>
                     </div>
                 </div>
                 <div class="chat-reactions" data-for="ad_${id}">${adChipsHTML(ad.id)}</div>

@@ -74,6 +74,13 @@ function favCardHTML(l, withRemove) {
         `<button class="main" data-a="open">Открыть</button>${withRemove ? '<button data-a="unfav" aria-label="Убрать из избранного"><i class="fas fa-heart-crack"></i></button>' : ''}`);
 }
 
+// «Недавно смотрели»: карточки в одну строку, листаются вбок
+function recentCardHTML(l) {
+    const e = escapeHtml, t = l.thumb || l.image || '';
+    return `<button type="button" class="rc-card" data-a="open" data-lid="${e(l.id)}"><span class="rc-thumb" style="${t ? 'background-image:url(' + e(t) + ')' : ''}"></span>
+        <b>${e(l.title)}</b><small>${e(l.price || '')}</small>${l.location ? `<small class="rc-loc">${e(l.location)}</small>` : ''}</button>`;
+}
+
 let favList = [];
 function paintFavSections() {
     const fav = document.getElementById('favBox'), rec = document.getElementById('recentBox');
@@ -81,7 +88,7 @@ function paintFavSections() {
         : `<div class="req-empty"><i class="fas fa-heart"></i><b>Пока пусто</b><span>${getToken() ? 'Нажмите «В избранное» в карточке жилья, чтобы вернуться к нему позже.' : 'Войдите в аккаунт, чтобы сохранять жильё в избранное.'}</span></div>`;
     const secF = document.getElementById('favHead'); if (secF) secF.textContent = 'Избранное' + (favList.length ? ': ' + favList.length : '');
     const r = getRecent();
-    if (rec) { rec.innerHTML = r.map(x => favCardHTML(x, false)).join(''); const s = document.getElementById('recentSec'); if (s) s.hidden = !r.length; }
+    if (rec) { rec.innerHTML = r.map(recentCardHTML).join(''); const s = document.getElementById('recentSec'); if (s) s.hidden = !r.length; }
 }
 
 function refreshFavSections() {
@@ -93,7 +100,7 @@ function refreshFavSections() {
 // ---------- окно «Избранное» (сердечко в шапке) ----------
 function openFavorites() {
     openSheet('Избранное', `<div class="opt-sec" id="favHead">Избранное</div><div id="favBox" class="req-mine"></div>
-        <div id="recentSec" hidden><div class="opt-sec" style="margin-top:16px">Недавно смотрели</div><div id="recentBox" class="req-mine"></div></div>`, (el) => {
+        <div id="recentSec" hidden><div class="opt-sec" style="margin-top:16px">Недавно смотрели</div><div id="recentBox" class="recent-row"></div></div>`, (el) => {
         el.addEventListener('click', onFavClick);
         paintFavSections(); refreshFavSections();
     });
@@ -105,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function onFavClick(ev) {
     const b = ev.target.closest('#favBox button[data-a], #recentBox button[data-a]'); if (!b) return;
-    const card = b.closest('.opt-card'); const id = card.dataset.lid;
+    const card = b.closest('.opt-card, .rc-card'); const id = card.dataset.lid;
     if (b.dataset.a === 'open') {
         const l = favList.find(x => x.id === id);
         if (l) { closeSheet(); openAdFromCard(l); return; }
