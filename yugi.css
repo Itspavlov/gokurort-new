@@ -444,3 +444,34 @@
 .st-ad-grid b { font-size: 16px; }
 .st-ad-grid span { font-size: 11px; color: var(--text-muted); }
 .st-note { margin: 14px 2px 4px; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+/* ---- v18: подписки на поиск ---- */
+.watch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.watch-btn { flex: 1; padding: 11px 12px; border-radius: 12px; border: 1px dashed var(--sea, #2BC4D6); background: none; color: var(--sea, #2BC4D6); font: 700 14px var(--font); cursor: pointer; }
+.watch-link { border: 0; background: none; color: var(--text-muted); font: 600 13px var(--font); text-decoration: underline; cursor: pointer; white-space: nowrap; }
+.sub-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); }
+.sub-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sub-main b { font-size: 14px; }
+.sub-main span { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub-show { border: 0; border-radius: 10px; padding: 8px 10px; background: var(--sea, #2BC4D6); color: #04202a; font: 700 12px var(--font); cursor: pointer; }
+.sub-del { border: 0; background: none; color: var(--text-muted); font: 700 12px var(--font); padding: 8px; cursor: pointer; }
+.sub-del.sure { color: #E5484D; }
+
+/* ---- v18: фото и быстрые ответы в личных чатах ---- */
+.plus-btn { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255,255,255,.12)); color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+.plus-row { display: flex; align-items: center; gap: 14px; width: 100%; box-sizing: border-box; padding: 14px; margin-bottom: 8px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 600 15px var(--font); cursor: pointer; text-align: left; }
+.plus-row i { width: 22px; text-align: center; color: var(--sea); }
+.dm-prev { display: block; width: 100%; max-height: 46vh; object-fit: contain; border-radius: 14px; background: #000; margin-bottom: 10px; }
+.dm-cap { height: auto; }
+.dm-photo-bubble { padding: 4px !important; }
+.dm-photo { display: block; max-width: min(240px, 62vw); max-height: 300px; border-radius: 12px; cursor: zoom-in; object-fit: cover; }
+.dm-cap-t { padding: 6px 6px 3px; font-size: 14px; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
+.photo-viewer { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.92); }
+.photo-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.photo-viewer button { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 14px; width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 26px; line-height: 1; }
+.q-row { display: flex; align-items: stretch; gap: 6px; margin-bottom: 8px; }
+.q-use { flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 500 14px/1.35 var(--font); text-align: left; cursor: pointer; }
+.q-del { width: 40px; border: 0; border-radius: 12px; background: none; color: var(--text-muted); font-size: 16px; cursor: pointer; }
+.q-add { display: flex; gap: 8px; margin-top: 10px; }
+.q-add input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--border, #444); background: transparent; color: inherit; font: inherit; font-size: 16px; }
+.q-add button { padding: 0 14px; border: 0; border-radius: 12px; background: var(--sea, #2BC4D6); color: #04202a; font: 700 14px var(--font); cursor: pointer; }

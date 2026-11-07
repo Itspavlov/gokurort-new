@@ -91,6 +91,7 @@ function renderProfile() {
 
         <div class="pf-menu">
             <button type="button" class="pf-row" id="rowStats" onclick="openStats()" hidden><i class="fas fa-chart-simple"></i><span>Статистика</span><i class="fas fa-chevron-right pf-go"></i></button>
+            <button type="button" class="pf-row" id="rowSubs" onclick="openSearchSubs()"><i class="fas fa-bell"></i><span>Подписки на поиск</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowReq" onclick="openMyRequests()"><i class="fas fa-magnifying-glass"></i><span>Мои запросы</span><em id="rowReqCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowMatch" onclick="openMatchingSheet()" hidden><i class="fas fa-users"></i><span>Подходящие арендаторы</span><em id="rowMatchCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
             <div class="pf-row pf-static"><i class="fas fa-circle-half-stroke"></i><span>Тема</span>

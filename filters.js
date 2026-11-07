@@ -97,6 +97,7 @@ function openFilterSheet() {
         <div class="f-h">Удобства</div>
         <div class="chip-row" id="ffAmen">${AMENITIES.map(a => chip(f.amen.includes(a.l), `data-a="${e(a.l)}"`, `<i class="fas ${a.i}"></i>${e(a.l)}`)).join('')}</div>
         <label class="pref-row" style="margin-top:14px"><span><b>Только проверенные хозяева</b></span><input type="checkbox" id="ffVer" ${f.verified ? 'checked' : ''}><i class="pref-sw"></i></label>
+        <div class="watch-row"><button type="button" class="watch-btn" id="ffWatch"><i class="fas fa-bell"></i> Следить за этим поиском</button><button type="button" class="watch-link" id="ffSubs">Мои подписки</button></div>
         <div class="f-actions"><button type="button" class="ghost-btn" id="ffReset">Сбросить</button><button type="button" class="primary-btn" id="ffApply">Показать</button></div>`, (el) => {
         const read = () => {
             f.q = el.querySelector('#ffQ').value.trim();
@@ -122,6 +123,8 @@ function openFilterSheet() {
         el.addEventListener('input', recount); el.addEventListener('change', recount);
         el.querySelector('#ffReset').onclick = () => { adFilter = { ...FILTER_DEFAULT, amen: [] }; saveAdFilter(); closeSheet(); applyAdFilters(); refreshAdMap(); };
         el.querySelector('#ffApply').onclick = () => { read(); adFilter = f; saveAdFilter(); closeSheet(); applyAdFilters(); refreshAdMap(); };
+        el.querySelector('#ffWatch').onclick = () => { read(); watchSearch(f); };
+        el.querySelector('#ffSubs').onclick = () => openSearchSubs();
         recount();
     });
 }
