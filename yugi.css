@@ -154,16 +154,13 @@
 
 
 /* ===== Ищут / Предлагают, запросы арендаторов ===== */
-.seek-bar { flex: none; display: flex; align-items: center; gap: 8px; margin: 4px 14px 2px; }
 .seek-tabs { flex: 1; min-width: 0; display: flex; padding: 3px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); }
 .seek-tab { flex: 1; height: 34px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font: 700 13px var(--font); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; -webkit-tap-highlight-color: transparent; outline: none; }
 .seek-tab.on { background: var(--glass-strong); color: var(--text); }
 .seek-tab b { font-size: 11px; opacity: .8; }
 .seek-tab b:empty { display: none; }
-.seek-add { flex: none; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--text); color: #0b1626; font: 800 13px var(--font); cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; outline: none; font-variant-numeric: tabular-nums; }
-#chatMessages.view-seek > :not(.req-item):not(#reqEmpty) { display: none !important; }
-#chatMessages.view-offer .req-item, #chatMessages.view-offer #reqEmpty { display: none; }
-#chatMessages:not(.view-seek) #reqEmpty { display: none; }
+#chatMessages.view-seek > :not(.req-item[data-kind="seek"]):not(#reqEmpty) { display: none !important; }
+#chatMessages.view-offer > .req-item[data-kind="seek"], #chatMessages.view-offer > .chat-welcome { display: none !important; }
 .req-item { margin: 4px 0 10px; }
 .opt-sec { margin: 4px 2px 8px; font: 800 13px var(--font); color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
 .opt-card { display: flex; gap: 12px; padding: 10px; border-radius: 18px; background: var(--glass); border: 1px solid var(--glass-border); margin-bottom: 10px; }
@@ -522,3 +519,15 @@
     --on-sea: #fff; --on-accent: #2A0813; --panel-dark: rgba(22, 22, 28, 0.72);
     --font: 'Space Grotesk', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Space Grotesk', sans-serif;
 }
+
+
+/* ===== v20: в разделах нет переписки, только карточки «Ищу / Предоставляю» ===== */
+#chatMessages.cards > :not(.req-item):not(.chat-message-ad):not(.chat-welcome):not(#reqEmpty) { display: none !important; }
+.cards-dock { flex: none; display: flex; flex-direction: column; gap: 8px; margin: 0 14px; margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); padding: 8px; border-radius: 26px; background: var(--glass); border: 1px solid var(--glass-border); box-shadow: var(--glass-hi), var(--shadow); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.cards-dock .seek-tabs { flex: none; }
+.dock-actions { display: flex; gap: 8px; }
+.dock-btn { flex: 1; min-width: 0; height: 46px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255,255,255,.14)); color: var(--text); font: 800 15px var(--font); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 7px; -webkit-tap-highlight-color: transparent; outline: none; font-variant-numeric: tabular-nums; }
+.dock-btn.main { background: var(--text); color: var(--on-sea, #0b1626); border-color: transparent; }
+.dock-btn:active { transform: scale(.98); }
+.req-kind { font: 700 11px var(--font); font-style: normal; padding: 3px 9px; border-radius: 999px; background: var(--glass-strong); color: var(--text-secondary); white-space: nowrap; }
+.req-kind.offer { color: var(--text); }

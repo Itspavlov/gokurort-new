@@ -11,7 +11,17 @@ let reqEditing = null;
 
 const REQ_NOUN = { apartment: 'квартиру', house: 'дом', hotel: 'отель', room: 'комнату', guest: 'гостевой дом' };
 const REQ_CATS = [['', 'Любое жильё'], ['apartment', 'Квартира'], ['house', 'Дом'], ['hotel', 'Отель'], ['room', 'Комната'], ['guest', 'Гостевой дом']];
-const REQ_STATUS = { active: 'Активен', found: 'Найдено жильё', closed: 'Закрыт', expired: 'Истёк срок' };
+const REQ_STATUS = { active: 'Активен', found: 'Найдено', closed: 'Закрыт', expired: 'Истёк срок' };
+
+// Разделы без жилья: «Ищу» и «Предоставляю» — простые карточки
+const SEC = {
+    work:   { seek: { head: 'Ищу работу', ph: 'Например: официант, опыт 2 года' }, offer: { head: 'Предоставляю работу', ph: 'Например: нужен повар на лето' }, price: 'Оплата, ₽', date: '', seats: '' },
+    trips:  { seek: { head: 'Ищу поездку', ph: 'Например: ищу попутчиков Сочи → Адлер' }, offer: { head: 'Предоставляю поездку', ph: 'Например: еду в Краснодар, есть 2 места' }, price: 'Цена, ₽', date: 'Дата поездки', seats: 'Мест' },
+    market: { seek: { head: 'Ищу вещь', ph: 'Например: ищу детский велосипед' }, offer: { head: 'Предоставляю: продам или отдам', ph: 'Например: продам самокат' }, price: 'Цена, ₽ (пусто — отдам даром)', date: '', seats: '' }
+};
+const isHousingReq = (r) => !r || !r.section || r.section === 'housing';
+// Раздел открытой комнаты: housing, work, trips или market
+const reqSection = () => (typeof currentRoom === 'string' && SEC[currentRoom]) ? currentRoom : 'housing';
 
 const reqAuthHeaders = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -24,7 +34,7 @@ const setCooldown = (sec) => { reqCooldownUntil = Date.now() + Math.max(0, sec) 
 function loadRequests(cb) {
     const room = typeof currentRoom === 'string' ? currentRoom : '';
     const cat = (typeof housingCatByRoom === 'function' && room.startsWith('housing-') && housingCatByRoom(room)) ? housingCatByRoom(room).id : '';
-    const url = `${SERVER_URL}/api/requests?status=active${cat ? '&category=' + cat : ''}`;
+    const url = `${SERVER_URL}/api/requests?status=active&section=${reqSection()}${cat ? '&category=' + cat : ''}`;
     const h = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
     fetch(url, { headers: h }).then(r => r.json()).then(d => {
         if (!d || !d.ok) return;
@@ -36,7 +46,29 @@ function loadRequests(cb) {
 }
 
 // ---------- карточки ----------
+function cardHTML(r) {
+    const e = escapeHtml, sec = SEC[r.section];
+    const seek = r.kind !== 'offer';
+    const lines = [
+        r.city ? `<span><i class="fas fa-location-dot"></i>${e(r.city)}</span>` : '',
+        r.dateFrom ? `<span><i class="fas fa-calendar"></i>${fmtShortDate(r.dateFrom)}</span>` : '',
+        r.guests ? `<span><i class="fas fa-user-group"></i>${r.guests} ${sec && sec.seats ? 'мест' : 'чел.'}</span>` : '',
+        r.budget ? `<span><i class="fas fa-ruble-sign"></i>${seek && r.section !== 'work' ? 'до ' : ''}${Number(r.budget).toLocaleString('ru-RU')} ₽</span>` : ''
+    ].join('');
+    const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : `<em class="req-kind ${seek ? 'seek' : 'offer'}">${seek ? 'Ищет' : 'Предлагает'}</em>`;
+    const actions = r.status !== 'active' ? '' : (r.mine
+        ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>`
+        : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>`);
+    return `<div class="req-card card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
+        <div class="req-head"><div class="chat-avatar" style="background:${dmColor(r.ownerName)}">${e(Array.from(r.ownerName)[0] || '?')}</div>
+            <div class="req-title"><b>${e(r.title || '')}</b><small>${e(r.mine ? 'Вы' : r.ownerName)} · ${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+        ${lines ? `<div class="req-lines">${lines}</div>` : ''}
+        ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
+        ${actions ? `<div class="req-actions">${actions}</div>` : ''}</div>`;
+}
+
 function reqCardHTML(r, opts = {}) {
+    if (!isHousingReq(r)) return cardHTML(r);
     const e = escapeHtml;
     const noun = REQ_NOUN[r.category] || 'жильё';
     const lines = [
@@ -76,24 +108,47 @@ function paintRequests() {
     let added = 0;
     for (const r of sorted) {
         const w = document.createElement('div');
-        w.className = 'req-item'; w.dataset.ts = r.created; w.dataset.rid = r.id;
+        w.className = 'req-item'; w.dataset.ts = r.created; w.dataset.rid = r.id; w.dataset.kind = r.kind === 'offer' ? 'offer' : 'seek';
         w.innerHTML = reqCardHTML(r);
         const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > r.created);
         if (after) msgs.insertBefore(w, after); else msgs.appendChild(w);
         added++;
     }
-    const empty = document.getElementById('reqEmpty');
-    if (empty) empty.hidden = reqList.length > 0;
-    const cnt = document.querySelector('.seek-tab[data-v="seek"] b');
-    if (cnt) cnt.textContent = reqList.length ? reqList.length : '';
-    if (added && (nearBottom || reqView === 'seek')) msgs.scrollTop = msgs.scrollHeight;
+    updateDockState();
+    if (added && (nearBottom || reqView !== 'all')) msgs.scrollTop = msgs.scrollHeight;
 }
 
-// ---------- переключатель Ищут / Предлагают (повторное нажатие — показать всё) ----------
-function seekBarHTML() {
-    const t = (v, l) => `<button type="button" role="tab" class="seek-tab ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}">${l}${v === 'seek' ? '<b></b>' : ''}</button>`;
-    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', 'Ищут')}${t('offer', 'Предлагают')}</div>
-        <button type="button" class="seek-add" id="seekAdd"><i class="fas fa-plus"></i> Ищу жильё</button></div>`;
+// Счётчики на вкладках и подсказка, когда в выбранной вкладке пусто
+function updateDockState() {
+    const msgs = document.getElementById('chatMessages');
+    if (!msgs) return;
+    const seeks = msgs.querySelectorAll('.req-item[data-kind="seek"]').length;
+    const offers = msgs.querySelectorAll('.req-item[data-kind="offer"], .chat-message-ad').length;
+    const set = (v, n) => { const b = document.querySelector(`.seek-tab[data-v="${v}"] b`); if (b) b.textContent = n ? n : ''; };
+    set('seek', seeks); set('offer', offers);
+    const empty = document.getElementById('reqEmpty');
+    if (!empty) return;
+    const shown = reqView === 'seek' ? seeks : reqView === 'offer' ? offers : seeks + offers;
+    empty.hidden = shown > 0;
+    if (!shown) {
+        const housing = reqSection() === 'housing';
+        empty.innerHTML = reqView === 'offer'
+            ? `<i class="fas fa-circle-plus"></i><b>Пока нет предложений</b><span>${housing ? 'Сдаёте жильё? Нажмите «Предоставляю» внизу.' : 'Нажмите «Предоставляю» внизу и добавьте карточку.'}</span>`
+            : reqView === 'seek'
+                ? `<i class="fas fa-magnifying-glass"></i><b>Пока никто не ищет</b><span>${housing ? 'Ищете жильё? Нажмите «Ищу» внизу: хозяева увидят запрос и предложат варианты.' : 'Нажмите «Ищу» внизу и добавьте карточку.'}</span>`
+                : `<i class="fas fa-layer-group"></i><b>Здесь пока пусто</b><span>Добавьте карточку: «Ищу» или «Предоставляю» внизу.</span>`;
+    }
+}
+
+// ---------- нижняя панель: фильтр «Ищут / Предлагают» и кнопки «Ищу» и «Предоставляю» ----------
+function cardsDockHTML() {
+    const t = (v, l) => `<button type="button" role="tab" class="seek-tab ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}">${l}<b></b></button>`;
+    return `<div class="cards-dock" id="cardsDock">
+        <div class="seek-tabs" role="tablist">${t('seek', 'Ищут')}${t('offer', 'Предлагают')}</div>
+        <div class="dock-actions">
+            <button type="button" class="dock-btn" id="dockSeek"><i class="fas fa-magnifying-glass"></i> Ищу</button>
+            <button type="button" class="dock-btn main" id="dockOffer"><i class="fas fa-plus"></i> Предоставляю</button>
+        </div></div>`;
 }
 
 function applyReqView() {
@@ -102,31 +157,31 @@ function applyReqView() {
     msgs.classList.toggle('view-seek', reqView === 'seek');
     msgs.classList.toggle('view-offer', reqView === 'offer');
     document.querySelectorAll('.seek-tab').forEach(b => { const on = b.dataset.v === reqView; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    updateDockState();
     msgs.scrollTop = msgs.scrollHeight;
 }
 
-function setupSeekBar() {
-    if (!document.getElementById('catChips') || document.getElementById('seekBar')) return;
-    const wrap = document.querySelector('.cat-chips-wrap');
+function setupCards() {
+    const dock = document.getElementById('cardsDock');
     const msgs = document.getElementById('chatMessages');
-    if (!wrap || !msgs) return;
-    wrap.insertAdjacentHTML('afterend', seekBarHTML());
-    const welcome = msgs.querySelector('.chat-welcome');
-    const box = msgs;
-    msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden><i class="fas fa-magnifying-glass"></i><b>Пока нет запросов</b><span>Ищете жильё? Нажмите «Ищу жильё»: хозяева увидят запрос и предложат варианты.</span></div>');
-    document.getElementById('seekBar').addEventListener('click', (ev) => {
+    if (!dock || !msgs || dock.dataset.on) return;
+    dock.dataset.on = '1';
+    msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden></div>');
+    dock.addEventListener('click', (ev) => {
         const tab = ev.target.closest('.seek-tab');
         if (tab) { reqView = reqView === tab.dataset.v ? 'all' : tab.dataset.v; applyReqView(); return; }   // повторное нажатие снимает фильтр
-        if (ev.target.closest('#seekAdd')) openRequestSheet();
+        if (ev.target.closest('#dockSeek')) { reqSection() === 'housing' ? openRequestSheet() : openCardSheet('seek'); return; }
+        if (ev.target.closest('#dockOffer')) { reqSection() === 'housing' ? openAdForm() : openCardSheet('offer'); }
     });
     msgs.addEventListener('click', (ev) => { if (ev.target.closest('.req-card')) onReqCardClick(ev); });
     applyReqView();
     paintRequests();
     loadRequests();
+    tickCooldown();
 }
 
 const _openGroupForReq = openGroup;
-openGroup = function () { const r = _openGroupForReq.apply(this, arguments); setTimeout(setupSeekBar, 0); return r; };
+openGroup = function () { const r = _openGroupForReq.apply(this, arguments); setTimeout(setupCards, 0); return r; };
 
 // ---------- действия на карточке ----------
 function onReqCardClick(ev) {
@@ -138,6 +193,11 @@ function onReqCardClick(ev) {
     const act = btn.dataset.act;
     if (act === 'write') { openOfferSheet(r); return; }
     if (act === 'options') { openOptionsSheet(r); return; }
+    if (act === 'write-dm' && !isHousingReq(r)) {
+        startDm(r.ownerName, { id: 'req_' + r.id.slice(2, 30), title: (r.kind === 'offer' ? 'Предложение: ' : 'Запрос: ') + (r.title || '') },
+            `Здравствуйте! По вашей карточке «${r.title || ''}»: `);
+        return;
+    }
     if (act === 'write-dm') {
         const dates = r.dateFrom ? ' на ' + fmtShortDate(r.dateFrom) + (r.dateTo ? '–' + fmtShortDate(r.dateTo) : '') : '';
         startDm(r.ownerName, { id: 'req_' + r.id.slice(2, 30), title: 'Запрос: ' + (r.city || 'жильё') + dates },
@@ -163,6 +223,7 @@ function onReqCardClick(ev) {
 
 // ---------- форма запроса ----------
 function openRequestSheet(edit) {
+    if (edit && edit.id && !isHousingReq(edit)) { openCardSheet(edit.kind, edit); return; }
     loginRequired(() => {
         reqEditing = edit && edit.id ? edit : null;
         const e = escapeHtml, r = reqEditing || {};
@@ -220,6 +281,61 @@ function openRequestSheet(edit) {
     });
 }
 
+
+// ---------- форма карточки «Ищу / Предоставляю» для работы, поездок и вещей ----------
+function openCardSheet(kind, edit) {
+    loginRequired(() => {
+        const r = edit && edit.id ? edit : null;
+        const section = r ? r.section : reqSection();
+        const sec = SEC[section];
+        if (!sec) return;
+        kind = kind === 'offer' ? 'offer' : 'seek';
+        const cfg = sec[kind], e = escapeHtml, v0 = r || {};
+        openSheet(r ? 'Изменить карточку' : cfg.head, `
+            <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
+            <label class="field"><span>Заголовок</span><input id="cdTitle" maxlength="80" placeholder="${e(cfg.ph)}" value="${e(v0.title || '')}"></label>
+            <label class="field"><span>Город или место (необязательно)</span><input id="cdCity" maxlength="60" value="${e(v0.city || '')}"></label>
+            ${sec.date ? `<div class="rq-row"><label class="field"><span>${sec.date}</span><input id="cdDate" type="date" min="${todayISO()}" value="${e(v0.dateFrom || '')}"></label>
+            <label class="field"><span>${sec.seats}</span><input id="cdSeats" type="number" inputmode="numeric" min="1" max="30" value="${v0.guests || ''}"></label></div>` : ''}
+            <label class="field"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}"></label>
+            <label class="field"><span>Подробности</span><textarea id="cdText" maxlength="300" rows="3">${e(v0.text || '')}</textarea></label>
+            <div class="auth-error" id="cdErr"></div>
+            <button class="primary-btn wide-btn" id="cdSend"></button>`, (el) => {
+            const btn = el.querySelector('#cdSend'), err = el.querySelector('#cdErr');
+            const label = () => {
+                const w = r ? 0 : cooldownLeft();
+                btn.disabled = w > 0;
+                btn.innerHTML = w > 0 ? `Следующая карточка через ${fmtCountdown(w)}` : (r ? '<i class="fas fa-check"></i> Сохранить' : '<i class="fas fa-paper-plane"></i> Опубликовать');
+            };
+            label();
+            const t = setInterval(() => { if (!document.body.contains(btn)) { clearInterval(t); return; } label(); }, 500);
+            btn.addEventListener('click', () => {
+                const v = (id) => { const n = el.querySelector(id); return n ? n.value.trim() : ''; };
+                if (!v('#cdTitle')) { err.textContent = 'Напишите заголовок'; return; }
+                err.textContent = '';
+                btn.disabled = true;
+                const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), text: v('#cdText') };
+                const url = r ? `${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}` : `${SERVER_URL}/api/requests`;
+                fetch(url, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify(body) }).then(async (x) => {
+                    let d = null; try { d = await x.json(); } catch (_) {}
+                    if (x.status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; return; }
+                    if (!d || !d.ok) {
+                        if (d && d.code === 'REQUEST_WAIT') setCooldown(d.wait || 60);
+                        err.textContent = (d && d.message) || 'Не удалось отправить';
+                        label();
+                        return;
+                    }
+                    if (!r) setCooldown(d.cooldown || 60);
+                    closeSheet();
+                    showToast(r ? 'Карточка обновлена' : 'Карточка опубликована');
+                    if (!r) { reqView = kind === 'offer' ? 'offer' : 'seek'; applyReqView(); }
+                    loadRequests(refreshMyRequests);
+                }).catch(() => { err.textContent = 'Нет связи с сервером'; label(); });
+            });
+        });
+    });
+}
+
 // ---------- мои запросы (в профиле) ----------
 let myReqs = [];
 function refreshMyRequests() {
@@ -234,7 +350,7 @@ function paintMyRequests() {
     if (cnt) { cnt.hidden = !act.length; cnt.textContent = String(act.length); }
     const box = document.getElementById('myReqBox');
     if (!box) return;
-    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Ищу жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
+    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Ищу» в разделе «Жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
     const hist = myReqs.filter(r => r.status !== 'active');
     const row = (r) => `<div class="req-row">${reqCardHTML(r)}<button type="button" class="req-del" data-del="${escapeHtml(r.id)}" aria-label="Удалить запрос"><i class="fas fa-trash"></i><span>Удалить</span></button></div>`;
     box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(row).join('') : '')
@@ -306,11 +422,13 @@ openAdForm = function () {
 // ---------- таймер ----------
 function tickCooldown() {
     clearInterval(reqTicker);
-    const add = document.getElementById('seekAdd');
     const paint = () => {
         const w = cooldownLeft();
-        const b = document.getElementById('seekAdd');
-        if (b) b.innerHTML = w > 0 ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : '<i class="fas fa-plus"></i> Ищу жильё';
+        const housing = reqSection() === 'housing';
+        const seek = document.getElementById('dockSeek'), offer = document.getElementById('dockOffer');
+        if (seek) seek.innerHTML = w > 0 ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : '<i class="fas fa-magnifying-glass"></i> Ищу';
+        // у жилья «Предоставляю» — обычное объявление, у него своего таймера нет
+        if (offer) offer.innerHTML = (w > 0 && !housing) ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : '<i class="fas fa-plus"></i> Предоставляю';
         if (w <= 0) clearInterval(reqTicker);
     };
     paint();
@@ -320,7 +438,7 @@ function tickCooldown() {
 // ---------- обновление в реальном времени ----------
 const _onSocialEventReq = onSocialEvent;
 onSocialEvent = function (ev, d) {
-    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('seekBar')) loadRequests(); if (document.getElementById('myReqBox') || document.getElementById('rowReq')) refreshMyRequests(); if (document.getElementById('matchReqBox') || document.getElementById('rowMatch')) refreshMatchingRequests(); }, 400); return; }
+    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('cardsDock')) loadRequests(); if (document.getElementById('myReqBox') || document.getElementById('rowReq')) refreshMyRequests(); if (document.getElementById('matchReqBox') || document.getElementById('rowMatch')) refreshMatchingRequests(); }, 400); return; }
     return _onSocialEventReq.apply(this, arguments);
 };
 

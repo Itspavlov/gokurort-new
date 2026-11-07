@@ -328,6 +328,7 @@ function connectSocket() {
         if (!message || typeof message !== 'object') return;
         // сообщение из другой комнаты не показываем
         if (message.room && message.room !== currentRoom) return;
+        if (document.querySelector('#chatMessages.cards')) return;   // в разделах нет переписки
         // защита от дублей (повторная доставка после переподключения)
         const cached = currentRoom && messagesCache[currentRoom];
         if (message.id && cached && cached.some(m => m.id === message.id)) return;
@@ -411,6 +412,7 @@ function scrollChatToBottomSmooth() {
 function renderHistory(history) {
     const messagesContainer = document.getElementById('chatMessages');
     if (!messagesContainer) return;
+    if (messagesContainer.classList.contains('cards')) return;      // в разделах нет переписки: только карточки
 
     const userName = getUserName();
 
@@ -513,9 +515,9 @@ function openGroup(groupId, opts) {
         const local = getAllAds().filter(a => !(typeof isRemoteAdId === 'function' && isRemoteAdId(a.id)));
         const all = cat.id === 'all';
         openChatRoom(groupId, all ? 'Жильё' : 'Жильё · ' + cat.label, 'fas ' + (all ? 'fa-home' : cat.icon), adsForRoom(groupId)(local), Object.assign({
-            noAttach: true, chips: true,
-            welcomeTitle: all ? 'Жильё у моря: все объявления' : 'Чат «' + cat.label + '»',
-            welcomeText: all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху.' : 'Здесь только объявления этого типа и общение с хозяевами.'
+            noAttach: true, chips: true, cards: true,
+            welcomeTitle: all ? 'Жильё у моря: все объявления' : 'Раздел «' + cat.label + '»',
+            welcomeText: (all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху. ' : 'Здесь только жильё этого типа. ') + 'Переписки в разделе нет: нажмите «Ищу», если ищете жильё, или «Предоставляю», чтобы разместить своё. Договариваться можно в личных сообщениях.'
         }, opts || {}));
         return;
     }
@@ -528,7 +530,10 @@ function openGroup(groupId, opts) {
     const room = rooms[groupId];
     if (!room) return;
 
-    openChatRoom(groupId, room.name, room.icon, room.ads, Object.assign({ noAttach: !!room.noAttach, hint: !!room.hint }, opts || {}));
+    openChatRoom(groupId, room.name, room.icon, room.ads, Object.assign({
+        noAttach: !!room.noAttach, hint: !!room.hint, cards: true,
+        welcomeText: 'Переписки в разделе нет: нажмите «Ищу» или «Предоставляю» и добавьте карточку. Договариваться можно в личных сообщениях.'
+    }, opts || {}));
 }
 
 // ---------- ОТКРЫТИЕ ЧАТА ----------
@@ -565,7 +570,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
         </div>
         ${opts.chips ? housingChipsHTML(roomId) : ''}
 
-        <div class="chat-messages" id="chatMessages">
+        <div class="chat-messages${opts.cards ? ' cards' : ''}" id="chatMessages">
             <div class="chat-welcome">
                 <div class="chat-welcome-icon"><i class="${roomIcon}"></i></div>
                 <div class="chat-welcome-title">${escapeHtml(welcomeTitle)}</div>
@@ -574,7 +579,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
             ${ads.map(ad => renderHousingMessage(ad)).join('')}
         </div>
 
-        <div class="chat-input-wrapper">
+        ${opts.cards ? cardsDockHTML() : `<div class="chat-input-wrapper">
             ${opts.noAttach ? '' : `<button class="chat-attach-btn" onclick="attachImage()">
                 <i class="fas fa-paperclip"></i>
             </button>
@@ -583,7 +588,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
             <button class="chat-send-btn" onclick="sendMessage()">
                 <i class="fas fa-paper-plane"></i>
             </button>
-        </div>
+        </div>`}
     `;
 
     groupScreen.style.display = 'flex';
@@ -685,6 +690,7 @@ function renderHousingMessage(ad) {
 // ---------- ОТПРАВКА СООБЩЕНИЯ ----------
 function sendMessage() {
     const input = document.getElementById('chatInput');
+    if (!input) return;
     const text = input.value.trim();
     if (!text) return;
 
