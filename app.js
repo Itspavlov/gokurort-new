@@ -171,7 +171,7 @@ const metaTheme = document.querySelector('meta[name="theme-color"]');
 const THEMES = {
     sea:  { name: 'Вечер',  meta: '#060F1C', bg: '#060F1C', accent: '#FF9A5C' },
     sand: { name: 'Песок',  meta: '#FBF3E4', bg: '#FBF3E4', accent: '#F08A24' },
-    surf: { name: 'Прибой', meta: '#F2F6FB', bg: '#F2F6FB', accent: '#2F7BFF' },
+    surf: { name: 'Прибой', meta: '#F0F8F7', bg: '#F0F8F7', accent: '#0E9F94' },
     dusk: { name: 'Закат',  meta: '#121216', bg: '#121216', accent: '#FF5E8A' }
 };
 const THEME_FONTS = {

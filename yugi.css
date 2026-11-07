@@ -497,14 +497,14 @@
     --font: 'Nunito', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Fraunces', Georgia, serif;
 }
 :root[data-theme="surf"] {
-    --sun-1: #2F7BFF; --sun-2: #5B9BFF; --sea: #2F7BFF; --sun: linear-gradient(135deg, #2F7BFF 0%, #5B9BFF 100%); --accent: #2F7BFF;
-    --bg: #F2F6FB;
-    --mesh: radial-gradient(520px 420px at 105% 0%, rgba(214, 232, 255, 0.8), transparent 70%), radial-gradient(480px 480px at -10% 50%, rgba(214, 243, 236, 0.7), transparent 70%), #F2F6FB;
-    --blob-a: rgba(180, 210, 255, 0.5); --blob-b: rgba(190, 235, 225, 0.5);
-    --glass: rgba(255, 255, 255, 0.92); --glass-strong: #FFFFFF; --glass-border: #E1E8F2;
+    --sun-1: #0E9F94; --sun-2: #3CC7B8; --sea: #0E9F94; --sun: linear-gradient(135deg, #0B8F86 0%, #3CC7B8 100%); --accent: #0B8F86;
+    --bg: #F0F8F7;
+    --mesh: radial-gradient(520px 420px at 105% 0%, rgba(188, 235, 228, 0.85), transparent 70%), radial-gradient(480px 480px at -10% 50%, rgba(214, 240, 232, 0.75), transparent 70%), #F0F8F7;
+    --blob-a: rgba(150, 220, 210, 0.45); --blob-b: rgba(190, 232, 214, 0.45);
+    --glass: rgba(255, 255, 255, 0.92); --glass-strong: #FFFFFF; --glass-border: #D6E9E6;
     --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 1);
-    --shadow: 0 10px 26px rgba(30, 60, 120, 0.14);
-    --text: #0F1B2D; --text-secondary: rgba(15, 27, 45, 0.74); --text-muted: rgba(15, 27, 45, 0.55);
+    --shadow: 0 10px 26px rgba(14, 90, 84, 0.13);
+    --text: #0D2625; --text-secondary: rgba(13, 38, 37, 0.74); --text-muted: rgba(13, 38, 37, 0.55);
     --on-sea: #fff; --on-accent: #fff;
     --font: 'Inter', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Inter', sans-serif;
 }
@@ -531,3 +531,9 @@
 .dock-btn:active { transform: scale(.98); }
 .req-kind { font: 700 11px var(--font); font-style: normal; padding: 3px 9px; border-radius: 999px; background: var(--glass-strong); color: var(--text-secondary); white-space: nowrap; }
 .req-kind.offer { color: var(--text); }
+
+/* ===== v21: «Прибой» — бирюзовые плитки вместо синих ===== */
+:root[data-theme="surf"] .gc-housing { background: linear-gradient(150deg, #2CC4B3 0%, #0E8F8C 60%, #0A4F5A 100%); }
+:root[data-theme="surf"] .gc-work    { background: linear-gradient(150deg, #5FD3C8 0%, #1AA39F 60%, #0E6270 100%); }
+:root[data-theme="surf"] .gc-trips   { background: linear-gradient(150deg, #4CCB9C 0%, #17996F 60%, #0B5A52 100%); }
+:root[data-theme="surf"] .gc-market  { background: linear-gradient(150deg, #6CC3DC 0%, #2A8CAA 60%, #134F66 100%); }
