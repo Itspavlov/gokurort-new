@@ -1,11 +1,13 @@
 // ============================================
-// YuGi YuGi — карточки услуг в профиле
-//  • «Мои услуги» в профиле: карточки с фото (до 4), ценой и описанием — прогулки на джипах, трансфер, маникюр…
-//  • другой пользователь видит их в профиле хозяина (вкладка «Услуги») и в разделе «Услуги»
+// YuGi YuGi — карточки развлечений в профиле и раздел «Развлечения»
+//  • «Мои развлечения» в профиле: карточки с фото (до 4), ценой и описанием — морские прогулки, экскурсии, джипы…
+//  • другой пользователь видит их в профиле хозяина (вкладка «Развлечения») и в разделе «Развлечения»
+//  • в разделе есть быстрый поиск и категории, чтобы не листать всё подряд
 //  • «Предоставляю»: если карточки или объявления уже есть — предложим опубликовать старое заново или создать новое
 // ============================================
-const SV_TAGS = { tours: 'Экскурсии и прогулки', transport: 'Транспорт', beauty: 'Красота', repair: 'Ремонт', food: 'Еда', kids: 'Детям', other: 'Другое' };
-const SV_UNITS = ['', 'за человека', 'за час', 'за день', 'за услугу'];
+const SV_TAGS = { sea: 'Морские прогулки', tours: 'Экскурсии', active: 'Активный отдых', kids: 'Детям', show: 'Шоу и вечера', food: 'Гастро', other: 'Другое' };
+const SV_ICONS = { sea: 'fa-ship', tours: 'fa-map-location-dot', active: 'fa-person-hiking', kids: 'fa-child-reaching', show: 'fa-masks-theater', food: 'fa-utensils', other: 'fa-star' };
+const SV_UNITS = ['', 'за человека', 'за час', 'за день', 'за билет', 'за лодку / группу'];
 const SV_MAX = 10, SV_PHOTOS = 4;
 let serviceFeed = [];      // карточки в разделе «Услуги»
 let myServices = [];       // мои карточки
@@ -42,7 +44,7 @@ function serviceFeedHTML(s) {
     return `<div class="sv-card sv-feed" data-sid="${e(s.id)}">
         <div class="req-head"><div class="chat-avatar" style="background:${dmColor(s.ownerName)}">${e(Array.from(s.ownerName)[0] || '?')}</div>
             <div class="req-title"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></div>
-            <em class="req-kind offer">Услуга</em></div>
+            <em class="req-kind offer">Развлечение</em></div>
         <div class="sv-main" data-sv="view" data-id="${e(s.id)}">
             <div class="sv-thumb">${s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : '<i class="fas fa-image"></i>'}${s.photoCount > 1 ? `<em>${s.photoCount}</em>` : ''}</div>
             <div class="sv-info">
@@ -85,7 +87,7 @@ function openServiceView(id) {
             <div class="sv-view-meta"><span class="sv-tag">${e(SV_TAGS[s.tag] || '')}</span>${s.city ? `<span><i class="fas fa-location-dot"></i>${e(s.city)}</span>` : ''}</div>
             ${s.text ? `<p class="sv-view-text">${e(s.text)}</p>` : ''}
             <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" style="background:${dmColor(s.ownerName)}">${e(Array.from(s.ownerName)[0] || '?')}</span>
-                <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие услуги</small></span><i class="fas fa-chevron-right"></i></button>
+                <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
             ${mine ? `<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button><button class="primary-btn" data-sv="bump" data-id="${e(s.id)}"><i class="fas fa-arrow-up"></i> Поднять</button></div>`
                 : `<button class="primary-btn wide-btn" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i> Написать</button>`}`, (el) => {
             el.querySelector('[data-sv-owner]').addEventListener('click', () => { closeSheet(); if (typeof openUserProfile === 'function') openUserProfile({ id: s.ownerId, name: s.ownerName }); });
@@ -95,7 +97,7 @@ function openServiceView(id) {
 }
 
 function writeAboutService(id, title, ownerName) {
-    loginRequired(() => startDm(ownerName, { id: 'svc_' + id, title: 'Услуга: ' + title }, `Здравствуйте! Интересует «${title}». `));
+    loginRequired(() => startDm(ownerName, { id: 'svc_' + id, title: 'Развлечение: ' + title }, `Здравствуйте! Интересует «${title}». `));
 }
 
 // ---------- сжатие фото ----------
@@ -141,16 +143,16 @@ function openServiceEditor(edit, after) {
         }
         const s = edit || {}, e = escapeHtml;
         const photos = (s.photos || []).slice();
-        openSheet(edit ? 'Изменить услугу' : 'Новая услуга', `
-            <p class="auth-note" style="margin:0 4px 12px">Например: «Прогулки на джипах», «Трансфер из аэропорта», «Маникюр на дому». Карточку увидят в вашем профиле и в разделе «Услуги».</p>
+        openSheet(edit ? 'Изменить развлечение' : 'Новое развлечение', `
+            <p class="auth-note" style="margin:0 4px 12px">Например: «Морская прогулка на катере», «Экскурсия в горы», «Джип-тур». Карточку увидят в вашем профиле и в разделе «Развлечения».</p>
             <div class="form-h" style="margin:0 2px 8px">Фото · до ${SV_PHOTOS}</div>
             <div class="photo-grid sv-photo-grid" id="svPhotos"></div>
             <input type="file" id="svFile" accept="image/*" multiple hidden>
-            <label class="field"><span>Название</span><input id="svTitle" maxlength="80" placeholder="Прогулки на джипах по горам" value="${e(s.title || '')}"></label>
+            <label class="field"><span>Название</span><input id="svTitle" maxlength="80" placeholder="Морская прогулка на катере" value="${e(s.title || '')}"></label>
             <label class="field"><span>Категория</span><select id="svTag">${Object.entries(SV_TAGS).map(([k, v]) => `<option value="${k}" ${s.tag === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
             <div class="rq-row"><label class="field"><span>Цена, ₽</span><input id="svPrice" type="number" inputmode="numeric" min="1" value="${s.price || ''}" placeholder="Можно пусто"></label>
             <label class="field"><span>Как считать</span><select id="svUnit">${SV_UNITS.map(u => `<option value="${e(u)}" ${(s.unit || '') === u ? 'selected' : ''}>${u || '—'}</option>`).join('')}</select></label></div>
-            <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Красная Поляна"></label>
+            <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Анапа, причал"></label>
             <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="800" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>
             <div class="auth-error" id="svErr"></div>
             <button class="primary-btn wide-btn" id="svSave" type="button"><i class="fas fa-check"></i> ${edit ? 'Сохранить' : 'Опубликовать'}</button>`, (el) => {
@@ -207,7 +209,7 @@ function bumpService(id) {
     }).catch(() => showToast('Нет связи с сервером'));
 }
 function deleteService(id) {
-    if (!confirm('Удалить карточку услуги?')) return;
+    if (!confirm('Удалить карточку развлечения?')) return;
     svApi('/api/services/' + encodeURIComponent(id), { method: 'DELETE', headers: svAuth() }).then(({ d }) => {
         if (d && d.ok) { closeSheet(); showToast('Карточка удалена'); afterServiceChange(); }
         else showToast((d && d.message) || 'Не удалось удалить');
@@ -227,10 +229,10 @@ function mountMyServices() {
         const head = root.querySelector('.pf-head');
         if (head) head.parentNode.insertBefore(box, head); else root.appendChild(box);
     }
-    box.innerHTML = `<div class="section-head pf-head"><h2 class="section-title">Мои услуги${myServices.length ? ': ' + myServices.length : ''}</h2></div>
+    box.innerHTML = `<div class="section-head pf-head"><h2 class="section-title">Мои развлечения${myServices.length ? ': ' + myServices.length : ''}</h2></div>
         ${myServices.length ? `<div class="sv-list">${myServices.map(s => serviceCardHTML(s, true)).join('')}</div>`
-            : '<p class="pf-empty">Сдаёте жильё и ещё возите на джипах, делаете экскурсии, маникюр? Добавьте услугу с фото: её увидят в вашем профиле.</p>'}
-        ${myServices.length < SV_MAX ? '<button type="button" class="ghost-btn wide-btn sv-add" data-sv="new"><i class="fas fa-plus"></i> Добавить услугу</button>' : ''}`;
+            : '<p class="pf-empty">Сдаёте жильё и ещё катаете на катере, водите экскурсии или возите на джипах? Добавьте развлечение с фото: его увидят в вашем профиле.</p>'}
+        ${myServices.length < SV_MAX ? '<button type="button" class="ghost-btn wide-btn sv-add" data-sv="new"><i class="fas fa-plus"></i> Добавить развлечение</button>' : ''}`;
 }
 
 const _renderProfileSv = renderProfile;
@@ -253,8 +255,8 @@ function openServiceFlow() {
         if (!myServices.length) { openServiceEditor(); return; }
         const rows = myServices.slice(0, SV_MAX).map(s => chooserRow(s.thumb, s.title, svPrice(s),
             `<button type="button" class="rp-main" data-sv="bump" data-id="${escapeHtml(s.id)}">Поднять</button><button type="button" data-sv="edit" data-id="${escapeHtml(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button>`)).join('');
-        openSheet('Предоставляю услугу', `
-            <p class="auth-note" style="margin:0 4px 12px">У вас уже есть карточки. Опубликуйте одну из них заново — она встанет наверх раздела, — или создайте новую.</p>
+        openSheet('Предлагаю развлечение', `
+            <p class="auth-note" style="margin:0 4px 12px">У вас уже есть развлечения. Опубликуйте одну из них заново — она встанет наверх раздела, — или создайте новую.</p>
             <div class="rp-list">${rows}</div>
             ${myServices.length < SV_MAX ? '<button type="button" class="primary-btn wide-btn" data-sv="new"><i class="fas fa-plus"></i> Создать новую карточку</button>' : '<p class="auth-note" style="margin:8px 4px 0">Достигнут предел: 10 карточек. Удалите ненужную в профиле.</p>'}`);
     }));
@@ -337,3 +339,76 @@ document.addEventListener('click', (ev) => {
     const ed = t.closest('[data-ad-edit]'); if (ed) { closeSheet(); _openAdFormSv(ed.dataset.adEdit); return; }
     if (t.closest('[data-ad-new]')) { closeSheet(); _openAdFormSv(); }
 });
+
+// ============================================
+// Быстрый поиск в разделе «Развлечения»: строка и категории над лентой.
+// Фильтр работает по тому, что уже загружено, поэтому отвечает сразу.
+// ============================================
+let entTag = '', entQ = '';
+
+function entBarHTML() {
+    const e = escapeHtml;
+    const chip = (t, label, icon) => `<button type="button" role="tab" class="cat-chip ent-chip ${entTag === t ? 'on' : ''}" data-t="${t}" aria-selected="${entTag === t}"><i class="fas ${icon}"></i><span>${label}</span><b></b></button>`;
+    return `<div class="ent-bar" id="entBar">
+        <label class="ent-search"><i class="fas fa-magnifying-glass"></i>
+            <input id="entQ" type="search" enterkeyhint="search" autocomplete="off" maxlength="40" placeholder="Поиск: катер, джипы, дельфины…" value="${e(entQ)}">
+            <button type="button" id="entClear" aria-label="Очистить" ${entQ ? '' : 'hidden'}><i class="fas fa-xmark"></i></button></label>
+        <div class="cat-chips ent-chips" role="tablist" aria-label="Категория">${chip('', 'Все', 'fa-border-all')}${Object.entries(SV_TAGS).map(([t, l]) => chip(t, l, SV_ICONS[t])).join('')}</div></div>`;
+}
+
+function setupEntBar() {
+    if (typeof currentRoom !== 'string' || currentRoom !== 'services') return;
+    const scr = document.getElementById('group-screen');
+    if (!scr || document.getElementById('entBar')) return;
+    const head = scr.querySelector('.room-head');
+    if (!head) return;
+    head.insertAdjacentHTML('afterend', entBarHTML());
+    const bar = document.getElementById('entBar'), q = bar.querySelector('#entQ'), clr = bar.querySelector('#entClear');
+    q.addEventListener('input', () => { entQ = q.value.trim().toLowerCase(); clr.hidden = !entQ; applyEntFilter(); });
+    q.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); q.blur(); } });
+    clr.addEventListener('click', () => { q.value = ''; entQ = ''; clr.hidden = true; applyEntFilter(); q.focus(); });
+    bar.querySelector('.ent-chips').addEventListener('click', (ev) => {
+        const c = ev.target.closest('.ent-chip'); if (!c) return;
+        entTag = c.dataset.t;
+        bar.querySelectorAll('.ent-chip').forEach(x => { const on = x === c; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+        applyEntFilter();
+    });
+    applyEntFilter();
+}
+
+function applyEntFilter() {
+    const msgs = document.getElementById('chatMessages');
+    if (!msgs || currentRoom !== 'services') return;
+    const items = Array.from(msgs.querySelectorAll('.req-item'));
+    const counts = {};
+    items.forEach(it => { if (it.dataset.tag) counts[it.dataset.tag] = (counts[it.dataset.tag] || 0) + 1; });
+    document.querySelectorAll('#entBar .ent-chip').forEach(c => {
+        const n = c.dataset.t ? (counts[c.dataset.t] || 0) : Object.values(counts).reduce((a, b) => a + b, 0);
+        const b = c.querySelector('b'); if (b) b.textContent = n || '';
+    });
+    const active = !!(entTag || entQ);
+    let shown = 0;
+    items.forEach(it => {
+        const okTag = !entTag || it.dataset.tag === entTag;
+        const okQ = !entQ || it.textContent.toLowerCase().includes(entQ);
+        const ok = okTag && okQ;
+        it.classList.toggle('ent-off', !ok);
+        if (ok) shown++;
+    });
+    let none = document.getElementById('entNone');
+    if (active && !shown) {
+        if (!none) { none = document.createElement('div'); none.id = 'entNone'; none.className = 'req-empty'; msgs.appendChild(none); }
+        none.innerHTML = '<i class="fas fa-magnifying-glass"></i><b>Ничего не нашлось</b><span>Попробуйте другое слово или категорию «Все».</span>';
+    } else if (none) none.remove();
+    const empty = document.getElementById('reqEmpty'); if (empty && active) empty.hidden = true;
+}
+
+const _paintRequestsEnt = paintRequests;
+paintRequests = function () { const r = _paintRequestsEnt.apply(this, arguments); applyEntFilter(); return r; };
+const _openGroupEnt = openGroup;
+openGroup = function (id) {
+    if (id !== 'services') { entTag = ''; entQ = ''; }
+    const r = _openGroupEnt.apply(this, arguments);
+    if (id === 'services') setTimeout(setupEntBar, 80);
+    return r;
+};

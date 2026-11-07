@@ -17,7 +17,7 @@ const REQ_STATUS = { active: 'Активен', found: 'Найдено', closed: 
 const SEC = {
     work:   { seek: { head: 'Ищу работу', ph: 'Например: официант, опыт 2 года' }, offer: { head: 'Предоставляю работу', ph: 'Например: нужен повар на лето' }, price: 'Оплата, ₽', date: '', seats: '' },
     trips:  { seek: { head: 'Ищу поездку', ph: 'Например: ищу попутчиков Сочи → Адлер' }, offer: { head: 'Предоставляю поездку', ph: 'Например: еду в Краснодар, есть 2 места' }, price: 'Цена, ₽', date: 'Дата поездки', seats: 'Мест' },
-    services: { seek: { head: 'Ищу услугу', ph: 'Например: нужен электрик или мастер маникюра' }, offer: { head: 'Предоставляю услугу', ph: 'Например: делаю массаж, ремонт, уборку' }, price: 'Цена, ₽', date: '', seats: '' }
+    services: { seek: { head: 'Ищу развлечение', ph: 'Например: ищу компанию на морскую прогулку' }, offer: { head: 'Предлагаю развлечение', ph: 'Например: экскурсия на джипах, яхта на день' }, price: 'Цена, ₽', date: '', seats: '' }
 };
 const isHousingReq = (r) => !r || !r.section || r.section === 'housing';
 // Раздел открытой комнаты: housing, work, trips или services
@@ -107,14 +107,14 @@ function paintRequests() {
     // карточки запросов и (в разделе «Услуги») карточки услуг встают в ленту по времени вместе
     const items = reqList.map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
     if (reqSection() === 'services' && typeof serviceFeed !== 'undefined') {
-        serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, html: serviceFeedHTML(sv) }));
+        serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, tag: sv.tag || 'other', html: serviceFeedHTML(sv) }));
     }
     items.sort((x, y) => x.ts - y.ts);
     let added = 0;
     for (const it of items) {
         const w = document.createElement('div');
         w.className = 'req-item'; w.dataset.ts = it.ts; w.dataset.kind = it.kind;
-        if (it.rid) w.dataset.rid = it.rid; else w.dataset.sid = it.sid;
+        if (it.rid) w.dataset.rid = it.rid; else { w.dataset.sid = it.sid; w.dataset.tag = it.tag; }
         w.innerHTML = it.html;
         const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > it.ts);
         if (after) msgs.insertBefore(w, after); else msgs.appendChild(w);
@@ -152,8 +152,8 @@ function cardsDockHTML() {
     return `<div class="cards-dock" id="cardsDock">
         <div class="seek-tabs" role="tablist">${t('seek', 'Ищут')}${t('offer', 'Предлагают')}</div>
         <div class="dock-actions">
-            <button type="button" class="dock-btn" id="dockSeek"><i class="fas fa-magnifying-glass"></i> Ищу</button>
-            <button type="button" class="dock-btn main" id="dockOffer"><i class="fas fa-plus"></i> Предоставляю</button>
+            <button type="button" class="dock-btn seek" id="dockSeek" title="Разместить запрос: что вы ищете" aria-label="Ищу: разместить запрос"><i class="fas fa-magnifying-glass"></i> Ищу</button>
+            <button type="button" class="dock-btn main" id="dockOffer" title="Разместить своё предложение" aria-label="Предоставляю: разместить предложение"><i class="fas fa-plus"></i> Предоставляю</button>
         </div></div>`;
 }
 
@@ -189,6 +189,27 @@ function setupCards() {
     paintRequests();
     loadRequests();
     tickCooldown();
+    // кнопка «?» с подсказками есть в каждом разделе, а в первый раз подсказки показываются сами
+    const head = document.querySelector('#group-screen .room-head');
+    if (head && !head.querySelector('.chat-help-btn')) head.insertAdjacentHTML('beforeend', '<button type="button" class="chat-header-btn chat-help-btn" onclick="cardsTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>');
+    if (reqSection() !== 'housing') setTimeout(() => cardsTour(false), 900);
+}
+
+// ---------- подсказки у кнопок «Ищу» и «Предоставляю» ----------
+const CARD_TIPS = {
+    housing: { seek: 'Ищете жильё? Укажите город, даты, гостей и бюджет: хозяева увидят запрос и предложат варианты.', offer: 'Сдаёте или продаёте жильё? Опубликуйте объявление. Если оно уже было, можно поднять его наверх списка.' },
+    work:    { seek: 'Ищете работу? Напишите, кем и где хотите работать: работодатели ответят в личные сообщения.', offer: 'Нужен сотрудник? Разместите вакансию. Прежние можно опубликовать заново.' },
+    trips:   { seek: 'Нужна поездка или попутчик? Укажите откуда, дату и сколько мест нужно.', offer: 'Едете и есть свободные места? Предложите поездку или трансфер, пассажиры напишут вам.' },
+    services:{ seek: 'Ищете, чем заняться? Напишите, что хотите: морскую прогулку, экскурсию, джип-тур.', offer: 'Проводите экскурсии, катаете на катере, возите на джипах? Добавьте карточку с фото. Прежние можно поднять.' }
+};
+function cardsTour(force) {
+    const sec = reqSection(), t = CARD_TIPS[sec];
+    if (!t) return;
+    runTour('cards-' + sec, [
+        { sel: '#dockSeek', title: 'Кнопка «Ищу»', text: t.seek },
+        { sel: '#dockOffer', title: 'Кнопка «Предоставляю»', text: t.offer },
+        { sel: '.seek-tabs', title: 'Ищут и Предлагают', text: 'Фильтр ленты: нажмите, чтобы видеть только запросы или только предложения. Повторное нажатие снимает фильтр.' }
+    ], force);
 }
 
 const _openGroupForReq = openGroup;

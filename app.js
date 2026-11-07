@@ -532,7 +532,7 @@ function openGroup(groupId, opts) {
     }
     const rooms = {
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
-        services: { name: 'Услуги', icon: 'fas fa-screwdriver-wrench', ads: [] },
+        services: { name: 'Развлечения', icon: 'fas fa-ship', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] },
         dating: { name: 'Знакомства и общение', icon: 'fas fa-comments', ads: [] }
     };
@@ -661,39 +661,50 @@ function adChipsHTML(adId) {
     return renderReactionChips({ id: 'ad_' + adId, reactions: st.counts, mine: st.mine });
 }
 
+// Главные удобства показываем первыми: Wi-Fi, парковка, бассейн
+const AMEN_FIRST = ['Wi-Fi', 'Парковка', 'Бассейн', 'Кондиционер', 'Кухня'];
+function adAmenBadges(ad, max) {
+    const list = (ad.amenities || []).slice().sort((x, y) => {
+        const i = AMEN_FIRST.indexOf(x), j = AMEN_FIRST.indexOf(y);
+        return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+    });
+    if (!list.length) return '';
+    const icon = typeof amenityIcon === 'function' ? amenityIcon : () => 'fa-check';
+    const shown = list.slice(0, max).map(l => `<span class="am"><i class="fas ${icon(l)}"></i>${escapeHtml(l)}</span>`).join('');
+    return `<div class="ad-amen">${shown}${list.length > max ? `<span class="am more">+${list.length - max}</span>` : ''}</div>`;
+}
+
 function renderHousingMessage(ad) {
     const owner = getOwner(ad);
     const name = owner.name || 'Хозяин';
-    const color = owner.color || '#E8643F';
     const time = ad.time || '';
-    const avatar = owner.avatar
-        ? `<img src="${owner.avatar}" alt="" class="chat-avatar-img">`
-        : escapeHtml(name[0] || '?');
+    const id = escapeHtml(String(ad.id));
+    const remote = typeof isRemoteAdId === 'function' && isRemoteAdId(ad.id);
+    const photos = Number(ad.photoCount) || (ad.photos && ad.photos.length) || (ad.image ? 1 : 0);
+    const sea = (typeof distMeters === 'function' && ad.coords && ad.beach) ? fmtDist(distMeters(ad.coords, ad.beach)) : '';
+    const fav = remote && typeof favIds !== 'undefined' && favIds.has(ad.id);
+    const rating = ad.rating ? `<span class="ad-rate"><i class="fas fa-star"></i>${Number(ad.rating).toFixed(1).replace('.', ',')}${ad.reviewCount ? `<small>(${ad.reviewCount})</small>` : ''}</span>` : '';
 
     return `
-        <div class="chat-message chat-message-ad" data-id="ad_${escapeHtml(String(ad.id))}" data-ad-id="${escapeHtml(String(ad.id))}"${(ad.updated || ad.created) ? ` data-ts="${Number(ad.updated || ad.created)}"` : ''} onclick="openListing('${ad.id}')">
-            <div class="chat-avatar" style="background: ${color};">${avatar}</div>
+        <div class="chat-message chat-message-ad" data-id="ad_${id}" data-ad-id="${id}"${(ad.updated || ad.created) ? ` data-ts="${Number(ad.updated || ad.created)}"` : ''} onclick="openListing('${id}')">
             <div class="chat-bubble-wrap">
-                <div class="chat-bubble-header">
-                    <span class="chat-user-name">${escapeHtml(name)}</span>
-                    <span class="chat-time">${escapeHtml(time)}</span>
-                </div>
                 <div class="chat-bubble">
                     <div class="chat-ad-image">
                         ${adImg(ad)}
                         ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
-                        ${ad.isVerified ? '<div class="ad-badge ad-badge-verified"><i class="fas fa-check"></i></div>' : ''}
+                        ${remote ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
+                        ${photos ? `<span class="ph-count"><i class="fas fa-camera"></i>${photos}</span>` : ''}
+                        ${sea ? `<span class="sea-dist"><i class="fas fa-umbrella-beach"></i>${escapeHtml(sea)} до моря</span>` : ''}
                     </div>
-                    <div class="chat-ad-title">${escapeHtml(ad.title)}</div>
-                    <div class="chat-ad-price">${escapeHtml(ad.price)}</div>
-                    <div class="chat-ad-location">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>${escapeHtml(ad.location)}</span>
+                    <div class="ad-info">
+                        <div class="ad-row1"><div class="chat-ad-price">${escapeHtml(ad.price)}</div>${rating}</div>
+                        <div class="chat-ad-title">${escapeHtml(ad.title)}</div>
+                        <div class="chat-ad-location"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
+                        ${adAmenBadges(ad, 3)}
+                        <div class="ad-owner"><span>${escapeHtml(name)}${ad.isVerified ? ' <i class="fas fa-circle-check"></i>' : ''}</span><span>${escapeHtml(time)}</span></div>
                     </div>
-                    <div class="chat-ad-desc">${escapeHtml(ad.description || '')}</div>
-                    <div class="chat-ad-more">Фото, карта, свободные даты <i class="fas fa-chevron-right"></i></div>
                 </div>
-                <div class="chat-reactions" data-for="ad_${escapeHtml(String(ad.id))}">${adChipsHTML(ad.id)}</div>
+                <div class="chat-reactions" data-for="ad_${id}">${adChipsHTML(ad.id)}</div>
             </div>
         </div>
     `;
@@ -900,7 +911,7 @@ function runSearch() {
     const map = [
         { room: 'work',   words: ['работ', 'ваканс', 'резюме', 'подработ', 'официант', 'повар'] },
         { room: 'trips',  words: ['поезд', 'попутч', 'трансфер', 'такси', 'довез', 'аэропорт'] },
-        { room: 'services', words: ['услуг', 'мастер', 'ремонт', 'массаж', 'маникюр', 'уборк', 'электрик', 'сантехник', 'репетитор'] },
+        { room: 'services', words: ['развлеч', 'экскурс', 'прогулк', 'яхт', 'катер', 'джип', 'дайвинг', 'аквапарк', 'дельфин', 'рыбалк', 'шоу', 'квадр'] },
         { room: 'dating', words: ['знаком', 'общени', 'компани'] }
     ];
     const hit = map.find(m => m.words.some(w => q.includes(w)));

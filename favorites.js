@@ -116,3 +116,24 @@ function onFavClick(ev) {
         favApi('/api/favorites', { id, on: false }).then(d => { if (d.ok) { favIds = new Set(d.ids); favList = favList.filter(x => x.id !== id); paintFavSections(); } else showToast(d.message || 'Не удалось'); }).catch(() => showToast('Нет связи с сервером'));
     }
 }
+
+// ---------- сердечко на карточке в ленте жилья ----------
+function paintCardFavs() {
+    document.querySelectorAll('.card-fav[data-fav]').forEach(b => { const on = favIds.has(b.dataset.fav); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); b.setAttribute('aria-label', on ? 'Убрать из избранного' : 'В избранное'); });
+}
+function toggleCardFav(id, btn) {
+    loginRequired(() => {
+        const on = !favIds.has(id);
+        if (on) favIds.add(id); else favIds.delete(id);
+        paintCardFavs();
+        if (on && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); }
+        favApi('/api/favorites', { id, on }).then(d => {
+            if (!d.ok) { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast(d.message || 'Не удалось сохранить'); }
+            else { favIds = new Set(d.ids); paintCardFavs(); showToast(on ? 'Добавлено в избранное' : 'Убрано из избранного'); refreshFavSections(); }
+        }).catch(() => { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast('Нет связи с сервером'); });
+    });
+}
+const _openGroupFav = openGroup;
+openGroup = function () { const r = _openGroupFav.apply(this, arguments); if (getToken()) setTimeout(() => loadFavIds(paintCardFavs), 300); return r; };
+const _placeRemoteAdsFav = placeRemoteAds;
+placeRemoteAds = function () { const r = _placeRemoteAdsFav.apply(this, arguments); paintCardFavs(); return r; };

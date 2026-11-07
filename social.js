@@ -1152,14 +1152,14 @@ function placeRemoteAds() {
     if (!box || !isHousingRoom(currentRoom)) return;
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 160;
     box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
-    const sorted = adsForRoom(currentRoom)([...remoteAds]).sort((a, b) => (a.created || 0) - (b.created || 0));
+    const sorted = adsForRoom(currentRoom)([...remoteAds]).sort((a, b) => (a.updated || a.created || 0) - (b.updated || b.created || 0));   // поднятые встают ниже, ближе к свежим
     let added = false;
     for (const ad of sorted) {
         const tpl = document.createElement('template');
         tpl.innerHTML = renderHousingMessage(ad).trim();
         const el = tpl.content.firstElementChild;
         if (!el) continue;
-        const ts = Number(ad.created) || 0;
+        const ts = Number(ad.updated || ad.created) || 0;
         let before = null;
         for (const m of box.querySelectorAll('.chat-message[data-ts]')) {
             if (Number(m.dataset.ts) > ts) { before = m; break; }

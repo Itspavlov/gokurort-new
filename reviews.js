@@ -91,7 +91,7 @@ function paintUserProfile() {
         </div>`).join('') : '<p class="rv-empty">Объявлений нет</p>';
 
     const svs = d.services || [];
-    const svcHTML = svs.length ? `<div class="sv-list">${svs.map(x => (typeof serviceCardHTML === 'function' ? serviceCardHTML(x, false) : '')).join('')}</div>` : '<p class="rv-empty">Услуг нет</p>';
+    const svcHTML = svs.length ? `<div class="sv-list">${svs.map(x => (typeof serviceCardHTML === 'function' ? serviceCardHTML(x, false) : '')).join('')}</div>` : '<p class="rv-empty">Развлечений нет</p>';
 
     let revs;
     if (!d.server) {
@@ -126,7 +126,7 @@ function paintUserProfile() {
             </div>
             <div class="up-tabs">
                 <button class="${pv.tab === 'ads' ? 'on' : ''}" data-a="tab" data-t="ads">Объявления · ${ads.length}</button>
-                <button class="${pv.tab === 'svc' ? 'on' : ''}" data-a="tab" data-t="svc">Услуги · ${svs.length}</button>
+                <button class="${pv.tab === 'svc' ? 'on' : ''}" data-a="tab" data-t="svc">Развлечения · ${svs.length}</button>
                 <button class="${pv.tab === 'rev' ? 'on' : ''}" data-a="tab" data-t="rev">Отзывы · ${d.count}</button>
             </div>
             <div class="up-body">${pv.tab === 'ads' ? `<div class="featured-list up-list">${cards}</div>` : pv.tab === 'svc' ? svcHTML : revs}</div>
