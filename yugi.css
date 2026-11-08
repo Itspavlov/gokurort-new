@@ -852,3 +852,16 @@
 .gc-trips .group-photo { object-position: 76% 55%; }
 .gc-services .group-photo { object-position: 64% 55%; }
 .group-card.gc-dating.strip .group-photo { object-position: 60% 50%; }
+
+/* ===== v35: компактная шапка (все пять плиток на экране), строка поиска уже и ближе к описанию, место и температура «залипают» при прокрутке ===== */
+.hero-scene { height: 300px; }
+.hero-title { font-size: 32px; letter-spacing: -1px; line-height: 1.08; margin-bottom: 6px; }
+.hero-sub { max-width: none; font-size: 14px; line-height: 1.35; margin-bottom: 0; }
+.search-pill { margin-top: 12px; padding: 4px 4px 4px 16px; }
+.search-pill input { font-size: 15px; padding: 7px 6px; }
+.search-go { height: 38px; padding: 0 18px; border-radius: 19px; font-size: 15px; }
+.group-grid { margin-top: 14px; }
+@media (max-width: 360px) { .hero-title { font-size: 28px; } }
+/* место и температура остаются под шапкой, пока листаете главную */
+#tab-search > .hero-meta { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 52px); z-index: 20; }
+@media (max-width: 340px) { .wx-water span { display: none; } }
