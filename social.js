@@ -678,7 +678,7 @@ function renderDialogs() {
     const W = 88;
     let row = null, fg = null, sx = 0, sy = 0, state = 0, baseX = 0, dx = 0, moved = false;
     const closeAll = (except) => root.querySelectorAll('.swipe-row.open').forEach(r => {
-        if (r !== except) { r.classList.remove('open', 'swiping'); const f = r.querySelector('.swipe-fg'); if (f) { f.style.transition = 'transform .18s ease-out'; f.style.transform = ''; } }
+        if (r !== except) { r.classList.remove('open', 'swiping'); r.style.setProperty('--sw', '0px'); const f = r.querySelector('.swipe-fg'); if (f) { f.style.transition = 'transform .18s ease-out'; f.style.transform = ''; } }
     });
     root.addEventListener('pointerdown', (ev) => {
         if (ev.button > 0) return;
@@ -705,6 +705,7 @@ function renderDialogs() {
         row.classList.add('swiping');
         dx = Math.max(-W, Math.min(0, baseX + mx));
         fg.style.transform = `translateX(${dx}px)`;
+        row.style.setProperty('--sw', -dx + 'px');
     });
     const end = () => {
         if (row && state === 1) {
@@ -713,6 +714,7 @@ function renderDialogs() {
             row.classList.remove('swiping');
             fg.style.transition = 'transform .18s ease-out';
             fg.style.transform = open ? `translateX(${-W}px)` : '';
+            row.style.setProperty('--sw', open ? W + 'px' : '0px');
         }
         row = null;
     };

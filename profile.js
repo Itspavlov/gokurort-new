@@ -309,7 +309,7 @@ function openAdForm(editId) {
             <div class="form-block">
                 <label class="field"><span>Название</span><input id="fmTitle" maxlength="60" value="${e(old ? old.title : '')}" placeholder="Например: Студия у моря"></label>
                 <label class="field"><span id="fmPriceLabel">Цена за сутки, ₽</span><input id="fmPrice" type="number" inputmode="numeric" min="0" value="${old ? old.priceNum : ''}" placeholder="2500"></label>
-                <label class="field"><span>Адрес</span><input id="fmAddr" maxlength="80" value="${e(old ? old.location : '')}" placeholder="Улица, дом"></label>
+                <label class="field"><span>Посёлок, улица, дом</span><input id="fmAddr" maxlength="100" value="${e(old ? old.location : 'Архипо-Осиповка, ')}" placeholder="Архипо-Осиповка, ул. Горная, 12"><small class="form-hint">Начните с посёлка или города — по нему объявление находят те, кто ищет жильё.</small></label>
                 <label class="field"><span>Описание</span><textarea id="fmDesc" rows="4" maxlength="800" placeholder="Что есть в жилье, чем оно удобно">${e(old ? old.description : '')}</textarea></label>
                 <label class="field"><span id="fmRoomsLabel">Комнаты и площадь</span><input id="fmRooms" maxlength="40" value="${e(f.rooms || '')}" placeholder="1 комната · 32 м²"></label>
             </div>
