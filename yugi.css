@@ -865,3 +865,7 @@
 /* место и температура остаются под шапкой, пока листаете главную */
 #tab-search > .hero-meta { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 52px); z-index: 20; }
 @media (max-width: 340px) { .wx-water span { display: none; } }
+
+/* ===== v36: плитки чуть крупнее (по высоте экрана), нижнее меню ниже, почти у самого края ===== */
+.group-card { min-height: clamp(164px, calc((100dvh - 430px) / 2), 196px); }
+.bottom-nav { padding-bottom: max(2px, calc(env(safe-area-inset-bottom, 0px) - 30px)); }
