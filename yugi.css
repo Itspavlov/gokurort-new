@@ -735,3 +735,14 @@
 .rc-card small.rc-loc { color: var(--text-muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* фото в карточке листаются пальцем: разрешаем горизонтальную прокрутку по цепочке родителей */
 #chatMessages .ad-slides { touch-action: pan-x pan-y; }
+
+/* v26: фото в шапке — затемнение слева и сверху, чтобы заголовок читался на закате */
+.hero-scene::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse 95% 50% at 22% 74%, rgba(5, 14, 30, .78) 0%, rgba(5, 14, 30, 0) 100%), linear-gradient(100deg, rgba(5, 14, 30, .42) 0%, rgba(5, 14, 30, .12) 55%, rgba(5, 14, 30, 0) 100%); }
+
+/* v27: полоса «Знакомства» с фото компании на закате */
+.group-card.strip .group-photo { object-position: 50% 62%; }
+.group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(110, 30, 130, .78) 0%, rgba(200, 60, 140, .42) 55%, rgba(240, 135, 90, .1) 100%); }
+
+/* v29: подзаголовок поверх фото — чуть плотнее тень */
+.hero-photo ~ .hero-sub, #tab-search .hero-sub { text-shadow: 0 1px 3px rgba(0, 0, 0, .5), 0 1px 14px rgba(0, 0, 0, .45); }
