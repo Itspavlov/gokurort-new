@@ -734,7 +734,7 @@ function renderHousingMessage(ad) {
                         ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent">Срочно</div>' : ''}
                         ${remote ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
                         ${sl.n ? `<span class="ph-count"><i class="fas fa-camera"></i><span><b class="cur">1</b>/${sl.n}</span></span>` : ''}
-                        ${sea ? `<span class="sea-dist"><i class="fas fa-umbrella-beach"></i>${escapeHtml(sea)} до моря</span>` : ''}
+                        ${sea ? `<span class="sea-dist"><i class="fas fa-umbrella-beach"></i>${escapeHtml(sea)}<small> до моря</small></span>` : ''}
                     </div>
                     <div class="ad-info">
                         <div class="ad-row1"><div class="chat-ad-price">${escapeHtml(ad.price)}${ad.isVerified ? ' <i class="fas fa-circle-check ad-ok" aria-label="Проверенный хозяин"></i>' : ''}</div>${rating}</div>
