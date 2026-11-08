@@ -869,3 +869,9 @@
 /* ===== v36: плитки чуть крупнее (по высоте экрана), нижнее меню ниже, почти у самого края ===== */
 .group-card { min-height: clamp(164px, calc((100dvh - 430px) / 2), 196px); }
 .bottom-nav { padding-bottom: max(2px, calc(env(safe-area-inset-bottom, 0px) - 30px)); }
+
+/* ===== v37: «еду с животными» в запросе, блок «другие типы жилья» ===== */
+.rq-pets { display: flex; align-items: center; gap: 10px; margin: 2px 4px 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.rq-pets input { width: 20px; height: 20px; accent-color: #FF8A4C; flex: none; }
+.rq-pets i { color: #FFB84D; margin-right: 4px; }
+.opt-note { margin: -2px 4px 10px; font-size: 12.5px; line-height: 1.35; color: var(--text-secondary); }

@@ -83,12 +83,13 @@ function reqCardHTML(r, opts = {}) {
     const lines = [
         (r.city || r.district) ? `<span><i class="fas fa-location-dot"></i>${e([r.city, r.district].filter(Boolean).join(', '))}</span>` : '',
         r.dateFrom ? `<span><i class="fas fa-calendar"></i>${fmtShortDate(r.dateFrom)}${r.dateTo ? '–' + fmtShortDate(r.dateTo) : ''}</span>` : '',
-        r.guests ? `<span><i class="fas fa-user-group"></i>${r.guests} ${r.guests === 1 ? 'гость' : 'гостя'}</span>` : '',
-        r.budget ? `<span><i class="fas fa-ruble-sign"></i>до ${Number(r.budget).toLocaleString('ru-RU')} ₽/сутки</span>` : ''
+        r.guests ? `<span><i class="fas fa-user-group"></i>${r.guests} ${plural(r.guests, 'гость', 'гостя', 'гостей')}</span>` : '',
+        r.budget ? `<span><i class="fas fa-ruble-sign"></i>до ${Number(r.budget).toLocaleString('ru-RU')} ₽/сутки</span>` : '',
+        r.pets ? `<span><i class="fas fa-paw"></i>с животными</span>` : ''
     ].join('');
     const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : '';
     const found = r.mine && r.status === 'active'
-        ? `<button type="button" class="main" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}${r.offerCount ? ' · предложений ' + r.offerCount : ''}</button>` : '';
+        ? `<button type="button" class="main" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}${r.similarCount ? (r.matchCount ? ' · ' : ': ') + 'другие типы ' + r.similarCount : ''}${r.offerCount ? ' · предложений ' + r.offerCount : ''}</button>` : '';
     const actions = r.mine
         ? (r.status === 'active' ? found + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` : '');
@@ -285,7 +286,8 @@ function openRequestSheet(edit) {
             <label class="field"><span>Выезд</span><input id="rqTo" type="date" min="${todayISO()}" value="${e(r.dateTo || '')}"></label></div>
             <div class="rq-row"><label class="field"><span>Гостей</span><input id="rqGuests" type="number" inputmode="numeric" min="1" max="30" value="${r.guests || ''}"></label>
             <label class="field"><span>Бюджет, ₽/сутки</span><input id="rqBudget" type="number" inputmode="numeric" min="1" value="${r.budget || ''}"></label></div>
-            <label class="field"><span>Пожелания</span><textarea id="rqText" maxlength="300" rows="3" placeholder="Например: недалеко от моря, можно с животными">${e(r.text || '')}</textarea></label>
+            <label class="rq-pets"><input type="checkbox" id="rqPets" ${r.pets ? 'checked' : ''}><span><i class="fas fa-paw"></i> Еду с животными</span></label>
+            <label class="field"><span>Пожелания</span><textarea id="rqText" maxlength="300" rows="3" placeholder="Например: недалеко от моря, рядом магазин">${e(r.text || '')}</textarea></label>
             <div class="auth-error" id="rqErr"></div>
             <button class="primary-btn wide-btn" id="rqSend"></button>`, (el) => {
             const btn = el.querySelector('#rqSend'), err = el.querySelector('#rqErr');
@@ -303,7 +305,7 @@ function openRequestSheet(edit) {
                 if (from && to && to < from) { err.textContent = 'Выезд раньше заезда'; return; }
                 err.textContent = '';
                 btn.disabled = true;
-                const body = { category: v('#rqCat'), city: v('#rqCity'), district: v('#rqDistrict'), dateFrom: from, dateTo: to, guests: v('#rqGuests'), budget: v('#rqBudget'), text: v('#rqText') };
+                const body = { category: v('#rqCat'), city: v('#rqCity'), district: v('#rqDistrict'), dateFrom: from, dateTo: to, guests: v('#rqGuests'), budget: v('#rqBudget'), pets: el.querySelector('#rqPets').checked, text: v('#rqText') };
                 const url = reqEditing ? `${SERVER_URL}/api/requests/${encodeURIComponent(reqEditing.id)}` : `${SERVER_URL}/api/requests`;
                 fetch(url, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify(body) }).then(async (x) => {
                     let d = null; try { d = await x.json(); } catch (_) {}
@@ -316,12 +318,12 @@ function openRequestSheet(edit) {
                     }
                     if (!reqEditing) setCooldown(d.cooldown || 60);
                     closeSheet();
-                    showToast(reqEditing ? 'Запрос обновлён' : (d.matches ? 'Мы нашли ' + d.matches + ' ' + plural(d.matches, 'вариант', 'варианта', 'вариантов') + ' под ваш запрос' : 'Запрос опубликован. Хозяева его увидят'));
+                    showToast(reqEditing ? 'Запрос обновлён' : (d.matches ? 'Мы нашли ' + d.matches + ' ' + plural(d.matches, 'вариант', 'варианта', 'вариантов') + ' под ваш запрос' : (d.similar ? 'Точных вариантов нет, но есть ' + d.similar + ' в других типах жилья' : 'Запрос опубликован. Хозяева его увидят')));
                     reqView = reqEditing ? reqView : 'seek';
                     applyReqView();
                     loadRequests(refreshMyRequests);
                     // после публикации сразу показываем найденные варианты во всплывающем окне
-                    if (!reqEditing && d.matches) setTimeout(() => openOptionsSheet(d.request), 350);
+                    if (!reqEditing && (d.matches || d.similar)) setTimeout(() => openOptionsSheet(d.request), 350);
                     else if (!reqEditing) setTimeout(() => openNoMatchSheet(), 350);
                 }).catch(() => { err.textContent = 'Нет связи с сервером'; label(); });
             });
@@ -516,7 +518,12 @@ function openOptionsSheet(r) {
                 `<button class="main" data-a="view">Посмотреть</button><button data-a="dm" data-owner="${escapeHtml(x.ownerName)}">Начать диалог</button><button data-a="no" data-oid="${escapeHtml(x.id)}">Не подходит</button>`)).join('') : '<p class="opt-empty">Предложений от хозяев пока нет</p>';
             const rest = m.listings.filter(l => !offered.has(l.id));
             const matHTML = rest.length ? rest.map(l => listingMiniHTML(l, `<button class="main" data-a="view">Посмотреть</button><button data-a="dm" data-owner="${escapeHtml(l.owner.name)}">Написать</button>`)).join('') : '<p class="opt-empty">Подходящего жилья пока нет. Как только хозяева опубликуют объявление, оно появится здесь</p>';
-            box.innerHTML = `<div class="opt-sec">Предложения хозяев</div>${offHTML}<div class="opt-sec" style="margin-top:14px">Подходящее жильё: ${rest.length}</div>${matHTML}`;
+            const catName = Object.fromEntries(REQ_CATS);
+            const alike = (m.similar || []).filter(l => !offered.has(l.id));
+            const alikeHTML = alike.length ? `<div class="opt-sec" style="margin-top:14px">Другие типы жилья: ${alike.length}</div>
+                <p class="opt-note">Подходят по цене, числу гостей, датам${r.pets ? ' и животным' : ''}. Не совпадает только тип${r.category ? ': вы искали «' + escapeHtml(catName[r.category] || '') + '»' : ''}.</p>` +
+                alike.map(l => listingMiniHTML({ ...l, price: (catName[l.category] ? catName[l.category] + ' · ' : '') + (l.price || '') }, `<button class="main" data-a="view">Посмотреть</button><button data-a="dm" data-owner="${escapeHtml(l.owner.name)}">Написать</button>`)).join('') : '';
+            box.innerHTML = `<div class="opt-sec">Предложения хозяев</div>${offHTML}<div class="opt-sec" style="margin-top:14px">Подходящее жильё: ${rest.length}</div>${matHTML}${alikeHTML}`;
         }).catch(() => { box.innerHTML = '<p class="opt-empty">Нет связи с сервером</p>'; });
         el.addEventListener('click', (ev) => {
             const b = ev.target.closest('button[data-a]'); if (!b) return;
