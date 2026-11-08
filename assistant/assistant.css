@@ -1,0 +1,55 @@
+/* Помощник «Юги»: слой поверх интерфейса. Сам холст не ловит касания (pointer-events:none), кликабелен только хитбокс по персонажу. */
+:root { --yy-bg: #fff; --yy-fg: #1c2b2a; --yy-line: rgba(0,0,0,.08); --yy-mute: rgba(28,43,42,.6); }
+:root[data-theme="dark"], :root[data-theme="dusk"], :root[data-theme="sea"] { --yy-bg: #262a35; --yy-fg: #f3f1f7; --yy-line: rgba(255,255,255,.1); --yy-mute: rgba(243,241,247,.6); }
+.yy-asst { position: fixed; inset: 0; z-index: 95; pointer-events: none; overflow: hidden; }
+.yy-asst.chat { z-index: 125; }
+.yy-asst-canvas { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
+.yy-asst-hit { position: absolute; left: 0; top: 0; padding: 0; margin: 0; border: 0; background: transparent; pointer-events: auto; cursor: pointer; border-radius: 14px; -webkit-tap-highlight-color: transparent; }
+.yy-asst-hit:focus-visible { outline: 2px solid var(--accent, #F08A24); outline-offset: 1px; }
+.yy-bubble { position: absolute; left: 0; top: 0; max-width: min(240px, calc(100vw - 24px)); padding: 9px 12px; border-radius: 14px; background: var(--yy-bg); color: var(--yy-fg);
+    font: 600 13px/1.35 var(--font, system-ui, sans-serif); box-shadow: 0 8px 24px rgba(0,0,0,.28); pointer-events: auto; cursor: pointer; opacity: 0; visibility: hidden; transition: opacity .18s; }
+.yy-bubble.on { opacity: 1; visibility: visible; }
+.yy-bubble::after { content: ''; position: absolute; left: var(--tx, 50%); bottom: -5px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+.yy-bubble.below::after { bottom: auto; top: -5px; }
+.yy-zzz { position: absolute; left: 0; top: 0; display: none; pointer-events: none; }
+.yy-zzz i { position: absolute; left: 0; top: 0; font: 800 12px/1 var(--font, sans-serif); font-style: normal; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); opacity: 0; animation: yyz 2.4s infinite; }
+.yy-zzz i:nth-child(2) { animation-delay: .8s; font-size: 15px; } .yy-zzz i:nth-child(3) { animation-delay: 1.6s; font-size: 18px; }
+@keyframes yyz { 0% { opacity: 0; transform: translate(0,0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(14px,-26px); } }
+.yy-conf { position: absolute; left: 0; top: 0; pointer-events: none; }
+.yy-conf i { position: absolute; left: 0; top: 0; width: 6px; height: 9px; background: var(--c); border-radius: 1px; opacity: 0; animation: yyc 1.5s ease-out forwards; }
+@keyframes yyc { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 70px)) rotate(var(--r)); } }
+.yy-spot { outline: 3px solid var(--accent, #F08A24); outline-offset: 3px; animation: yyspot 1.1s ease-in-out infinite; }
+@keyframes yyspot { 50% { outline-color: transparent; } }
+.yy-ghost { position: fixed; right: 14px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 90; width: 34px; height: 34px; border-radius: 50%; border: 0; display: none; align-items: center; justify-content: center;
+    background: var(--yy-bg); color: var(--yy-fg); box-shadow: 0 4px 14px rgba(0,0,0,.3); opacity: .75; cursor: pointer; }
+/* чат */
+.yy-chat { position: fixed; left: 0; right: 0; bottom: 0; z-index: 120; max-width: 480px; margin: 0 auto; height: min(56vh, 460px); display: flex; flex-direction: column; background: var(--yy-bg); color: var(--yy-fg);
+    border-radius: 22px 22px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,.35); transform: translateY(105%); transition: transform .22s ease-out; font: 500 14px/1.4 var(--font, system-ui, sans-serif); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.yy-chat[hidden] { display: none; }
+.yy-chat.on { transform: none; }
+.yy-chat-head { display: flex; align-items: center; gap: 4px; padding: 26px 10px 8px 16px; border-bottom: 1px solid var(--yy-line); }
+.yy-chat-title { flex: 1; display: flex; flex-direction: column; } .yy-chat-title small { color: var(--yy-mute); font-size: 12px; }
+.yy-ic { width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--yy-fg); cursor: pointer; font-size: 15px; }
+.yy-ic.rec { color: #e5484d; }
+.yy-msgs { flex: 1; overflow-y: auto; padding: 12px 14px 4px; display: flex; flex-direction: column; gap: 8px; }
+.yy-m { max-width: 86%; padding: 8px 12px; border-radius: 14px; background: var(--yy-line); align-self: flex-start; }
+.yy-m.me { align-self: flex-end; background: var(--accent, #F08A24); color: var(--on-accent, #fff); }
+.yy-m > span { display: block; }
+.yy-act { display: inline-block; margin: 8px 6px 0 0; padding: 6px 11px; border: 1px solid var(--accent, #F08A24); border-radius: 999px; background: transparent; color: inherit; font: 700 12px var(--font, sans-serif); cursor: pointer; }
+.yy-act.open { background: var(--accent, #F08A24); color: var(--on-accent, #fff); }
+.yy-chips { display: flex; gap: 6px; padding: 6px 14px; overflow-x: auto; scrollbar-width: none; }
+.yy-chips button { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--yy-line); background: transparent; color: var(--yy-fg); font: 600 12px var(--font, sans-serif); cursor: pointer; }
+.yy-chat-in { display: flex; gap: 6px; padding: 6px 12px 12px; }
+.yy-chat-in input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--yy-line); background: transparent; color: var(--yy-fg); font: inherit; font-size: 16px; }
+.yy-send { width: 42px; border: 0; border-radius: 50%; background: var(--accent, #F08A24); color: var(--on-accent, #fff); cursor: pointer; }
+.yy-set { position: absolute; inset: 62px 0 0 0; background: var(--yy-bg); padding: 12px 16px; overflow-y: auto; border-radius: 0 0 0 0; }
+.yy-set[hidden] { display: none; }
+.yy-set-h { font-weight: 800; margin-bottom: 8px; }
+.yy-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--yy-line); }
+.yy-row small { display: block; color: var(--yy-mute); font-size: 12px; }
+.yy-row input[type=checkbox] { position: absolute; opacity: 0; pointer-events: none; }
+.yy-sw { flex: none; width: 42px; height: 24px; border-radius: 999px; background: var(--yy-line); position: relative; transition: background .15s; }
+.yy-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.yy-row input:checked + .yy-sw { background: var(--accent, #F08A24); } .yy-row input:checked + .yy-sw::after { transform: translateX(18px); }
+.yy-pad input[type=range] { width: 120px; }
+@media (prefers-reduced-motion: reduce) { .yy-spot, .yy-zzz i { animation: none; } .yy-chat { transition: none; } }
