@@ -845,3 +845,10 @@
 .swipe-row { background: transparent; }
 .swipe-del { clip-path: inset(0 0 0 calc(88px - var(--sw, 0px))); transition: clip-path .18s ease-out; }
 .swipe-row.swiping .swipe-del { transition: none; }
+
+/* ===== v34: новые картинки плиток — героям уступает левый верх, где лежит иконка ===== */
+.gc-housing .group-photo { object-position: 78% 55%; }
+.gc-work .group-photo { object-position: 80% 55%; }
+.gc-trips .group-photo { object-position: 76% 55%; }
+.gc-services .group-photo { object-position: 64% 55%; }
+.group-card.gc-dating.strip .group-photo { object-position: 60% 50%; }
