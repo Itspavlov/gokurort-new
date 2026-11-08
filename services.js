@@ -3,7 +3,7 @@
 //  • «Мои развлечения» в профиле: карточки с фото (до 4), ценой и описанием — морские прогулки, экскурсии, джипы…
 //  • другой пользователь видит их в профиле хозяина (вкладка «Развлечения») и в разделе «Развлечения»
 //  • в разделе есть быстрый поиск и категории, чтобы не листать всё подряд
-//  • «Предоставляю»: если карточки или объявления уже есть — предложим опубликовать старое заново или создать новое
+//  • «Предлагаю / Сдаю»: если карточки или объявления уже есть — предложим опубликовать старое заново или создать новое
 // ============================================
 const SV_TAGS = { sea: 'Морские прогулки', tours: 'Экскурсии', active: 'Активный отдых', kids: 'Детям', show: 'Шоу и вечера', food: 'Гастро', other: 'Другое' };
 const SV_ICONS = { sea: 'fa-ship', tours: 'fa-map-location-dot', active: 'fa-person-hiking', kids: 'fa-child-reaching', show: 'fa-masks-theater', food: 'fa-utensils', other: 'fa-star' };
@@ -243,7 +243,7 @@ renderProfile = function () {
     return r;
 };
 
-// ---------- «Предоставляю»: старое или новое ----------
+// ---------- «Предлагаю / Сдаю»: старое или новое ----------
 function chooserRow(thumb, title, sub, btns) {
     const e = escapeHtml;
     return `<div class="rp-row"><div class="rp-thumb">${thumb ? `<img src="${e(thumb)}" alt="">` : '<i class="fas fa-image"></i>'}</div>
@@ -294,7 +294,7 @@ openAdForm = function (editId) {
     if (!mine.length) return _openAdFormSv.apply(this, arguments);
     const rows = mine.slice(0, 6).map(a => chooserRow(a.image || (a.photos && a.photos[0]) || '', a.title, a.price || '',
         `<button type="button" class="rp-main" data-ad-bump="${escapeHtml(String(a.id))}">Поднять</button><button type="button" data-ad-edit="${escapeHtml(String(a.id))}" aria-label="Изменить"><i class="fas fa-pen"></i></button>`)).join('');
-    openSheet('Предлагаю жильё', `
+    openSheet('Сдаю жильё', `
         <p class="auth-note" style="margin:0 4px 12px">Вы уже публиковали жильё. Опубликуйте его заново — объявление встанет наверх, — или добавьте новое.</p>
         <div class="rp-list">${rows}</div>
         <button type="button" class="primary-btn wide-btn" data-ad-new><i class="fas fa-plus"></i> Добавить новое жильё</button>`);

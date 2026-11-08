@@ -525,8 +525,8 @@ function openGroup(groupId, opts) {
         const all = cat.id === 'all';
         openChatRoom(groupId, all ? 'Жильё' : 'Жильё · ' + cat.label, 'fas ' + (all ? 'fa-home' : cat.icon), adsForRoom(groupId)(local), Object.assign({
             noAttach: true, chips: true, cards: true,
-            welcomeTitle: all ? 'Жильё у моря: все объявления' : 'Раздел «' + cat.label + '»',
-            welcomeText: (all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху. ' : 'Здесь только жильё этого типа. ') + 'Переписки в разделе нет: нажмите «Ищу», если ищете жильё, или «Предоставляю», чтобы разместить своё. Договариваться можно в личных сообщениях.'
+            welcomeTitle: all ? 'Жильё у моря' : 'Раздел «' + cat.label + '»',
+            welcomeText: (all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху. ' : 'Здесь только жильё этого типа. ') + 'Переписки в разделе нет: нажмите «Ищу жильё», если ищете, или «Сдаю жильё», чтобы разместить своё. Договариваться можно в личных сообщениях.'
         }, opts || {}));
         return;
     }
@@ -544,7 +544,7 @@ function openGroup(groupId, opts) {
         noAttach: !!room.noAttach, hint: !!room.hint, cards: groupId !== 'dating',
         welcomeText: groupId === 'dating'
             ? 'Раздел для тех, кому 18+. Здесь можно знакомиться и общаться. Не публикуйте телефон и адрес, а о подозрительных людях сообщайте через жалобу на сообщение.'
-            : 'Переписки в разделе нет: нажмите «Ищу» или «Предоставляю» и добавьте карточку. Договариваться можно в личных сообщениях.'
+            : 'Переписки в разделе нет: нажмите кнопку «Ищу» или «Предлагаю» внизу и добавьте карточку. Договариваться можно в личных сообщениях.'
     }, opts || {}));
 }
 
@@ -581,6 +581,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
             ${opts.chips ? `<button class="chat-header-btn chat-help-btn" onclick="housingTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>` : ''}
         </div>
         ${opts.chips ? housingChipsHTML(roomId) : ''}
+        ${opts.cards ? seekBarHTML(roomId) : ''}
 
         <div class="chat-messages${opts.cards ? ' cards' : ''}" id="chatMessages">
             <div class="chat-welcome">
@@ -591,7 +592,7 @@ function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
             ${ads.map(ad => renderHousingMessage(ad)).join('')}
         </div>
 
-        ${opts.cards ? cardsDockHTML() : `<div class="chat-input-wrapper">
+        ${opts.cards ? cardsDockHTML(roomId) : `<div class="chat-input-wrapper">
             ${opts.noAttach ? '' : `<button class="chat-attach-btn" onclick="attachImage()">
                 <i class="fas fa-paperclip"></i>
             </button>

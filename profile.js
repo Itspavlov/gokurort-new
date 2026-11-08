@@ -41,7 +41,52 @@ function openSheet(title, bodyHTML, onMount) {
     el.addEventListener('click', (ev) => { if (ev.target === el || ev.target.closest('[data-sheet-close]')) closeSheet(); });
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add('open'));
+    attachSheetSwipe(el);
     if (onMount) onMount(el);
+}
+
+// Шторка закрывается и свайпом: тянуть можно за ручку и заголовок вверх или вниз, а за содержимое — вниз,
+// когда оно прокручено до начала. Поля ввода, ползунки и календари не трогаем.
+function attachSheetSwipe(el) {
+    const panel = el.querySelector('.sheet-panel');
+    if (!panel) return;
+    let x0 = 0, y0 = 0, dy = 0, t0 = 0, state = 0, fromHead = false;      // state: 0 — не решено, 1 — тянем, -1 — не наше
+    const finish = (closing) => {
+        panel.style.transition = 'transform .22s ease-out';
+        if (closing) {
+            el.style.transition = 'opacity .2s'; el.style.opacity = '0';
+            panel.style.transform = dy > 0 ? 'translateY(100%)' : 'translateY(-40px)';
+            setTimeout(() => { if (document.getElementById('sheet') === el) closeSheet(); }, 200);
+        } else { panel.style.transform = ''; el.style.opacity = ''; }
+    };
+    panel.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1 || e.target.closest('input, textarea, select, [data-noswipe], .cal, .cal-grid')) { state = -1; return; }
+        const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dy = 0; t0 = Date.now(); state = 0;
+        fromHead = !!e.target.closest('.sheet-grab, .sheet-head');
+    }, { passive: true });
+    panel.addEventListener('touchmove', (e) => {
+        if (state < 0 || e.touches.length !== 1) return;
+        const t = e.touches[0], dx = t.clientX - x0; dy = t.clientY - y0;
+        if (state === 0) {
+            if (Math.abs(dy) < 8 && Math.abs(dx) < 8) return;
+            const vertical = Math.abs(dy) > Math.abs(dx) * 1.2;
+            state = vertical && (fromHead || (dy > 0 && panel.scrollTop <= 0)) ? 1 : -1;
+            if (state < 0) return;
+            panel.style.transition = 'none';
+        }
+        const off = dy > 0 ? dy : dy * 0.35;                                   // вверх тянется туго
+        panel.style.transform = 'translateY(' + off + 'px)';
+        el.style.opacity = String(1 - Math.min(Math.abs(off) / 420, 0.6));
+        if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+    const end = () => {
+        if (state !== 1) { state = 0; return; }
+        state = 0;
+        const dist = Math.abs(dy), speed = dist / Math.max(1, Date.now() - t0);
+        finish(dist > 90 || (speed > 0.6 && dist > 30));
+    };
+    panel.addEventListener('touchend', end);
+    panel.addEventListener('touchcancel', end);
 }
 
 function closeSheet() {

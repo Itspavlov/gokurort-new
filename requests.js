@@ -4,7 +4,7 @@
 // здесь только показ таймера и счётчика.
 // ============================================
 let reqList = [];
-let reqView = 'all';                 // all | seek | offer
+let reqView = 'offer';               // seek | offer: вкладки сверху, «все» убрано
 let reqCooldownUntil = 0;
 let reqTicker = 0;
 let reqEditing = null;
@@ -13,15 +13,24 @@ const REQ_NOUN = { apartment: 'квартиру', house: 'дом', hotel: 'от�
 const REQ_CATS = [['', 'Любое жильё'], ['apartment', 'Квартира'], ['house', 'Дом'], ['hotel', 'Отель'], ['room', 'Комната'], ['guest', 'Гостевой дом']];
 const REQ_STATUS = { active: 'Активен', found: 'Найдено', closed: 'Закрыт', expired: 'Истёк срок' };
 
-// Разделы без жилья: «Ищу» и «Предоставляю» — простые карточки
+// Разделы без жилья: «Ищу» и «Предлагаю» — простые карточки
 const SEC = {
-    work:   { seek: { head: 'Ищу работу', ph: 'Например: официант, опыт 2 года' }, offer: { head: 'Предоставляю работу', ph: 'Например: нужен повар на лето' }, price: 'Оплата, ₽', date: '', seats: '' },
-    trips:  { seek: { head: 'Ищу поездку', ph: 'Например: ищу попутчиков Сочи → Адлер' }, offer: { head: 'Предоставляю поездку', ph: 'Например: еду в Краснодар, есть 2 места' }, price: 'Цена, ₽', date: 'Дата поездки', seats: 'Мест' },
+    work:   { seek: { head: 'Ищу работу', ph: 'Например: официант, опыт 2 года' }, offer: { head: 'Предлагаю работу', ph: 'Например: нужен повар на лето' }, price: 'Оплата, ₽', date: '', seats: '' },
+    trips:  { seek: { head: 'Ищу поездку', ph: 'Например: ищу попутчиков Сочи → Адлер' }, offer: { head: 'Предлагаю поездку', ph: 'Например: еду в Краснодар, есть 2 места' }, price: 'Цена, ₽', date: 'Дата поездки', seats: 'Мест' },
     services: { seek: { head: 'Ищу развлечение', ph: 'Например: ищу компанию на морскую прогулку' }, offer: { head: 'Предлагаю развлечение', ph: 'Например: экскурсия на джипах, яхта на день' }, price: 'Цена, ₽', date: '', seats: '' }
 };
 const isHousingReq = (r) => !r || !r.section || r.section === 'housing';
 // Раздел открытой комнаты: housing, work, trips или services
 const reqSection = () => (typeof currentRoom === 'string' && SEC[currentRoom]) ? currentRoom : 'housing';
+
+// Подписи вкладок (сверху, что смотреть) и кнопок (внизу, что создать) для каждого раздела
+const SEEK_LABELS = {
+    housing:  { tabs: ['Ищут жильё', 'Сдают жильё'], btns: ['Ищу жильё', 'Сдаю жильё'] },
+    work:     { tabs: ['Ищут работу', 'Предлагают работу'], btns: ['Ищу работу', 'Предлагаю работу'] },
+    trips:    { tabs: ['Ищут поездку', 'Предлагают поездку'], btns: ['Ищу поездку', 'Предлагаю поездку'] },
+    services: { tabs: ['Ищут развлечения', 'Предлагают развлечения'], btns: ['Ищу развлечение', 'Предлагаю развлечение'] }
+};
+const secLabels = (sec) => SEEK_LABELS[sec || reqSection()] || SEEK_LABELS.housing;
 
 const reqAuthHeaders = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });
 const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -137,23 +146,29 @@ function updateDockState() {
     const shown = reqView === 'seek' ? seeks : reqView === 'offer' ? offers : seeks + offers;
     empty.hidden = shown > 0;
     if (!shown) {
-        const housing = reqSection() === 'housing';
+        const housing = reqSection() === 'housing', L = secLabels();
         empty.innerHTML = reqView === 'offer'
-            ? `<i class="fas fa-circle-plus"></i><b>Пока нет предложений</b><span>${housing ? 'Сдаёте жильё? Нажмите «Предоставляю» внизу.' : 'Нажмите «Предоставляю» внизу и добавьте карточку.'}</span>`
-            : reqView === 'seek'
-                ? `<i class="fas fa-magnifying-glass"></i><b>Пока никто не ищет</b><span>${housing ? 'Ищете жильё? Нажмите «Ищу» внизу: хозяева увидят запрос и предложат варианты.' : 'Нажмите «Ищу» внизу и добавьте карточку.'}</span>`
-                : `<i class="fas fa-layer-group"></i><b>Здесь пока пусто</b><span>Добавьте карточку: «Ищу» или «Предоставляю» внизу.</span>`;
+            ? `<i class="fas fa-circle-plus"></i><b>Пока нет предложений</b><span>${housing ? 'Сдаёте жильё? Нажмите «' + L.btns[1] + '» внизу.' : 'Нажмите «' + L.btns[1] + '» внизу и добавьте карточку.'}</span>`
+            : `<i class="fas fa-magnifying-glass"></i><b>Пока никто не ищет</b><span>${housing ? 'Ищете жильё? Нажмите «' + L.btns[0] + '» внизу: хозяева увидят запрос и предложат варианты.' : 'Нажмите «' + L.btns[0] + '» внизу и добавьте карточку.'}</span>`;
     }
 }
 
-// ---------- нижняя панель: фильтр «Ищут / Предлагают» и кнопки «Ищу» и «Предоставляю» ----------
-function cardsDockHTML() {
-    const t = (v, l) => `<button type="button" role="tab" class="seek-tab ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}">${l}<b></b></button>`;
+// ---------- вкладки сверху (что смотреть) и кнопки внизу (что создать) ----------
+// Вкладки стоят под чипсами типов, а внизу только две кнопки создания.
+function seekBarHTML(room) {
+    const L = secLabels(SEC[room] ? room : 'housing');
+    if (reqView !== 'seek') reqView = 'offer';
+    const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b></b></button>`;
+    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', L.tabs[0])}${t('offer', L.tabs[1])}</div></div>`;
+}
+const dockBtnHTML = (icon, label) => `<i class="fas ${icon}"></i> ${label}`;
+function cardsDockHTML(room) {
+    const L = secLabels(SEC[room] ? room : 'housing');
+    const long = (s) => s.length > 17 ? ' nogly' : '';
     return `<div class="cards-dock" id="cardsDock">
-        <div class="seek-tabs" role="tablist">${t('seek', 'Ищут')}${t('offer', 'Предлагают')}</div>
         <div class="dock-actions">
-            <button type="button" class="dock-btn seek" id="dockSeek" title="Разместить запрос: что вы ищете" aria-label="Ищу: разместить запрос"><i class="fas fa-magnifying-glass"></i> Ищу</button>
-            <button type="button" class="dock-btn main" id="dockOffer" title="Разместить своё предложение" aria-label="Предоставляю: разместить предложение"><i class="fas fa-plus"></i> Предоставляю</button>
+            <button type="button" class="dock-btn seek${long(L.btns[0])}" id="dockSeek" aria-label="${L.btns[0]}: разместить запрос">${dockBtnHTML('fa-magnifying-glass', L.btns[0])}</button>
+            <button type="button" class="dock-btn main${long(L.btns[1])}" id="dockOffer" aria-label="${L.btns[1]}: разместить предложение">${dockBtnHTML('fa-plus', L.btns[1])}</button>
         </div></div>`;
 }
 
@@ -173,9 +188,9 @@ function setupCards() {
     if (!dock || !msgs || dock.dataset.on) return;
     dock.dataset.on = '1';
     msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden></div>');
+    const bar = document.getElementById('seekBar');
+    if (bar) bar.addEventListener('click', (ev) => { const tab = ev.target.closest('.seek-tab'); if (tab) { reqView = tab.dataset.v; applyReqView(); } });
     dock.addEventListener('click', (ev) => {
-        const tab = ev.target.closest('.seek-tab');
-        if (tab) { reqView = reqView === tab.dataset.v ? 'all' : tab.dataset.v; applyReqView(); return; }   // повторное нажатие снимает фильтр
         if (ev.target.closest('#dockSeek')) { reqSection() === 'housing' ? openRequestSheet() : openCardFlow('seek'); return; }
         if (ev.target.closest('#dockOffer')) {
             const sec = reqSection();
@@ -195,7 +210,7 @@ function setupCards() {
     if (reqSection() !== 'housing') setTimeout(() => cardsTour(false), 900);
 }
 
-// ---------- подсказки у кнопок «Ищу» и «Предоставляю» ----------
+// ---------- подсказки у вкладок и кнопок ----------
 const CARD_TIPS = {
     housing: { seek: 'Ищете жильё? Укажите город, даты, гостей и бюджет: хозяева увидят запрос и предложат варианты.', offer: 'Сдаёте или продаёте жильё? Опубликуйте объявление. Если оно уже было, можно поднять его наверх списка.' },
     work:    { seek: 'Ищете работу? Напишите, кем и где хотите работать: работодатели ответят в личные сообщения.', offer: 'Нужен сотрудник? Разместите вакансию. Прежние можно опубликовать заново.' },
@@ -205,10 +220,11 @@ const CARD_TIPS = {
 function cardsTour(force) {
     const sec = reqSection(), t = CARD_TIPS[sec];
     if (!t) return;
+    const L = secLabels(sec);
     runTour('cards-' + sec, [
-        { sel: '#dockSeek', title: 'Кнопка «Ищу»', text: t.seek },
-        { sel: '#dockOffer', title: 'Кнопка «Предоставляю»', text: t.offer },
-        { sel: '.seek-tabs', title: 'Ищут и Предлагают', text: 'Фильтр ленты: нажмите, чтобы видеть только запросы или только предложения. Повторное нажатие снимает фильтр.' }
+        { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' },
+        { sel: '#dockSeek', title: 'Кнопка «' + L.btns[0] + '»', text: t.seek },
+        { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: t.offer }
     ], force);
 }
 
@@ -314,7 +330,7 @@ function openRequestSheet(edit) {
 }
 
 
-// ---------- форма карточки «Ищу / Предоставляю» для работы, поездок и вещей ----------
+// ---------- форма карточки «Ищу / Предлагаю» для работы, поездок и вещей ----------
 function openCardSheet(kind, edit, prefill) {
     loginRequired(() => {
         const r = edit && edit.id ? edit : null;
@@ -382,7 +398,7 @@ function paintMyRequests() {
     if (cnt) { cnt.hidden = !act.length; cnt.textContent = String(act.length); }
     const box = document.getElementById('myReqBox');
     if (!box) return;
-    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Ищу» в разделе «Жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
+    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Ищу жильё» в разделе «Жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
     const hist = myReqs.filter(r => r.status !== 'active');
     const row = (r) => `<div class="req-row">${reqCardHTML(r)}<button type="button" class="req-del" data-del="${escapeHtml(r.id)}" aria-label="Удалить запрос"><i class="fas fa-trash"></i><span>Удалить</span></button></div>`;
     box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(row).join('') : '')
@@ -457,10 +473,10 @@ function tickCooldown() {
     const paint = () => {
         const w = cooldownLeft();
         const housing = reqSection() === 'housing';
-        const seek = document.getElementById('dockSeek'), offer = document.getElementById('dockOffer');
-        if (seek) seek.innerHTML = w > 0 ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : '<i class="fas fa-magnifying-glass"></i> Ищу';
-        // у жилья «Предоставляю» — обычное объявление, у него своего таймера нет
-        if (offer) offer.innerHTML = (w > 0 && !housing) ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : '<i class="fas fa-plus"></i> Предоставляю';
+        const seek = document.getElementById('dockSeek'), offer = document.getElementById('dockOffer'), L = secLabels();
+        if (seek) seek.innerHTML = w > 0 ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : dockBtnHTML('fa-magnifying-glass', L.btns[0]);
+        // у жилья «Сдаю» — обычное объявление, у него своего таймера нет
+        if (offer) offer.innerHTML = (w > 0 && !housing) ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : dockBtnHTML('fa-plus', L.btns[1]);
         if (w <= 0) clearInterval(reqTicker);
     };
     paint();
