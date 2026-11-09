@@ -7,8 +7,12 @@
 // ============================================
 const DV_PHOTOS = 5;
 const DV_IDEAS = ['Джипы в горы', 'Морская прогулка', 'Волейбол на пляже', 'Просто потусить', 'Шашлыки у моря', 'Вечер на набережной'];
+const DV_EMOJI = ['❤️', '🙌', '🔥', '👏', '😍', '😂', '😮', '😢'];
+// Ключ Яндекса нужен только для поиска адреса; сами карты — Leaflet. Ограничьте ключ по домену в кабинете Яндекса.
+const DV_YKEY = '7aafdf73-bf1e-4ec7-8d18-07b14be93c80';
 let dvFeed = [];
 let dvOpenId = null;       // открытая в шторке карточка
+let dvCommId = null;       // карточка, чьи комментарии открыты
 
 const dvEsc = (s) => escapeHtml(String(s == null ? '' : s));
 const dvPrice = (a) => a && a.price ? Number(a.price).toLocaleString('ru-RU') + ' ₽' + (a.unit ? ' ' + a.unit : '') : '';
@@ -21,6 +25,45 @@ function dvWhen(w) {
     if (!m) return '';
     const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
     return d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' }) + ' · ' + m[4] + ':' + m[5];
+}
+const dvPin = () => L.divIcon({ className: 'map-pin-wrap', html: '<div class="map-pin pin-meet"><i class="fas fa-flag"></i></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+const dvFmtCoords = (c) => c[0].toFixed(5) + ', ' + c[1].toFixed(5);
+
+// карта в блоке el: без подписи Leaflet, спутниковые тайлы как в объявлениях
+function dvMakeMap(el, center, zoom, opts) {
+    if (typeof L === 'undefined') {
+        el.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>';
+        return null;
+    }
+    const map = L.map(el, Object.assign({ zoomControl: false, tap: false }, opts || {})).setView(center, zoom);
+    if (map.attributionControl) map.attributionControl.setPrefix(false);
+    mapTiles().addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 420);       // шторка выезжает с анимацией
+    return map;
+}
+
+// поиск адреса через геокодер Яндекса (ключ выше); без связи или с неверным ключом просто сообщаем
+function dvGeocode(q) {
+    q = String(q || '').trim();
+    if (!/архипо|осипов/i.test(q)) q = 'Архипо-Осиповка, ' + q;
+    const url = 'https://geocode-maps.yandex.ru/1.x/?apikey=' + DV_YKEY + '&format=json&results=1&lang=ru_RU&geocode=' + encodeURIComponent(q)
+        + '&ll=' + MAP_DEFAULT[1] + ',' + MAP_DEFAULT[0] + '&spn=0.4,0.3&rspn=0';
+    return fetch(url).then((r) => { if (!r.ok) throw new Error('geo'); return r.json(); }).then((j) => {
+        const m = j && j.response && j.response.GeoObjectCollection.featureMember[0];
+        if (!m) return null;
+        const pos = String(m.GeoObject.Point.pos).split(' ').map(Number);
+        return { lat: pos[1], lng: pos[0], name: m.GeoObject.name };
+    });
+}
+
+// ссылки «проложить маршрут»: из текущего положения человека до точки сбора
+function dvRouteHTML(c) {
+    const la = c[0], lo = c[1];
+    return `<div class="dv-route">
+        <a class="dv-rbtn main" href="https://yandex.ru/maps/?rtext=~${la}%2C${lo}&rtt=auto" target="_blank" rel="noopener"><i class="fas fa-route"></i> Маршрут · Яндекс</a>
+        <a class="dv-rbtn" href="https://www.google.com/maps/dir/?api=1&destination=${la},${lo}" target="_blank" rel="noopener">Google</a>
+        <a class="dv-rbtn" href="https://maps.apple.com/?daddr=${la},${lo}" target="_blank" rel="noopener">Apple</a></div>`;
 }
 const dvPeople = (e) => e.max ? `${e.joins} из ${e.max}` : (e.joins ? String(e.joins) : '');
 
@@ -74,11 +117,12 @@ function dvCardHTML(e) {
         <div class="dv-meta">
             ${e.when ? `<span><i class="fas fa-clock"></i>${dvEsc(dvWhen(e.when))}</span>` : ''}
             ${e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : ''}
+            ${e.coords ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : ''}
             ${people ? `<span><i class="fas fa-user-group"></i>${dvEsc(people)}</span>` : ''}
         </div>
         ${e.attached ? dvAttachHTML(e.attached) : ''}
         <div class="dv-foot">
-            <button type="button" class="dv-btn" data-dv="open"><i class="fas fa-comment"></i> ${e.comments || 'Обсудить'}</button>
+            <button type="button" class="dv-btn" data-dv="comments"><i class="fas fa-comment"></i> ${e.comments || 'Обсудить'}</button>
             ${mine ? '<span class="dv-own">Ваш движ</span>' : `<button type="button" class="dv-btn main ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? '<i class="fas fa-check"></i> Вы идёте' : 'Я с вами'}</button>`}
         </div></article>`;
 }
@@ -102,6 +146,7 @@ function onFeedClick(ev) {
     const id = card.dataset.id;
     const act = ev.target.closest('[data-dv]');
     if (act && act.dataset.dv === 'join') { dvToggleJoin(id); return; }
+    if (act && act.dataset.dv === 'comments') { openDvizComments(id); return; }
     if (act && act.dataset.dv === 'service') { openServiceView(act.dataset.sid); return; }
     openDvizView(id);
 }
@@ -121,7 +166,7 @@ function dvToggleJoin(id, after) {
     });
 }
 
-// ---------- просмотр: фото, описание, участники, комментарии ----------
+// ---------- комментарии ----------
 function dvCommentsHTML(e) {
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const list = e.commentList || [];
@@ -130,9 +175,93 @@ function dvCommentsHTML(e) {
         return `<div class="dv-comment" data-cid="${dvEsc(c.id)}"><div class="chat-avatar" style="background:${dmColor(c.name)}">${dvEsc(Array.from(c.name)[0] || '?')}</div>
             <div class="dv-cbody"><div class="dv-chead"><b>${dvEsc(c.name)}${c.userId === e.ownerId ? ' <em>автор</em>' : ''}</b><small>${fmtAgo(c.time)}</small>${can ? `<button type="button" data-cdel="${dvEsc(c.id)}" aria-label="Удалить комментарий"><i class="fas fa-trash"></i></button>` : ''}</div>
             <p>${dvEsc(c.text)}</p></div></div>`;
-    }).join('') : '<p class="dv-nocomm">Комментариев пока нет. Спросите, что берут с собой и где встречаться.</p>';
+    }).join('') : '<div class="dv-nocomm"><i class="far fa-comment"></i><b>Комментариев пока нет</b><span>Спросите, что взять с собой и где встречаться.</span></div>';
 }
 
+function closeDvizComments() {
+    const el = document.getElementById('dvComm');
+    if (el) el.remove();
+    dvCommId = null;
+}
+
+// Окно комментариев снизу, как в Instagram: список, под ним ряд смайлов и строка ввода
+function openDvizComments(id) {
+    closeDvizComments();
+    dvCommId = id;
+    const acc = typeof getAccount === 'function' ? getAccount() : null;
+    const el = document.createElement('div');
+    el.id = 'dvComm'; el.className = 'sheet-overlay dv-comm-overlay';
+    el.innerHTML = `<div class="sheet-panel dv-comm-panel">
+        <div class="sheet-grab"></div>
+        <div class="dv-comm-head"><div class="sheet-title">Комментарии <span id="dvCCount"></span></div>
+            <button type="button" data-cclose aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>
+        <div class="dv-comments dv-clist" id="dvCList"><div class="dv-nocomm"><i class="fas fa-spinner fa-spin"></i></div></div>
+        <div class="dv-emoji" id="dvEmoji">${DV_EMOJI.map(m => `<button type="button" tabindex="-1">${m}</button>`).join('')}</div>
+        <form class="dv-write" id="dvWrite">
+            <span class="chat-avatar" style="background:${acc ? dmColor(acc.name) : 'rgba(128,128,128,.4)'}">${acc ? dvEsc(Array.from(acc.name)[0] || '?') : '<i class="fas fa-user"></i>'}</span>
+            <input id="dvText" maxlength="400" placeholder="Добавьте комментарий…" autocomplete="off" enterkeyhint="send">
+            <button type="submit" aria-label="Отправить" disabled><i class="fas fa-paper-plane"></i></button>
+        </form></div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('open'));
+    const panel = el.querySelector('.dv-comm-panel'), inp = el.querySelector('#dvText'), send = el.querySelector('#dvWrite button');
+    const close = () => {
+        el.style.transition = 'opacity .2s'; el.style.opacity = '0';
+        panel.style.transition = 'transform .22s ease-out'; panel.style.transform = 'translateY(100%)';
+        setTimeout(() => { if (document.getElementById('dvComm') === el) closeDvizComments(); }, 200);
+    };
+    el.addEventListener('click', (ev) => {
+        if (ev.target === el || ev.target.closest('[data-cclose]')) { close(); return; }
+        const cdel = ev.target.closest('[data-cdel]');
+        if (cdel) {
+            svApi('/api/dviz/' + encodeURIComponent(id) + '/comments/' + encodeURIComponent(cdel.dataset.cdel), { method: 'DELETE', headers: dvAuthed() })
+                .then(({ d }) => { if (d && d.ok) dvRefreshOpen(); else showToast((d && d.message) || 'Не удалось удалить'); })
+                .catch(() => showToast('Нет связи с сервером'));
+        }
+    });
+    // смахнуть вниз за ручку или заголовок
+    let y0 = 0, dy = 0, drag = false;
+    const head = el.querySelectorAll('.sheet-grab, .dv-comm-head');
+    head.forEach(h => {
+        h.addEventListener('touchstart', (e) => { if (e.touches.length !== 1 || e.target.closest('button')) return; drag = true; y0 = e.touches[0].clientY; dy = 0; panel.style.transition = 'none'; }, { passive: true });
+        h.addEventListener('touchmove', (e) => { if (!drag) return; dy = Math.max(0, e.touches[0].clientY - y0); panel.style.transform = 'translateY(' + dy + 'px)'; if (e.cancelable) e.preventDefault(); }, { passive: false });
+        const end = () => { if (!drag) return; drag = false; if (dy > 90) close(); else { panel.style.transition = 'transform .2s'; panel.style.transform = ''; } };
+        h.addEventListener('touchend', end); h.addEventListener('touchcancel', end);
+    });
+    // смайл — в позицию курсора; фокус из строки ввода не уходим, чтобы клавиатура не закрывалась
+    el.querySelector('#dvEmoji').addEventListener('pointerdown', (ev) => ev.preventDefault());
+    el.querySelector('#dvEmoji').addEventListener('click', (ev) => {
+        const b = ev.target.closest('button'); if (!b) return;
+        if (typeof haptic === 'function') haptic(8);
+        const s0 = inp.selectionStart == null ? inp.value.length : inp.selectionStart, s1 = inp.selectionEnd == null ? s0 : inp.selectionEnd;
+        if ((inp.value.length - (s1 - s0) + b.textContent.length) > 400) return;
+        inp.value = inp.value.slice(0, s0) + b.textContent + inp.value.slice(s1);
+        const pos = s0 + b.textContent.length;
+        try { inp.setSelectionRange(pos, pos); } catch (_) {}
+        inp.focus();
+        send.disabled = !inp.value.trim();
+    });
+    inp.addEventListener('input', () => { send.disabled = !inp.value.trim(); });
+    el.querySelector('#dvWrite').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const text = inp.value.trim();
+        if (!text) return;
+        loginRequired(() => {
+            inp.disabled = true; send.disabled = true;
+            svApi('/api/dviz/' + encodeURIComponent(id) + '/comments', { method: 'POST', headers: dvAuthed(), body: JSON.stringify({ text }) }).then(({ status, d }) => {
+                inp.disabled = false;
+                if (status === 401) { clearSession(); showToast('Сессия истекла. Войдите снова.'); send.disabled = !inp.value.trim(); return; }
+                if (!d || !d.ok) { showToast((d && d.message) || 'Не удалось отправить'); send.disabled = !inp.value.trim(); return; }
+                inp.value = ''; send.disabled = true;
+                inp.focus();
+                dvRefreshOpen(true);
+            }).catch(() => { inp.disabled = false; send.disabled = !inp.value.trim(); showToast('Нет связи с сервером'); });
+        });
+    });
+    dvRefreshOpen();
+}
+
+// ---------- просмотр: фото, описание, карта, участники ----------
 function openDvizView(id) {
     dvGet('/api/dviz/' + encodeURIComponent(id)).then(({ d }) => {
         if (!d || !d.ok) { showToast((d && d.message) || 'Движ недоступен'); loadDviz(); return; }
@@ -141,7 +270,6 @@ function openDvizView(id) {
         const mine = !!(acc && acc.id === e.ownerId);
         dvOpenId = e.id;
         const gal = (e.photos || []).length ? `<div class="sv-gallery dv-gallery">${e.photos.map((p, i) => `<img src="${dvEsc(p)}" alt="Фото ${i + 1}">`).join('')}</div>` : '';
-        const going = (e.joinList || []);
         openSheet(dvEsc(e.title), `
             ${gal}
             <div class="dv-meta big">
@@ -150,14 +278,14 @@ function openDvizView(id) {
                 ${dvPeople(e) ? `<span><i class="fas fa-user-group"></i>${dvEsc(dvPeople(e))}</span>` : ''}
             </div>
             ${e.text ? `<p class="sv-view-text">${dvEsc(e.text)}</p>` : ''}
+            ${e.coords ? `<div class="form-h" style="margin:12px 2px 8px">Точка сбора</div>
+                <div class="dv-map" id="dvViewMap" data-noswipe></div>${dvRouteHTML(e.coords)}` : ''}
             ${e.attached ? dvAttachHTML(e.attached) : ''}
             <button type="button" class="sv-owner" data-dv-owner><span class="chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</span>
                 <span><b>${dvEsc(mine ? 'Вы' : e.ownerName)}</b><small>Организатор · открыть профиль</small></span><i class="fas fa-chevron-right"></i></button>
             <div class="dv-going" id="dvGoing"></div>
             <div class="dv-actions" id="dvActions"></div>
-            <div class="form-h" style="margin:14px 2px 8px">Комментарии</div>
-            <div class="dv-comments" id="dvComments">${dvCommentsHTML(e)}</div>
-            <form class="dv-write" id="dvWrite"><input id="dvText" maxlength="400" placeholder="Написать комментарий…" autocomplete="off"><button type="submit" aria-label="Отправить"><i class="fas fa-paper-plane"></i></button></form>`, (el) => {
+            <button type="button" class="dv-commbtn" data-dv-comm><i class="far fa-comment"></i><span>Комментарии <b id="dvCN">${e.comments || 0}</b></span><i class="fas fa-chevron-up"></i></button>`, (el) => {
             const paintTop = (ev) => {
                 const g = el.querySelector('#dvGoing');
                 const jl = ev.joinList || [];
@@ -165,62 +293,52 @@ function openDvizView(id) {
                 el.querySelector('#dvActions').innerHTML = mine
                     ? '<button type="button" class="ghost-btn wide-btn dv-del" data-dv-del><i class="fas fa-trash"></i> Удалить движ</button>'
                     : `<button type="button" class="primary-btn wide-btn" data-dv-join>${ev.joined ? '<i class="fas fa-check"></i> Вы идёте — отменить' : '<i class="fas fa-hand"></i> Я с вами'}</button>`;
+                const n = el.querySelector('#dvCN'); if (n) n.textContent = ev.comments || 0;
             };
             paintTop(e);
             el._dv = { id: e.id, paintTop, owner: e.ownerId, e };
+            if (e.coords) {
+                const map = dvMakeMap(el.querySelector('#dvViewMap'), e.coords, 16);
+                if (map) L.marker(e.coords, { icon: dvPin() }).addTo(map);
+            }
             el.querySelector('[data-dv-owner]').onclick = () => { closeSheet(); if (typeof openUserProfile === 'function') openUserProfile({ id: e.ownerId, name: e.ownerName }); };
             const att = el.querySelector('[data-dv="service"]');
             if (att) att.onclick = () => openServiceView(att.dataset.sid);
             el.addEventListener('click', (ev) => {
                 if (ev.target.closest('[data-dv-join]')) { dvToggleJoin(e.id, () => dvRefreshOpen()); return; }
                 if (ev.target.closest('[data-dv-del]')) { dvDelete(e.id); return; }
-                const cdel = ev.target.closest('[data-cdel]');
-                if (cdel) {
-                    svApi('/api/dviz/' + encodeURIComponent(e.id) + '/comments/' + encodeURIComponent(cdel.dataset.cdel), { method: 'DELETE', headers: dvAuthed() })
-                        .then(({ d }) => { if (d && d.ok) dvRefreshOpen(); else showToast((d && d.message) || 'Не удалось удалить'); });
-                }
-            });
-            el.querySelector('#dvWrite').addEventListener('submit', (ev) => {
-                ev.preventDefault();
-                const inp = el.querySelector('#dvText'), text = inp.value.trim();
-                if (!text) return;
-                loginRequired(() => {
-                    inp.disabled = true;
-                    svApi('/api/dviz/' + encodeURIComponent(e.id) + '/comments', { method: 'POST', headers: dvAuthed(), body: JSON.stringify({ text }) }).then(({ status, d }) => {
-                        inp.disabled = false;
-                        if (status === 401) { clearSession(); showToast('Сессия истекла. Войдите снова.'); return; }
-                        if (!d || !d.ok) { showToast((d && d.message) || 'Не удалось отправить'); return; }
-                        inp.value = '';
-                        dvRefreshOpen(true);
-                    }).catch(() => { inp.disabled = false; showToast('Нет связи с сервером'); });
-                });
+                if (ev.target.closest('[data-dv-comm]')) { openDvizComments(e.id); return; }
             });
         });
     }).catch(() => showToast('Нет связи с сервером'));
 }
 
-// обновить открытую шторку (комментарии, участники) без перерисовки всей
+// обновить открытые окна (шторка движа, комментарии) и ленту без полной перерисовки
 function dvRefreshOpen(scrollDown) {
     const sheet = document.getElementById('sheet');
-    if (!sheet || !sheet._dv) return;
-    const st = sheet._dv;
-    dvGet('/api/dviz/' + encodeURIComponent(st.id)).then(({ d }) => {
+    const st = sheet && sheet._dv;
+    const id = dvCommId || (st && st.id);
+    if (!id) return;
+    dvGet('/api/dviz/' + encodeURIComponent(id)).then(({ d }) => {
         if (!d || !d.ok) return;
-        const box = sheet.querySelector('#dvComments');
-        if (!box) return;
         const e = d.event;
-        box.innerHTML = dvCommentsHTML(e);
-        st.paintTop(e);
+        if (st && st.id === e.id) st.paintTop(e);
+        const box = document.getElementById('dvCList');
+        if (box && dvCommId === e.id) {
+            const keep = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+            box.innerHTML = dvCommentsHTML(e);
+            const cnt = document.getElementById('dvCCount'); if (cnt) cnt.textContent = e.comments ? e.comments : '';
+            if (scrollDown || keep) box.scrollTop = box.scrollHeight;
+        }
         const f = dvFeed.find(x => x.id === e.id);
         if (f) { f.comments = e.comments; f.joins = e.joins; f.joined = e.joined; paintDviz(); }
-        if (scrollDown) box.lastElementChild && box.lastElementChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }).catch(() => {});
 }
 
 function dvDelete(id) {
     if (!confirm('Удалить этот движ вместе с комментариями?')) return;
     svApi('/api/dviz/' + encodeURIComponent(id), { method: 'DELETE', headers: dvAuthed() }).then(({ d }) => {
-        if (d && d.ok) { closeSheet(); showToast('Движ удалён'); loadDviz(); }
+        if (d && d.ok) { closeSheet(); closeDvizComments(); showToast('Движ удалён'); loadDviz(); }
         else showToast((d && d.message) || 'Не удалось удалить');
     }).catch(() => showToast('Нет связи с сервером'));
 }
@@ -228,8 +346,8 @@ function dvDelete(id) {
 // сервер сообщает: кто-то создал, удалил или прокомментировал движ
 function onDvizChanged(d) {
     if (document.getElementById('dvFeed')) loadDviz();
-    if (d && dvOpenId && d.id === dvOpenId) {
-        if (d.removed) { closeSheet(); showToast('Этот движ удалён'); } else dvRefreshOpen();
+    if (d && ((dvOpenId && d.id === dvOpenId) || (dvCommId && d.id === dvCommId))) {
+        if (d.removed) { closeSheet(); closeDvizComments(); showToast('Этот движ удалён'); } else dvRefreshOpen();
     }
 }
 
@@ -250,6 +368,12 @@ function openDvizForm(opts) {
             <label class="field"><span>Описание</span><textarea id="dvText" rows="4" maxlength="1000" placeholder="Кого ищете, что берут с собой, сколько стоит, как добраться">${e(opts.text || '')}</textarea></label>
             <label class="field"><span>Когда</span><input id="dvWhen" type="datetime-local" min="${minNow}"></label>
             <label class="field"><span>Место встречи</span><input id="dvPlace" maxlength="120" placeholder="Например: у фонтана на набережной"></label>
+            <div class="form-h" style="margin:0 2px 8px">Точка сбора на карте</div>
+            <div class="dv-mapsearch"><input id="dvAddr" maxlength="120" placeholder="Найти адрес или место" enterkeyhint="search" autocomplete="off">
+                <button type="button" id="dvFind" aria-label="Найти"><i class="fas fa-magnifying-glass"></i></button>
+                <button type="button" id="dvLoc" aria-label="Где я"><i class="fas fa-location-crosshairs"></i></button></div>
+            <div class="dv-map" id="dvPickMap" data-noswipe></div>
+            <div class="dv-maphint" id="dvMapHint"></div>
             <label class="field"><span>Сколько человек нужно</span><input id="dvMax" type="number" inputmode="numeric" min="2" max="99" placeholder="Можно пусто"></label>
             <div class="form-h" style="margin:0 2px 8px">Фото · до ${DV_PHOTOS}</div>
             <div class="photo-grid sv-photo-grid" id="dvPhotos"></div>
@@ -264,6 +388,52 @@ function openDvizForm(opts) {
                     <button type="button" aria-label="Открепить" data-unpin><i class="fas fa-xmark"></i></button></div>` : '';
             };
             paintAttach();
+            // ---- карта: тап по карте ставит метку, метку можно двигать ----
+            let coords = null, marker = null;
+            const hint = el.querySelector('#dvMapHint');
+            const pmap = dvMakeMap(el.querySelector('#dvPickMap'), MAP_DEFAULT, 15);
+            const paintHint = () => {
+                hint.innerHTML = coords
+                    ? `<i class="fas fa-circle-check"></i> Точка отмечена · ${dvFmtCoords(coords)} <button type="button" data-unmark>Убрать</button>`
+                    : 'Нажмите на карту — отметьте, где встречаетесь. Люди увидят точное место и смогут проложить маршрут.';
+            };
+            const setPoint = (lat, lng, zoom) => {
+                coords = [Math.round(lat * 1e5) / 1e5, Math.round(lng * 1e5) / 1e5];
+                if (pmap) {
+                    if (marker) marker.setLatLng(coords);
+                    else {
+                        marker = L.marker(coords, { icon: dvPin(), draggable: true }).addTo(pmap);
+                        marker.on('dragend', () => { const p = marker.getLatLng(); coords = [Math.round(p.lat * 1e5) / 1e5, Math.round(p.lng * 1e5) / 1e5]; paintHint(); });
+                    }
+                    pmap.setView(coords, zoom || Math.max(pmap.getZoom(), 16));
+                }
+                paintHint();
+            };
+            if (pmap) pmap.on('click', (ev) => { setPoint(ev.latlng.lat, ev.latlng.lng, pmap.getZoom()); if (typeof haptic === 'function') haptic(8); });
+            hint.addEventListener('click', (ev) => {
+                if (!ev.target.closest('[data-unmark]')) return;
+                coords = null; if (marker && pmap) { pmap.removeLayer(marker); marker = null; } paintHint();
+            });
+            paintHint();
+            const addr = el.querySelector('#dvAddr'), find = el.querySelector('#dvFind');
+            const doFind = () => {
+                const q = addr.value.trim();
+                if (!q) return;
+                find.disabled = true;
+                dvGeocode(q).then((r) => {
+                    find.disabled = false;
+                    if (!r) { showToast('Не нашли такое место — отметьте точку на карте'); return; }
+                    setPoint(r.lat, r.lng, 17);
+                    const pl = el.querySelector('#dvPlace'); if (pl && !pl.value.trim()) pl.value = r.name;
+                }).catch(() => { find.disabled = false; showToast('Поиск адреса сейчас недоступен — отметьте точку на карте'); });
+            };
+            find.addEventListener('click', doFind);
+            addr.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); doFind(); } });
+            el.querySelector('#dvLoc').addEventListener('click', () => {
+                if (!navigator.geolocation) { showToast('Геолокация недоступна'); return; }
+                navigator.geolocation.getCurrentPosition((pos) => setPoint(pos.coords.latitude, pos.coords.longitude, 17),
+                    () => showToast('Не удалось определить, где вы. Отметьте точку на карте'), { enableHighAccuracy: true, timeout: 8000 });
+            });
             el.querySelector('#dvAttachBox').addEventListener('click', (ev) => { if (ev.target.closest('[data-unpin]')) { attach = null; paintAttach(); } });
             el.querySelector('#dvIdeas').addEventListener('click', (ev) => {
                 const b = ev.target.closest('button'); if (!b) return;
@@ -291,7 +461,7 @@ function openDvizForm(opts) {
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
-                const body = { title: v('#dvTitle'), text: v('#dvText'), when: v('#dvWhen'), max: v('#dvMax'), place: v('#dvPlace'), photos, thumb, attach: attach ? { id: attach.id } : undefined };
+                const body = { title: v('#dvTitle'), text: v('#dvText'), when: v('#dvWhen'), max: v('#dvMax'), place: v('#dvPlace'), photos, thumb, coords: coords || undefined, attach: attach ? { id: attach.id } : undefined };
                 try {
                     const { status, d } = await svApi('/api/dviz', { method: 'POST', headers: dvAuthed(), body: JSON.stringify(body) });
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
