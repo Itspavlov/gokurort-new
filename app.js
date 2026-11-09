@@ -167,20 +167,20 @@ function adImg(ad, alt) {
 const html = document.documentElement;
 const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-// Темы: sea — «Морской вечер» (по умолчанию), sand — «Песок», surf — «Прибой», dusk — «Закат».
-// Старое значение «light» переносится на «Прибой», «dark» на «Морской вечер».
+// Темы: sea — «Морской вечер» (по умолчанию), sand — «Песок», peak — «Горы», dusk — «Закат».
+// Старые «light» и «surf» (Прибой) переносятся на «Песок», «dark» — на «Морской вечер».
 const THEMES = {
     sea:  { name: 'Вечер',  meta: '#060F1C', bg: '#060F1C', accent: '#FF9A5C' },
     sand: { name: 'Песок',  meta: '#FBF3E4', bg: '#FBF3E4', accent: '#F08A24' },
-    surf: { name: 'Прибой', meta: '#F0F8F7', bg: '#F0F8F7', accent: '#0E9F94' },
+    peak: { name: 'Горы',   meta: '#0E1024', bg: '#0E1024', accent: '#8B6CFF' },
     dusk: { name: 'Закат',  meta: '#121216', bg: '#121216', accent: '#FF5E8A' }
 };
 const THEME_FONTS = {
     sand: 'family=Fraunces:wght@600;700&family=Nunito:wght@500;600;700;800',
-    surf: 'family=Inter:wght@500;600;700;800',
+    peak: 'family=Manrope:wght@500;600;700;800',
     dusk: 'family=Space+Grotesk:wght@500;600;700'
 };
-const normTheme = (t) => t === 'light' ? 'surf' : (THEMES[t] ? t : 'sea');
+const normTheme = (t) => (t === 'light' || t === 'surf') ? 'sand' : (THEMES[t] ? t : 'sea');
 function getTheme() { return normTheme(html.getAttribute('data-theme')); }
 function loadThemeFont(theme) {
     const q = THEME_FONTS[theme]; if (!q || document.getElementById('font-' + theme)) return;

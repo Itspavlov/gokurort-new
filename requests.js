@@ -145,7 +145,7 @@ function paintRequests() {
     for (const it of items) {
         const w = document.createElement('div');
         w.className = 'req-item'; w.dataset.ts = it.ts; w.dataset.kind = it.kind;
-        if (it.rid) w.dataset.rid = it.rid; else { w.dataset.sid = it.sid; w.dataset.tag = it.tag; }
+        if (it.rid) w.dataset.rid = it.rid; else { w.dataset.sid = it.sid; w.dataset.tag = it.tag; w.classList.add('sv-item'); }
         w.innerHTML = it.html;
         const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > it.ts);
         if (after) msgs.insertBefore(w, after); else msgs.appendChild(w);

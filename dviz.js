@@ -9,7 +9,7 @@ const DV_PHOTOS = 5;
 const DV_IDEAS = ['Джипы в горы', 'Морская прогулка', 'Волейбол на пляже', 'Просто потусить', 'Шашлыки у моря', 'Вечер на набережной'];
 const DV_EMOJI = ['❤️', '🙌', '🔥', '👏', '😍', '😂', '😮', '😢'];
 // Ключ Яндекса нужен только для поиска адреса; сами карты — Leaflet. Ограничьте ключ по домену в кабинете Яндекса.
-const DV_YKEY = '7aafdf73-bf1e-4ec7-8d18-07b14be93c80';
+const DV_YKEY = '677f374a-c483-4bb5-a09a-2f25fdcba35e';
 let dvFeed = [];
 let dvOpenId = null;       // открытая в шторке карточка
 let dvCommId = null;       // карточка, чьи комментарии открыты
@@ -43,18 +43,27 @@ function dvMakeMap(el, center, zoom, opts) {
     return map;
 }
 
-// поиск адреса через геокодер Яндекса (ключ выше); без связи или с неверным ключом просто сообщаем
+// Поиск адреса. Сначала геокодер Яндекса (нужен ключ с продуктом «HTTP Геокодер»), если он не отвечает или ключ не подходит —
+// OpenStreetMap (Nominatim, без ключа). Оба вызова идут из браузера человека.
 function dvGeocode(q) {
     q = String(q || '').trim();
     if (!/архипо|осипов/i.test(q)) q = 'Архипо-Осиповка, ' + q;
-    const url = 'https://geocode-maps.yandex.ru/1.x/?apikey=' + DV_YKEY + '&format=json&results=1&lang=ru_RU&geocode=' + encodeURIComponent(q)
+    const ya = 'https://geocode-maps.yandex.ru/1.x/?apikey=' + DV_YKEY + '&format=json&results=1&lang=ru_RU&geocode=' + encodeURIComponent(q)
         + '&ll=' + MAP_DEFAULT[1] + ',' + MAP_DEFAULT[0] + '&spn=0.4,0.3&rspn=0';
-    return fetch(url).then((r) => { if (!r.ok) throw new Error('geo'); return r.json(); }).then((j) => {
+    const osm = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ru&countrycodes=ru&q=' + encodeURIComponent(q)
+        + '&viewbox=' + (MAP_DEFAULT[1] - 0.3) + ',' + (MAP_DEFAULT[0] + 0.2) + ',' + (MAP_DEFAULT[1] + 0.3) + ',' + (MAP_DEFAULT[0] - 0.2);
+    const viaYandex = () => fetch(ya).then((r) => { if (!r.ok) throw new Error('ya'); return r.json(); }).then((j) => {
         const m = j && j.response && j.response.GeoObjectCollection.featureMember[0];
         if (!m) return null;
         const pos = String(m.GeoObject.Point.pos).split(' ').map(Number);
         return { lat: pos[1], lng: pos[0], name: m.GeoObject.name };
     });
+    const viaOsm = () => fetch(osm).then((r) => { if (!r.ok) throw new Error('osm'); return r.json(); }).then((j) => {
+        const m = Array.isArray(j) && j[0];
+        if (!m) return null;
+        return { lat: Number(m.lat), lng: Number(m.lon), name: String(m.name || m.display_name || '').split(',')[0].trim() };
+    });
+    return viaYandex().then((r) => r || viaOsm(), () => viaOsm());
 }
 
 // ссылки «проложить маршрут»: из текущего положения человека до точки сбора
@@ -104,27 +113,43 @@ function loadDviz() {
     }).catch(() => { const f = document.getElementById('dvFeed'); if (f && !dvFeed.length) f.innerHTML = '<div class="dv-empty"><i class="fas fa-wifi"></i><b>Нет связи с сервером</b></div>'; });
 }
 
+// значок и цвет для карточки без фото — по ключевым словам в названии
+function dvArt(title) {
+    const t = String(title || '').toLowerCase();
+    const icon = /джип|внедорож|квадр|багги/.test(t) ? 'fa-truck-monster' : /море|морск|катер|яхт|лодк|парус|пляж/.test(t) ? 'fa-sailboat'
+        : /волейбол|мяч|футбол|спорт/.test(t) ? 'fa-volleyball' : /шашлык|барбекю|мангал|костёр|костер/.test(t) ? 'fa-fire-burner'
+        : /гор|поход|водопад|тропа|экскурс/.test(t) ? 'fa-mountain-sun' : 'fa-champagne-glasses';
+    let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 6;
+    return { icon, g: h };
+}
+
 function dvCardHTML(e) {
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = !!(acc && acc.id === e.ownerId);
+    const art = dvArt(e.title);
+    const names = e.joinNames || [];
+    const more = Math.max(0, (e.joins || 0) - names.length);
     const people = dvPeople(e);
-    return `<article class="dv-card" data-id="${dvEsc(e.id)}">
-        <div class="dv-head"><div class="chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</div>
-            <div class="dv-who"><b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(e.created)}</small></div></div>
-        ${e.thumb ? `<div class="dv-photo"><img src="${dvEsc(e.thumb)}" alt="" loading="lazy">${e.photoCount > 1 ? `<em><i class="fas fa-images"></i> ${e.photoCount}</em>` : ''}</div>` : ''}
-        <h3 class="dv-title">${dvEsc(e.title)}</h3>
-        ${e.text ? `<p class="dv-text">${dvEsc(e.text)}</p>` : ''}
-        <div class="dv-meta">
-            ${e.when ? `<span><i class="fas fa-clock"></i>${dvEsc(dvWhen(e.when))}</span>` : ''}
-            ${e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : ''}
-            ${e.coords ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : ''}
-            ${people ? `<span><i class="fas fa-user-group"></i>${dvEsc(people)}</span>` : ''}
-        </div>
-        ${e.attached ? dvAttachHTML(e.attached) : ''}
-        <div class="dv-foot">
-            <button type="button" class="dv-btn" data-dv="comments"><i class="fas fa-comment"></i> ${e.comments || 'Обсудить'}</button>
-            ${mine ? '<span class="dv-own">Ваш движ</span>' : `<button type="button" class="dv-btn main ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? '<i class="fas fa-check"></i> Вы идёте' : 'Я с вами'}</button>`}
-        </div></article>`;
+    return `<article class="dv-card dv-g${art.g}${e.thumb ? ' has-photo' : ''}" data-id="${dvEsc(e.id)}">
+        <div class="dv-bg">${e.thumb ? `<img src="${dvEsc(e.thumb)}" alt="" loading="lazy">` : `<i class="fas ${art.icon} dv-wm"></i>`}</div>
+        <div class="dv-top"><span class="dv-badge"><i class="fas fa-user-group"></i> Движ</span>
+            <span class="dv-by"><span class="chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</span>
+                <b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></div>
+        <div class="dv-body">
+            <h3 class="dv-title">${dvEsc(e.title)}</h3>
+            ${e.text ? `<p class="dv-text">${dvEsc(e.text)}</p>` : ''}
+            <div class="dv-meta">
+                ${e.when ? `<span><i class="far fa-calendar"></i>${dvEsc(dvWhen(e.when))}</span>` : ''}
+                ${e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : ''}
+                ${e.coords ? '<span><i class="fas fa-map-location-dot"></i>На карте</span>' : ''}
+            </div>
+            ${e.attached ? dvAttachHTML(e.attached) : ''}
+            <div class="dv-foot">
+                <div class="dv-people">${names.length ? `<span class="dv-avs">${names.map(n => `<i style="background:${dmColor(n)}">${dvEsc(Array.from(n)[0] || '?')}</i>`).join('')}${more ? `<i class="more">+${more}</i>` : ''}</span>` : ''}
+                    <small>${people ? dvEsc(people) : 'Будьте первым'}</small></div>
+                <button type="button" class="dv-cm" data-dv="comments" aria-label="Комментарии"><i class="far fa-comment"></i>${e.comments ? `<b>${e.comments}</b>` : ''}</button>
+                ${mine ? '<span class="dv-own">Ваш движ</span>' : `<button type="button" class="dv-btn main ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Присоединиться <i class="fas fa-arrow-right"></i>'}</button>`}
+            </div></div></article>`;
 }
 
 function dvAttachHTML(a) {

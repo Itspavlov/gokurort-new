@@ -36,26 +36,26 @@ function serviceCardHTML(s, mine) {
         </div>${act}</div>`;
 }
 
-// в ленте раздела: с автором и кнопкой «Написать»
+// в ленте раздела: плитка 2 в ряд — фото на весь фон, сверху автор, снизу название, цена и кнопка «Написать»
 function serviceFeedHTML(s) {
     const e = escapeHtml;
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = !!(acc && acc.id === s.ownerId);
-    return `<div class="sv-card sv-feed" data-sid="${e(s.id)}">
-        <div class="req-head"><div class="chat-avatar" style="background:${dmColor(s.ownerName)}">${e(Array.from(s.ownerName)[0] || '?')}</div>
-            <div class="req-title"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></div>
-            <em class="req-kind offer">Развлечение</em></div>
-        <div class="sv-main" data-sv="view" data-id="${e(s.id)}">
-            <div class="sv-thumb">${s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : '<i class="fas fa-image"></i>'}${s.photoCount > 1 ? `<em>${s.photoCount}</em>` : ''}</div>
-            <div class="sv-info">
-                <b class="sv-title">${e(s.title)}</b>
-                <span class="sv-price">${e(svPrice(s))}</span>
-                ${s.text ? `<p class="sv-text">${e(s.text)}</p>` : ''}
-                <small class="sv-meta"><span>${e(SV_TAGS[s.tag] || '')}</span>${s.city ? `<span><i class="fas fa-location-dot"></i>${e(s.city)}</span>` : ''}</small>
-            </div>
-        </div>
-        <div class="req-actions">${mine ? `<button type="button" data-sv="edit" data-id="${e(s.id)}">Изменить</button><button type="button" data-sv="bump" data-id="${e(s.id)}">Поднять</button>`
-            : `<button type="button" data-sv="view" data-id="${e(s.id)}">Смотреть</button><button type="button" class="main" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i> Написать</button>`}</div></div>`;
+    const price = s.price ? Number(s.price).toLocaleString('ru-RU') + ' ₽' : 'Договорная';
+    const btns = mine
+        ? `<button type="button" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button><button type="button" data-sv="bump" data-id="${e(s.id)}" aria-label="Поднять"><i class="fas fa-arrow-up"></i></button>`
+        : `<button type="button" class="main" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i></button>`;
+    return `<div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
+        <div class="sv-t-bg">${s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : `<i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>`}</div>
+        <div class="sv-t-top"><span class="chat-avatar" style="background:${dmColor(s.ownerName)}">${e(Array.from(s.ownerName)[0] || '?')}</span>
+            <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></span>
+            ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i>${s.photoCount}</em>` : ''}</div>
+        <div class="sv-t-bottom">
+            <span class="sv-t-tag"><i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>${e(SV_TAGS[s.tag] || '')}</span>
+            <b class="sv-t-title">${e(s.title)}</b>
+            ${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : ''}
+            <div class="sv-t-foot"><span class="sv-t-price">${e(price)}${s.price && s.unit ? `<small>${e(s.unit)}</small>` : ''}</span><span class="sv-t-btns">${btns}</span></div>
+        </div></div>`;
 }
 
 // ---------- загрузка ----------
