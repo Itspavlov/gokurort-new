@@ -293,6 +293,8 @@ function connectSocket() {
     });
 
     socket.on('dm-message', (m) => { if (typeof onDmMessage === 'function') onDmMessage(m); });
+    socket.on('dviz-changed', (d) => { if (typeof onDvizChanged === 'function') onDvizChanged(d); });
+    socket.on('dm-reaction', (d) => { if (typeof onDmReaction === 'function') onDmReaction(d); });
     socket.on('dm-read', (d) => { if (typeof onDmRead === 'function') onDmRead(d); });
     socket.on('notify', (p) => { if (typeof onNotify === 'function') onNotify(p); });
 
@@ -526,7 +528,7 @@ function openGroup(groupId, opts) {
         openChatRoom(groupId, all ? 'Жильё' : 'Жильё · ' + cat.label, 'fas ' + (all ? 'fa-home' : cat.icon), adsForRoom(groupId)(local), Object.assign({
             noAttach: true, chips: true, cards: true,
             welcomeTitle: all ? 'Жильё у моря' : 'Раздел «' + cat.label + '»',
-            welcomeText: (all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху. ' : 'Здесь только жильё этого типа. ') + 'Переписки в разделе нет: нажмите «Ищу жильё», если ищете, или «Сдаю жильё», чтобы разместить своё. Договариваться можно в личных сообщениях.'
+            welcomeText: (all ? 'Здесь все типы жилья. Чтобы увидеть только квартиры, дома или отели, выберите тип сверху. ' : 'Здесь только жильё этого типа. ') + 'Переписки в разделе нет: нажмите «Хочу снять», если ищете, или «Сдать жильё», чтобы разместить своё. Договариваться можно в личных сообщениях.'
         }, opts || {}));
         return;
     }
@@ -534,7 +536,7 @@ function openGroup(groupId, opts) {
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
         services: { name: 'Развлечения', icon: 'fas fa-ship', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] },
-        dating: { name: 'Знакомства и общение', icon: 'fas fa-comments', ads: [] }
+        dating: { name: 'Курортный движ', icon: 'fas fa-champagne-glasses', ads: [] }
     };
 
     const room = rooms[groupId];

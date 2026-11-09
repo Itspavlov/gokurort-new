@@ -25,11 +25,32 @@ const reqSection = () => (typeof currentRoom === 'string' && SEC[currentRoom]) ?
 
 // Подписи вкладок (сверху, что смотреть) и кнопок (внизу, что создать) для каждого раздела
 const SEEK_LABELS = {
-    housing:  { tabs: ['Ищут жильё', 'Сдают жильё'], btns: ['Ищу жильё', 'Сдаю жильё'] },
+    housing:  { tabs: ['Хочу снять', 'Сдать жильё'], btns: ['Хочу снять', 'Сдать жильё'] },
     work:     { tabs: ['Ищут работу', 'Предлагают работу'], btns: ['Ищу работу', 'Предлагаю работу'] },
     trips:    { tabs: ['Ищут поездку', 'Предлагают поездку'], btns: ['Ищу поездку', 'Предлагаю поездку'] },
     services: { tabs: ['Ищут развлечения', 'Предлагают развлечения'], btns: ['Ищу развлечение', 'Предлагаю развлечение'] }
 };
+const SEEK_TIP = 'Ваша карточка появится в ленте, и хозяева увидят её и смогут предложить жильё. Мы подберём варианты под ваш запрос и пришлём уведомление, как только найдётся что-то подходящее.';
+let seekTipTimer = null;
+function hideSeekTip() { clearTimeout(seekTipTimer); const t = document.getElementById('seekTip'); if (t) t.remove(); }
+// подсказка под вкладкой «Хочу снять»
+function showSeekTip(anchor) {
+    hideSeekTip();
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const tip = document.createElement('div');
+    tip.id = 'seekTip'; tip.className = 'seek-tip'; tip.setAttribute('role', 'status');
+    tip.innerHTML = `<b>Как это работает</b><span>${SEEK_TIP}</span>`;
+    document.body.appendChild(tip);
+    const w = Math.min(320, window.innerWidth - 24);
+    tip.style.width = w + 'px';
+    const left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), window.innerWidth - w - 12);
+    tip.style.left = left + 'px';
+    tip.style.top = (r.bottom + 10) + 'px';
+    tip.style.setProperty('--ax', Math.round(r.left + r.width / 2 - left) + 'px');
+    tip.addEventListener('click', hideSeekTip);
+    seekTipTimer = setTimeout(hideSeekTip, 8000);
+}
 const secLabels = (sec) => SEEK_LABELS[sec || reqSection()] || SEEK_LABELS.housing;
 
 const reqAuthHeaders = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });
@@ -190,7 +211,12 @@ function setupCards() {
     dock.dataset.on = '1';
     msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden></div>');
     const bar = document.getElementById('seekBar');
-    if (bar) bar.addEventListener('click', (ev) => { const tab = ev.target.closest('.seek-tab'); if (tab) { reqView = tab.dataset.v; applyReqView(); } });
+    if (bar) bar.addEventListener('click', (ev) => {
+        const tab = ev.target.closest('.seek-tab');
+        if (!tab) return;
+        reqView = tab.dataset.v; applyReqView();
+        if (tab.dataset.v === 'seek' && reqSection() === 'housing') showSeekTip(tab); else hideSeekTip();
+    });
     dock.addEventListener('click', (ev) => {
         if (ev.target.closest('#dockSeek')) { reqSection() === 'housing' ? openRequestSheet() : openCardFlow('seek'); return; }
         if (ev.target.closest('#dockOffer')) {
@@ -277,8 +303,8 @@ function openRequestSheet(edit) {
         reqEditing = edit && edit.id ? edit : null;
         const e = escapeHtml, r = reqEditing || {};
         const catOpts = REQ_CATS.map(([v, l]) => `<option value="${v}" ${(r.category || (typeof currentRoom === 'string' && currentRoom.startsWith('housing-') && housingCatByRoom(currentRoom).id) || '') === v ? 'selected' : ''}>${l}</option>`).join('');
-        openSheet(reqEditing ? 'Изменить запрос' : 'Ищу жильё', `
-            <p class="auth-note" style="margin:0 4px 12px">Хозяева увидят запрос и предложат варианты. Запрос живёт 14 дней.</p>
+        openSheet(reqEditing ? 'Изменить запрос' : 'Хочу снять жильё', `
+            <p class="seek-note"><i class="fas fa-circle-info"></i><span>${SEEK_TIP} Запрос живёт 14 дней.</span></p>
             <label class="field"><span>Что ищете</span><select id="rqCat">${catOpts}</select></label>
             <label class="field"><span>Город</span><input id="rqCity" maxlength="60" placeholder="Например: Адлер" value="${e(r.city || '')}"></label>
             <label class="field"><span>Район (необязательно)</span><input id="rqDistrict" maxlength="60" value="${e(r.district || '')}"></label>
@@ -400,7 +426,7 @@ function paintMyRequests() {
     if (cnt) { cnt.hidden = !act.length; cnt.textContent = String(act.length); }
     const box = document.getElementById('myReqBox');
     if (!box) return;
-    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Ищу жильё» в разделе «Жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
+    if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Хочу снять» в разделе «Жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
     const hist = myReqs.filter(r => r.status !== 'active');
     const row = (r) => `<div class="req-row">${reqCardHTML(r)}<button type="button" class="req-del" data-del="${escapeHtml(r.id)}" aria-label="Удалить запрос"><i class="fas fa-trash"></i><span>Удалить</span></button></div>`;
     box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(row).join('') : '')
@@ -410,7 +436,7 @@ function paintMyRequests() {
 function openMyRequests() {
     loginRequired(() => {
         openSheet('Мои запросы', `<div id="myReqBox" class="req-mine"><p class="opt-empty">Загружаю…</p></div>
-            <button class="primary-btn wide-btn" id="myReqAdd" style="margin-top:12px"><i class="fas fa-magnifying-glass"></i> Ищу жильё</button>`, (el) => {
+            <button class="primary-btn wide-btn" id="myReqAdd" style="margin-top:12px"><i class="fas fa-magnifying-glass"></i> Хочу снять</button>`, (el) => {
             paintMyRequests(); refreshMyRequests();
             el.querySelector('#myReqAdd').onclick = () => openRequestSheet();
             el.querySelector('#myReqBox').addEventListener('click', (ev) => {

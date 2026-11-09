@@ -283,6 +283,7 @@ function openDmChat(conv, prefill, messages) {
     if (messages) paint(messages);
     else socketAsk('dm-history', { convId: conv.id }, (res) => { if (res.ok) paint(res.messages); else showToast(res.message || 'Не удалось загрузить историю'); });
     setTimeout(() => scrollChatToBottom(), 150);
+    attachChatGestures();
 }
 
 function closeDmChat() {
@@ -302,7 +303,9 @@ function sendDm() {
     const convId = currentDm.convId;
     input.value = '';
     const clientId = newClientId();
-    const attempt = (retry) => socketAsk('dm-send', { convId, text, clientId }, (res) => {
+    const replyTo = replyDraft && String(replyDraft.id).startsWith('dmm_') ? replyDraft.id : undefined;
+    clearReply();
+    const attempt = (retry) => socketAsk('dm-send', { convId, text, clientId, replyTo }, (res) => {
         if (res.ok) return;
         if (!retry && !res.code) return attempt(true);  // нет ответа: повтор с тем же clientId — дубля не будет
         input.value = text;
@@ -789,6 +792,12 @@ function toggleReaction(id, emoji) {
             adState[adId] = { counts: res.reactions || {}, mine: res.mine || [] };
             paintAdChips(adId);
         });
+    } else if (currentDm) {                           // реакция в личном чате
+        const convId = currentDm.convId;
+        socketAsk('dm-react', { convId, id, emoji }, (res) => {
+            if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
+            paintDmReactions(id, res.reactions || {}, res.mine || []);
+        });
     } else if (currentGroup) {                        // реакция в группе
         socketAsk('group-react', { groupId: currentGroup.id, id, emoji }, (res) => {
             if (!res.ok) { showToast(res.message || 'Не получилось'); return; }
@@ -866,7 +875,7 @@ let gestureTimer = null;
 function closeMsgMenu() {
     const m = document.getElementById('msgMenu');
     if (m) m.remove();
-    document.querySelectorAll('.chat-message.pressed').forEach(el => el.classList.remove('pressed'));
+    document.querySelectorAll('.chat-message.pressed, .chat-message.pressed-ad').forEach(el => el.classList.remove('pressed', 'pressed-ad'));
 }
 
 // что за сообщение удержали
@@ -879,6 +888,12 @@ function resolveTarget(msgEl) {
         if (!ad) return null;
         return { kind: 'ad', id, adId, mine: !!ad.mine, text: '', reply: { id, user: 'Объявление', text: ad.title, adId: String(ad.id), adTitle: ad.title } };
     }
+    if (currentDm) {
+        const m = (window.dmMsgs || {})[id];
+        if (!m) return null;
+        const who = (m.from && m.from.name) || '';
+        return { kind: 'dm', id, text: m.text || '', reply: { id, user: who, text: m.text ? m.text.slice(0, 100) : (m.video ? 'Видеосообщение' : (m.voice ? 'Голосовое сообщение' : '📷 Фото')) } };
+    }
     if (currentGroup) {
         const m = currentGroup.messages.find(x => x.id === id);
         if (!m) return null;
@@ -889,12 +904,32 @@ function resolveTarget(msgEl) {
     return { kind: 'room', id, text: m.text, reply: { id, user: m.user, text: m.text ? m.text.slice(0, 100) : '📷 Фото' } };
 }
 
+// короткий «щелчок»: вибрация там, где она есть (Android), и переключатель-хаптик на iOS 18+
+function haptic(ms) {
+    if (navigator.vibrate) { try { navigator.vibrate(ms || 12); return; } catch (e) {} }
+    try {
+        let l = document.getElementById('hapticSwitch');
+        if (!l) {
+            l = document.createElement('label');
+            l.id = 'hapticSwitch'; l.setAttribute('aria-hidden', 'true');
+            l.style.cssText = 'position:fixed;left:-99px;top:-99px;opacity:0;pointer-events:none';
+            const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', '');
+            l.appendChild(i); document.body.appendChild(l);
+        }
+        l.click();
+    } catch (e) {}
+}
+
 function openMsgMenu(msgEl) {
     const t = resolveTarget(msgEl);
     if (!t) return;
     closeMsgMenu();
-    msgEl.classList.add('pressed');
-    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} }
+    haptic(12);
+
+    // сообщение «приподнимается»: поверх затемнения рисуем его копию с подсветкой
+    const bub = msgEl.querySelector('.chat-bubble');
+    const lift = bub && t.kind !== 'ad';
+    msgEl.classList.add(lift ? 'pressed' : 'pressed-ad');
 
     const menu = document.createElement('div');
     menu.id = 'msgMenu';
@@ -909,18 +944,31 @@ function openMsgMenu(msgEl) {
     document.body.appendChild(menu);
 
     const panel = menu.querySelector('.msg-menu');
-    const rect = (msgEl.querySelector('.chat-bubble') || msgEl).getBoundingClientRect();
-    const ph = panel.offsetHeight, pw = panel.offsetWidth;
-    let top = rect.top - ph - 8;
+    const rect = (bub || msgEl).getBoundingClientRect();
+    if (lift) {
+        const clone = bub.cloneNode(true);
+        clone.querySelectorAll('audio,video').forEach(n => n.remove());
+        clone.classList.add('lift-clone');
+        if (msgEl.classList.contains('chat-message-mine')) clone.classList.add('lift-mine');
+        clone.style.cssText += `;position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;max-width:none;margin:0;z-index:2;`;
+        menu.insertBefore(clone, panel);
+    }
+    const ph = panel.offsetHeight, pw = panel.offsetWidth, gap = 12;
+    let top = lift ? rect.bottom + gap : rect.top - ph - 8;
+    if (lift && top + ph > window.innerHeight - 8) top = rect.top - ph - gap;      // снизу не помещается — над сообщением
     if (top < 8) top = Math.min(Math.max(8, rect.top + 8), window.innerHeight - ph - 8);
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - pw - 8);
+    const mine = msgEl.classList.contains('chat-message-mine');
+    const left = Math.min(Math.max(8, mine ? rect.right - pw : rect.left), window.innerWidth - pw - 8);
     panel.style.top = top + 'px';
     panel.style.left = left + 'px';
 
+    const openedAt = Date.now();
     menu.addEventListener('click', (ev) => {
+        if (Date.now() - openedAt < 400) return;     // «хвост» того же тапа, который открыл меню
+        if (ev.target.closest('.msg-menu') === null && ev.target.closest('.lift-clone')) return;   // по самому сообщению — не закрываем
         const emojiBtn = ev.target.closest('[data-emoji]');
         const act = ev.target.closest('[data-act]');
-        if (emojiBtn) toggleReaction(t.id, emojiBtn.dataset.emoji);
+        if (emojiBtn) { haptic(8); toggleReaction(t.id, emojiBtn.dataset.emoji); }
         else if (act && act.dataset.act === 'reply') setReply(t.reply);
         else if (act && act.dataset.act === 'group') addAdToGroup(t.adId);
         else if (act && act.dataset.act === 'delete') {
@@ -929,7 +977,15 @@ function openMsgMenu(msgEl) {
             return;
         }
         else if (act && act.dataset.act === 'copy') {
-            try { navigator.clipboard.writeText(t.text); showToast('Скопировано'); } catch (e) { showToast('Не удалось скопировать'); }
+            const done = () => showToast('Скопировано');
+            const fallback = () => {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = t.text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+                    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
+                } catch (e) { showToast('Не удалось скопировать'); }
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.text).then(done, fallback); else fallback();
         }
         closeMsgMenu();
     });
@@ -939,7 +995,7 @@ function attachChatGestures() {
     const box = document.getElementById('chatMessages');
     if (!box || box.dataset.gestures) return;
     box.dataset.gestures = '1';
-    let startX = 0, startY = 0, held = false, swiped = false;
+    let startX = 0, startY = 0, held = false, swiped = false, tapEl = null, tapT = 0;
     let swipeEl = null, swipeDx = 0, swipeState = 0;   // 0 — не определено, 1 — свайп, -1 — это прокрутка
     const SWIPE_MAX = 84, SWIPE_TRIGGER = 56;
     const cancel = () => { if (gestureTimer) { clearTimeout(gestureTimer); gestureTimer = null; } };
@@ -960,19 +1016,22 @@ function attachChatGestures() {
 
     box.addEventListener('pointerdown', (ev) => {
         if (ev.button > 0) return;
-        held = false; swiped = false; swipeState = 0; swipeDx = 0;
+        held = false; swiped = false; swipeState = 0; swipeDx = 0; tapEl = null;
         resetSwipe(false);
         if (ev.target.closest('.react-chip, .reply-quote, .ad-slides')) return;   // по фото листаем, а не отвечаем
         const msgEl = ev.target.closest('.chat-message[data-id]');
         if (!msgEl || !ev.target.closest('.chat-bubble')) return;
         startX = ev.clientX; startY = ev.clientY;
         swipeEl = msgEl;
+        // обычный тап по тексту/подписи открывает меню; по фото, ссылкам, голосовым и карточкам объявлений — свои действия
+        if (!msgEl.dataset.id.startsWith('ad_') && !ev.target.closest('a,button,audio,video,img,.vm,.group-ad,.ad-slides')) { tapEl = msgEl; tapT = Date.now(); }
         cancel();
         gestureTimer = setTimeout(() => { held = true; gestureTimer = null; swipeState = -1; resetSwipe(false); openMsgMenu(msgEl); }, 450);
     });
     box.addEventListener('pointermove', (ev) => {
         if (!swipeEl) return;
         const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        if (tapEl && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) tapEl = null;
         if (swipeState === 0) {
             if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { swipeState = -1; cancel(); resetSwipe(false); return; }
             if (dx < -12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
@@ -991,6 +1050,13 @@ function attachChatGestures() {
     });
     const finish = (ev) => {
         cancel();
+        if (ev.type === 'pointerup' && tapEl && swipeState === 0 && !held && Date.now() - tapT < 450) {
+            const el = tapEl; tapEl = null; held = true;     // held гасит следующий click
+            resetSwipe(false);
+            openMsgMenu(el);
+            return;
+        }
+        tapEl = null;
         if (swipeState === 1 && swipeEl) {
             swiped = true;
             const el = swipeEl;
@@ -999,7 +1065,7 @@ function attachChatGestures() {
             if (fire && ev.type === 'pointerup') {
                 const t = resolveTarget(el);
                 if (t) {
-                    if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) {} }
+                    haptic(10);
                     if (t.kind === 'ad') ensureLogin(() => addAdToGroup(t.adId));
                     else setReply(t.reply);
                 }
