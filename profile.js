@@ -465,41 +465,27 @@ function renderFormPhotos() {
 function initPickMap() {
     const el = document.getElementById('pickMap');
     if (!el) return;
-    if (typeof L === 'undefined') {
-        el.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>';
-        updatePickDist();
-        return;
-    }
-
-    pickMap = L.map(el, { zoomControl: false, tap: false }).setView(formState.coords, 15);
-    if (pickMap.attributionControl) pickMap.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
-    mapTiles().addTo(pickMap);
-    L.control.zoom({ position: 'bottomright' }).addTo(pickMap);
-
-    const pin = (cls, icon) => L.divIcon({
-        className: 'map-pin-wrap',
-        html: `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-    });
-
-    pickMarkers.home = L.marker(formState.coords, { icon: pin('pin-home', 'fa-home'), draggable: true }).addTo(pickMap);
-    pickMarkers.sea = L.marker(formState.beach, { icon: pin('pin-sea', 'fa-umbrella-beach'), draggable: true }).addTo(pickMap);
-
-    pickMarkers.home.on('dragend', () => { const p = pickMarkers.home.getLatLng(); formState.coords = [p.lat, p.lng]; updatePickDist(); });
-    pickMarkers.sea.on('dragend', () => { const p = pickMarkers.sea.getLatLng(); formState.beach = [p.lat, p.lng]; updatePickDist(); });
-
-    pickMap.on('click', (ev) => setPickPoint(formState.pick, [ev.latlng.lat, ev.latlng.lng]));
-
-    pickMap.fitBounds([formState.coords, formState.beach], { padding: [50, 50], maxZoom: 16 });
-    setTimeout(() => pickMap.invalidateSize(), 250);
     updatePickDist();
+    YM.open(el, { center: formState.coords, zoom: 15, zoomControl: true }).then((map) => {
+        if (!map) return;
+        if (!document.getElementById('pickMap')) { map.destroy(); return; }
+        if (pickMap) pickMap.destroy();
+        pickMap = map;
+        const pin = (cls, icon) => `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`;
+        pickMarkers.home = map.addMarker({ coords: formState.coords, html: pin('pin-home', 'fa-home'), size: [40, 40], draggable: true,
+            onDrag: (c) => { formState.coords = c; updatePickDist(); } });
+        pickMarkers.sea = map.addMarker({ coords: formState.beach, html: pin('pin-sea', 'fa-umbrella-beach'), size: [40, 40], draggable: true,
+            onDrag: (c) => { formState.beach = c; updatePickDist(); } });
+        map.onClick((c) => setPickPoint(formState.pick, c));
+        map.fitBounds([formState.coords, formState.beach], { padding: 50, maxZoom: 16, animate: false });
+        setTimeout(() => map.invalidate(), 250);
+    });
 }
 
 function setPickPoint(which, latlng) {
     if (which === 'home') formState.coords = latlng; else formState.beach = latlng;
     const marker = pickMarkers[which === 'home' ? 'home' : 'sea'];
-    if (marker) marker.setLatLng(latlng);
+    if (marker) marker.setCoords(latlng);
     updatePickDist();
 }
 
@@ -581,7 +567,7 @@ function saveAdForm() {
 }
 
 function closeAdForm() {
-    if (pickMap) { pickMap.remove(); pickMap = null; }
+    if (pickMap) { pickMap.destroy(); pickMap = null; }
     pickMarkers = {};
     formCal = null;
     const screen = document.getElementById('form-screen');

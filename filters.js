@@ -130,7 +130,7 @@ function openFilterSheet() {
 }
 
 // ---------- карта ----------
-let adMap = null, adMapLayer = null, adMapFx = null, adMapSel = null, adMapTiles = null;
+let adMap = null, adMapSel = null, adMapToken = null;
 function shortPrice(ad) {
     const n = Number(ad.priceNum) || 0;
     if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' млн';
@@ -154,28 +154,28 @@ function openAdMap() {
         else if (b.dataset.m === 'open') { const id = b.dataset.id; closeAdMap(); openListing(id); }
     });
     const box = document.getElementById('adMapBox');
-    if (typeof L === 'undefined') { box.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>'; return; }
-    adMap = L.map(box, { zoomControl: false, tap: false, fadeAnimation: false, zoomAnimation: true });
+    const token = adMapToken = {};
     // сразу ставим итоговый вид, без «наезда»: иначе карта сначала грузит квадрат плиток на дальнем зуме, потом приближается
     const first = filteredAds().filter(a => Array.isArray(a.coords)).map(a => a.coords);
-    if (first.length) adMap.fitBounds(first, { padding: [50, 50], maxZoom: 15, animate: false });
-    else adMap.setView([44.8928, 37.299], 11, { animate: false });
-    if (adMap.attributionControl) adMap.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
-    adMapTiles = mapTiles({ keepBuffer: 4, updateWhenIdle: false }).addTo(adMap);
-    adMapLayer = L.layerGroup().addTo(adMap);
-    adMapFx = L.layerGroup().addTo(adMap);
-    adMap.on('click', () => { adMapSel = null; paintAdMapCard(); markSelected(); });
-    view.classList.add('intro');
-    refreshAdMap(false, true);
-    setTimeout(() => { if (adMap) { adMap.invalidateSize({ animate: false }); startBoat(); } }, 80);
+    const mid = first.length ? [first.reduce((x, p) => x + p[0], 0) / first.length, first.reduce((x, p) => x + p[1], 0) / first.length] : [44.8928, 37.299];
+    YM.open(box, { center: mid, zoom: first.length ? 13 : 11 }).then((map) => {
+        if (!map) return;
+        if (adMapToken !== token || !document.getElementById('adMapView')) { map.destroy(); return; }
+        adMap = map;
+        if (first.length) map.fitBounds(first, { padding: 50, maxZoom: 15, animate: false });
+        map.onClick(() => { adMapSel = null; paintAdMapCard(); markSelected(); });
+        view.classList.add('intro');
+        refreshAdMap(false, true);
+        setTimeout(() => { if (adMap === map) { map.invalidate(); startBoat(); } }, 160);
+    });
 }
 
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && document.getElementById('adMapView') && !document.getElementById('sheet')) closeAdMap(); });
 
 function closeAdMap() {
     stopBoat();
-    if (adMap) { try { adMap.remove(); } catch (e) {} }
-    adMap = null; adMapLayer = null; adMapFx = null; adMapSel = null; adMapTiles = null;
+    if (adMap) { try { adMap.destroy(); } catch (e) {} }
+    adMap = null; adMapSel = null; adMapToken = null;
     const v = document.getElementById('adMapView'); if (v) v.remove();
 }
 
@@ -197,18 +197,19 @@ function paintAdMapCard() {
 
 function refreshAdMap(fit, initial) {
     if (!initial) endBoat(true);
-    if (!adMap || !adMapLayer) { const t = document.getElementById('adMapTitle'); if (t) paintMapTitle(); return; }
-    adMapLayer.clearLayers();
+    if (!adMap) { const t = document.getElementById('adMapTitle'); if (t) paintMapTitle(); return; }
+    adMap.clearMarkers('ads');
     const list = filteredAds(), withPoint = list.filter(a => Array.isArray(a.coords));
     const pts = [];
     withPoint.forEach(ad => {
-        const icon = L.divIcon({ className: 'map-pin-wrap', html: `<div class="ad-pin" data-id="${escapeHtml(String(ad.id))}">${escapeHtml(shortPrice(ad))}</div>`, iconSize: [64, 30], iconAnchor: [32, 30] });
-        L.marker(ad.coords, { icon }).on('click', () => { adMapSel = ad.id; paintAdMapCard(); markSelected(); }).addTo(adMapLayer);
+        adMap.addMarker({ coords: ad.coords, group: 'ads', size: [64, 30], anchor: [32, 30],
+            html: `<div class="ad-pin" data-id="${escapeHtml(String(ad.id))}">${escapeHtml(shortPrice(ad))}</div>`,
+            onClick: () => { adMapSel = ad.id; paintAdMapCard(); markSelected(); } });
         pts.push(ad.coords);
     });
     if (adMapSel && !list.some(a => String(a.id) === String(adMapSel))) adMapSel = null;
     paintAdMapCard(); markSelected(); paintMapTitle(withPoint.length, list.length - withPoint.length);
-    if (pts.length && fit !== false) adMap.fitBounds(pts, { padding: [50, 50], maxZoom: 15 });
+    if (pts.length && fit !== false) adMap.fitBounds(pts, { padding: 50, maxZoom: 15 });
 }
 function paintMapTitle(n, noPoint) {
     const t = document.getElementById('adMapTitle'); if (!t) return;
@@ -255,7 +256,7 @@ placeRemoteAds = function () { const r = _placeRemoteAdsF.apply(this, arguments)
 let boat = null;     // { raf, canvas, timers, skip }
 
 function mapControls(on) {
-    ['dragging', 'touchZoom', 'scrollWheelZoom', 'doubleClickZoom', 'boxZoom', 'keyboard'].forEach(k => { if (adMap && adMap[k] && adMap[k][on ? 'enable' : 'disable']) adMap[k][on ? 'enable' : 'disable'](); });
+    if (adMap) adMap.setInteractive(on);
 }
 
 function teardownBoat() {
@@ -303,10 +304,10 @@ function startBoat() {
     const withBeach = ads.filter(a => Array.isArray(a.beach));
     const mean = (pts) => [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
     const targetLL = withBeach.length ? mean(withBeach.map(a => a.beach)) : mean(ads.map(a => a.coords));
-    let T = map.latLngToContainerPoint(targetLL);
+    let T = map.project(targetLL);
     T = { x: Math.max(48, Math.min(W - 48, T.x)), y: Math.max(120, Math.min(H - 170, T.y)) };
     let sx = 0, sy = 0;
-    withBeach.forEach(a => { const h = map.latLngToContainerPoint(a.coords), b = map.latLngToContainerPoint(a.beach); sx += b.x - h.x; sy += b.y - h.y; });
+    withBeach.forEach(a => { const h = map.project(a.coords), b = map.project(a.beach); sx += b.x - h.x; sy += b.y - h.y; });
     let len = Math.hypot(sx, sy);
     if (len < 2) { sx = -0.4; sy = 1; len = Math.hypot(sx, sy); }
     sx /= len; sy /= len;

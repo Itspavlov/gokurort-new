@@ -10,7 +10,6 @@ const DV_IDEAS = ['Джипы в горы', 'Морская прогулка', '
 const DV_EMOJI = ['❤️', '🙌', '🔥', '👏', '😍', '😂', '😮', '😢'];
 // Ключ Яндекса нужен только для поиска адреса; сами карты — Leaflet. Ограничьте ключ по домену в кабинете Яндекса.
 const DV_YKEY = '677f374a-c483-4bb5-a09a-2f25fdcba35e';
-const DV_YMAPKEY = '7aafdf73-bf1e-4ec7-8d18-07b14be93c80';   // ключ «JavaScript API»: в кабинете Яндекса ограничьте его по HTTP-referer (yugiyugi.ru)
 let dvFeed = [];
 let dvOpenId = null;       // открытая в шторке карточка
 let dvCommId = null;       // карточка, чьи комментарии открыты
@@ -30,80 +29,24 @@ function dvWhen(w) {
 const dvFmtCoords = (c) => c[0].toFixed(5) + ', ' + c[1].toFixed(5);
 
 // ---------- карта ----------
-// Основная — Яндекс.Карты (JS API 3.0): названия улиц, подпись «Яндекс». Не загрузилась (нет связи, ключ без разрешения для сайта) —
-// запасная карта на OpenStreetMap, тоже с улицами. Метка и клики приведены к одному виду: координаты везде [широта, долгота].
-let dvYmaps = null;
-function dvLoadYmaps() {
-    if (dvYmaps) return dvYmaps;
-    dvYmaps = new Promise((res, rej) => {
-        const done = () => window.ymaps3.ready.then(() => res(window.ymaps3), rej);
-        if (window.ymaps3) { done(); return; }
-        const sc = document.createElement('script');
-        sc.src = 'https://api-maps.yandex.ru/v3/?apikey=' + DV_YMAPKEY + '&lang=ru_RU';
-        sc.onload = () => (window.ymaps3 ? done() : rej(new Error('ymaps')));
-        sc.onerror = () => rej(new Error('ymaps'));
-        document.head.appendChild(sc);
-        setTimeout(() => rej(new Error('ymaps timeout')), 9000);
-    }).catch((e) => { dvYmaps = null; throw e; });
-    return dvYmaps;
-}
-
-async function dvYandexMap(el, center, zoom, o) {
-    const y = await dvLoadYmaps();
-    const map = new y.YMap(el, { location: { center: [center[1], center[0]], zoom } });
-    map.addChild(new y.YMapDefaultSchemeLayer());
-    map.addChild(new y.YMapDefaultFeaturesLayer());
-    let marker = null;
-    const pinEl = () => { const d = document.createElement('div'); d.className = 'dv-ympin'; d.innerHTML = '<i class="fas fa-flag"></i>'; return d; };
-    if (o.onClick) map.addChild(new y.YMapListener({ layer: 'any', onClick: (obj, ev) => { if (ev && ev.coordinates) o.onClick([ev.coordinates[1], ev.coordinates[0]]); } }));
-    return {
-        engine: 'yandex',
-        setPoint(c, z) {
-            const ll = [c[1], c[0]];
-            if (marker) marker.update({ coordinates: ll });
-            else {
-                marker = new y.YMapMarker({ coordinates: ll, draggable: !!o.draggable, onDragEnd: (cc) => o.onDrag && o.onDrag([cc[1], cc[0]]) }, pinEl());
-                map.addChild(marker);
-            }
-            if (z) map.setLocation({ center: ll, zoom: z, duration: 300 });
-        },
-        clearPoint() { if (marker) { map.removeChild(marker); marker = null; } },
-        getZoom() { return map.zoom || zoom; }
-    };
-}
-
-function dvLeafletMap(el, center, zoom, o) {
-    if (typeof L === 'undefined') {
-        el.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>';
-        return null;
-    }
-    const map = L.map(el, { zoomControl: false, tap: false }).setView(center, zoom);
-    if (map.attributionControl) map.attributionControl.setPrefix(false);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-    setTimeout(() => map.invalidateSize(), 420);       // шторка выезжает с анимацией
-    const icon = L.divIcon({ className: 'map-pin-wrap', html: '<div class="map-pin pin-meet"><i class="fas fa-flag"></i></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
-    let marker = null;
-    if (o.onClick) map.on('click', (ev) => o.onClick([ev.latlng.lat, ev.latlng.lng]));
-    return {
-        engine: 'osm',
-        setPoint(c, z) {
-            if (marker) marker.setLatLng(c);
-            else {
-                marker = L.marker(c, { icon, draggable: !!o.draggable }).addTo(map);
-                marker.on('dragend', () => { const p = marker.getLatLng(); o.onDrag && o.onDrag([p.lat, p.lng]); });
-            }
-            if (z) map.setView(c, z);
-        },
-        clearPoint() { if (marker) { map.removeLayer(marker); marker = null; } },
-        getZoom() { return map.getZoom(); }
-    };
-}
-
-// карта в блоке el; o: { draggable, onClick(c), onDrag(c) }. Возвращает Promise с управлением картой (или null, если карт нет совсем)
+// Карты (Яндекс, а если не загрузился — OpenStreetMap) подключает ymap.js; здесь только метка точки сбора.
 function dvOpenMap(el, center, zoom, o) {
     o = o || {};
-    return dvYandexMap(el, center, zoom, o).catch(() => { el.innerHTML = ''; return dvLeafletMap(el, center, zoom, o); });
+    return YM.open(el, { center, zoom, zoomControl: true }).then((map) => {
+        if (!map) return null;
+        let mk = null;
+        const pin = '<div class="map-pin pin-meet"><i class="fas fa-flag"></i></div>';
+        if (o.onClick) map.onClick(o.onClick);
+        return {
+            setPoint(c, z) {
+                if (mk) mk.setCoords(c);
+                else mk = map.addMarker({ coords: c, html: pin, size: [40, 40], draggable: !!o.draggable, onDrag: o.onDrag });
+                if (z) map.setView(c, z);
+            },
+            clearPoint() { if (mk) { mk.remove(); mk = null; } },
+            getZoom() { return map.getZoom(); }
+        };
+    });
 }
 
 // Поиск адреса. Сначала геокодер Яндекса (нужен ключ с продуктом «HTTP Геокодер»), если он не отвечает или ключ не подходит —

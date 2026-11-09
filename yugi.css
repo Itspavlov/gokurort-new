@@ -1101,6 +1101,6 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .dv-card.R .dv-cm { margin-right: auto; }
 .dv-feed .dv-cm { flex: none; height: auto; min-width: 0; padding: 8px 13px; display: inline-flex; align-items: center; gap: 7px; border-radius: 99px; border: 1px solid var(--glass-border); background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--text); font: 700 12.5px var(--font); cursor: pointer; }
 .dv-feed .dv-cm i { color: var(--sea, #2BC4D6); }
-
-/* метка точки сбора на Яндекс.Картах */
-.dv-ympin { width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #E5484D, #FF8A5C); color: #fff; font-size: 16px; border: 3px solid #fff; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+/* HTML-метки на Яндекс.Картах: блок по размеру метки, содержимое по центру */
+.ym-mk { display: flex; align-items: center; justify-content: center; }
+.pin-meet { background: linear-gradient(135deg, #E5484D, #FF8A5C); color: #fff; }

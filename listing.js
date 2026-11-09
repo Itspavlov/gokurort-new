@@ -380,61 +380,39 @@ function mapTiles(opts) {
     return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', Object.assign({ maxZoom: 19, attribution: 'Tiles © Esri' }, opts || {}));
 }
 
+const mapPin = (cls, icon) => `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`;
+
 function initListingMap(ad) {
     const el = document.getElementById('listingMap');
     if (!el) return;
-    if (typeof L === 'undefined') {
-        el.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>';
-        return;
-    }
-
-    const map = L.map(el, {
-        zoomControl: false,
-        dragging: false,
-        touchZoom: false,
-        doubleClickZoom: false,
-        scrollWheelZoom: false,
-        tap: false
-    }).setView(ad.coords, 16);
-
-    if (map.attributionControl) map.attributionControl.setPrefix(false);   // без подписи Leaflet и флага
-    mapTiles().addTo(map);
-
-    const pin = (cls, icon) => L.divIcon({
-        className: 'map-pin-wrap',
-        html: `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-    });
-
-    L.marker(ad.coords, { icon: pin('pin-home', 'fa-home') }).addTo(map);
-
-    if (ad.beach) {
-        L.marker(ad.beach, { icon: pin('pin-sea', 'fa-umbrella-beach') }).addTo(map);
-        L.polyline([ad.coords, ad.beach], { color: '#2DD4DA', weight: 3, dashArray: '2 8', lineCap: 'round' }).addTo(map);
-        map.fitBounds([ad.coords, ad.beach], { padding: [50, 50], maxZoom: 17 });
-    }
-
     // карта «спит», пока по ней не тапнули — чтобы не мешала листать страницу
-    const hint = document.createElement('div');
-    hint.className = 'map-hint';
-    hint.textContent = 'Нажмите, чтобы двигать карту';
-    el.appendChild(hint);
-    el.addEventListener('click', function wake() {
-        map.dragging.enable();
-        map.touchZoom.enable();
-        map.doubleClickZoom.enable();
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        hint.remove();
-        el.removeEventListener('click', wake);
+    YM.open(el, { center: ad.coords, zoom: 16, interactive: false }).then((map) => {
+        if (!map) return;
+        if (!el.isConnected) { map.destroy(); return; }
+        map.addMarker({ coords: ad.coords, html: mapPin('pin-home', 'fa-home'), size: [40, 40] });
+        if (ad.beach) {
+            map.addMarker({ coords: ad.beach, html: mapPin('pin-sea', 'fa-umbrella-beach'), size: [40, 40] });
+            map.addLine([ad.coords, ad.beach], { color: '#2DD4DA', width: 3 });
+            map.fitBounds([ad.coords, ad.beach], { padding: 50, maxZoom: 17, animate: false });
+        }
+        const hint = document.createElement('div');
+        hint.className = 'map-hint';
+        hint.textContent = 'Нажмите, чтобы двигать карту';
+        el.appendChild(hint);
+        el.addEventListener('click', function wake() {
+            map.setInteractive(true);
+            map.showZoom();
+            hint.remove();
+            el.removeEventListener('click', wake);
+        });
+        if (listingMapInst) listingMapInst.destroy();
+        listingMapInst = map;
+        setTimeout(() => map.invalidate(), 250);
     });
-
-    listingMapInst = map;
-    setTimeout(() => map.invalidateSize(), 250);
 }
 
 function closeListingMap() {
-    if (listingMapInst) { listingMapInst.remove(); listingMapInst = null; }
+    if (listingMapInst) { listingMapInst.destroy(); listingMapInst = null; }
 }
 
 // ---------- ПРОСМОТР ФОТО НА ВЕСЬ ЭКРАН ----------
