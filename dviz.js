@@ -10,6 +10,7 @@ const DV_IDEAS = ['Джипы в горы', 'Морская прогулка', '
 const DV_EMOJI = ['❤️', '🙌', '🔥', '👏', '😍', '😂', '😮', '😢'];
 // Ключ Яндекса нужен только для поиска адреса; сами карты — Leaflet. Ограничьте ключ по домену в кабинете Яндекса.
 const DV_YKEY = '677f374a-c483-4bb5-a09a-2f25fdcba35e';
+const DV_YMAPKEY = '7aafdf73-bf1e-4ec7-8d18-07b14be93c80';   // ключ «JavaScript API»: в кабинете Яндекса ограничьте его по HTTP-referer (yugiyugi.ru)
 let dvFeed = [];
 let dvOpenId = null;       // открытая в шторке карточка
 let dvCommId = null;       // карточка, чьи комментарии открыты
@@ -26,21 +27,83 @@ function dvWhen(w) {
     const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
     return d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' }) + ' · ' + m[4] + ':' + m[5];
 }
-const dvPin = () => L.divIcon({ className: 'map-pin-wrap', html: '<div class="map-pin pin-meet"><i class="fas fa-flag"></i></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
 const dvFmtCoords = (c) => c[0].toFixed(5) + ', ' + c[1].toFixed(5);
 
-// карта в блоке el: без подписи Leaflet, спутниковые тайлы как в объявлениях
-function dvMakeMap(el, center, zoom, opts) {
+// ---------- карта ----------
+// Основная — Яндекс.Карты (JS API 3.0): названия улиц, подпись «Яндекс». Не загрузилась (нет связи, ключ без разрешения для сайта) —
+// запасная карта на OpenStreetMap, тоже с улицами. Метка и клики приведены к одному виду: координаты везде [широта, долгота].
+let dvYmaps = null;
+function dvLoadYmaps() {
+    if (dvYmaps) return dvYmaps;
+    dvYmaps = new Promise((res, rej) => {
+        const done = () => window.ymaps3.ready.then(() => res(window.ymaps3), rej);
+        if (window.ymaps3) { done(); return; }
+        const sc = document.createElement('script');
+        sc.src = 'https://api-maps.yandex.ru/v3/?apikey=' + DV_YMAPKEY + '&lang=ru_RU';
+        sc.onload = () => (window.ymaps3 ? done() : rej(new Error('ymaps')));
+        sc.onerror = () => rej(new Error('ymaps'));
+        document.head.appendChild(sc);
+        setTimeout(() => rej(new Error('ymaps timeout')), 9000);
+    }).catch((e) => { dvYmaps = null; throw e; });
+    return dvYmaps;
+}
+
+async function dvYandexMap(el, center, zoom, o) {
+    const y = await dvLoadYmaps();
+    const map = new y.YMap(el, { location: { center: [center[1], center[0]], zoom } });
+    map.addChild(new y.YMapDefaultSchemeLayer());
+    map.addChild(new y.YMapDefaultFeaturesLayer());
+    let marker = null;
+    const pinEl = () => { const d = document.createElement('div'); d.className = 'dv-ympin'; d.innerHTML = '<i class="fas fa-flag"></i>'; return d; };
+    if (o.onClick) map.addChild(new y.YMapListener({ layer: 'any', onClick: (obj, ev) => { if (ev && ev.coordinates) o.onClick([ev.coordinates[1], ev.coordinates[0]]); } }));
+    return {
+        engine: 'yandex',
+        setPoint(c, z) {
+            const ll = [c[1], c[0]];
+            if (marker) marker.update({ coordinates: ll });
+            else {
+                marker = new y.YMapMarker({ coordinates: ll, draggable: !!o.draggable, onDragEnd: (cc) => o.onDrag && o.onDrag([cc[1], cc[0]]) }, pinEl());
+                map.addChild(marker);
+            }
+            if (z) map.setLocation({ center: ll, zoom: z, duration: 300 });
+        },
+        clearPoint() { if (marker) { map.removeChild(marker); marker = null; } },
+        getZoom() { return map.zoom || zoom; }
+    };
+}
+
+function dvLeafletMap(el, center, zoom, o) {
     if (typeof L === 'undefined') {
         el.innerHTML = '<div class="map-fallback"><i class="fas fa-map"></i>Карта загрузится при подключении к интернету</div>';
         return null;
     }
-    const map = L.map(el, Object.assign({ zoomControl: false, tap: false }, opts || {})).setView(center, zoom);
+    const map = L.map(el, { zoomControl: false, tap: false }).setView(center, zoom);
     if (map.attributionControl) map.attributionControl.setPrefix(false);
-    mapTiles().addTo(map);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     setTimeout(() => map.invalidateSize(), 420);       // шторка выезжает с анимацией
-    return map;
+    const icon = L.divIcon({ className: 'map-pin-wrap', html: '<div class="map-pin pin-meet"><i class="fas fa-flag"></i></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+    let marker = null;
+    if (o.onClick) map.on('click', (ev) => o.onClick([ev.latlng.lat, ev.latlng.lng]));
+    return {
+        engine: 'osm',
+        setPoint(c, z) {
+            if (marker) marker.setLatLng(c);
+            else {
+                marker = L.marker(c, { icon, draggable: !!o.draggable }).addTo(map);
+                marker.on('dragend', () => { const p = marker.getLatLng(); o.onDrag && o.onDrag([p.lat, p.lng]); });
+            }
+            if (z) map.setView(c, z);
+        },
+        clearPoint() { if (marker) { map.removeLayer(marker); marker = null; } },
+        getZoom() { return map.getZoom(); }
+    };
+}
+
+// карта в блоке el; o: { draggable, onClick(c), onDrag(c) }. Возвращает Promise с управлением картой (или null, если карт нет совсем)
+function dvOpenMap(el, center, zoom, o) {
+    o = o || {};
+    return dvYandexMap(el, center, zoom, o).catch(() => { el.innerHTML = ''; return dvLeafletMap(el, center, zoom, o); });
 }
 
 // Поиск адреса. Сначала геокодер Яндекса (нужен ключ с продуктом «HTTP Геокодер»), если он не отвечает или ключ не подходит —
@@ -123,33 +186,39 @@ function dvArt(title) {
     return { icon, g: h };
 }
 
-function dvCardHTML(e) {
+function dvCardHTML(e, i) {
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = !!(acc && acc.id === e.ownerId);
     const art = dvArt(e.title);
-    const names = e.joinNames || [];
-    const more = Math.max(0, (e.joins || 0) - names.length);
+    let h = 0; for (const ch of String(e.id)) h = (h * 31 + ch.charCodeAt(0)) % 3;
     const people = dvPeople(e);
-    return `<article class="dv-card dv-g${art.g}${e.thumb ? ' has-photo' : ''}" data-id="${dvEsc(e.id)}">
-        <div class="dv-bg">${e.thumb ? `<img src="${dvEsc(e.thumb)}" alt="" loading="lazy">` : `<i class="fas ${art.icon} dv-wm"></i>`}</div>
-        <div class="dv-top"><span class="dv-badge"><i class="fas fa-user-group"></i> Движ</span>
-            <span class="dv-by"><span class="chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</span>
-                <b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></div>
-        <div class="dv-body">
-            <h3 class="dv-title">${dvEsc(e.title)}</h3>
-            ${e.text ? `<p class="dv-text">${dvEsc(e.text)}</p>` : ''}
-            <div class="dv-meta">
-                ${e.when ? `<span><i class="far fa-calendar"></i>${dvEsc(dvWhen(e.when))}</span>` : ''}
-                ${e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : ''}
-                ${e.coords ? '<span><i class="fas fa-map-location-dot"></i>На карте</span>' : ''}
+    const cn = e.comments || 0;
+    // облачка идут в шахматном порядке: слева, справа, слева…; носик смотрит на аватарку автора под облачком
+    return `<article class="dv-card ${(i || 0) % 2 ? 'R' : 'L'} dv-c${h}" data-id="${dvEsc(e.id)}">
+        <div class="dv-bubble">
+            <div class="dv-bin">
+                <div class="dv-pic">${e.thumb ? `<img src="${dvEsc(e.thumb)}" alt="" loading="lazy">` : `<i class="fas ${art.icon} dv-wm"></i>`}</div>
+                <div class="dv-txt">
+                    <span class="dv-ic"><i class="fas fa-user-group"></i></span>
+                    <h3 class="dv-title">${dvEsc(e.title)}</h3>
+                    <div class="dv-meta">
+                        ${e.when ? `<span><i class="far fa-calendar"></i>${dvEsc(dvWhen(e.when))}</span>` : ''}
+                        ${e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : ''}
+                        ${e.coords && !e.place ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : ''}
+                    </div>
+                    <div class="dv-act">
+                        <span class="dv-ppl"><i class="fas fa-user-group"></i> ${people ? dvEsc(people) : 'пока никого'}</span>
+                        ${mine ? '<span class="dv-ownl">Ваш движ</span>' : `<button type="button" class="dv-join ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Я с вами'}</button>`}
+                    </div>
+                </div>
             </div>
-            ${e.attached ? dvAttachHTML(e.attached) : ''}
-            <div class="dv-foot">
-                <div class="dv-people">${names.length ? `<span class="dv-avs">${names.map(n => `<i style="background:${dmColor(n)}">${dvEsc(Array.from(n)[0] || '?')}</i>`).join('')}${more ? `<i class="more">+${more}</i>` : ''}</span>` : ''}
-                    <small>${people ? dvEsc(people) : 'Будьте первым'}</small></div>
-                <button type="button" class="dv-cm" data-dv="comments" aria-label="Комментарии"><i class="far fa-comment"></i>${e.comments ? `<b>${e.comments}</b>` : ''}</button>
-                ${mine ? '<span class="dv-own">Ваш движ</span>' : `<button type="button" class="dv-btn main ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Присоединиться <i class="fas fa-arrow-right"></i>'}</button>`}
-            </div></div></article>`;
+            <i class="dv-tail"></i>
+        </div>
+        <div class="dv-under">
+            <span class="dv-ava chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</span>
+            <span class="dv-who2"><b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(e.created)}</small></span>
+            <button type="button" class="dv-cm" data-dv="comments"><i class="far fa-comment"></i> ${cn ? cn + ' ' + plural(cn, 'комментарий', 'комментария', 'комментариев') : 'Обсудить'}</button>
+        </div></article>`;
 }
 
 function dvAttachHTML(a) {
@@ -323,8 +392,7 @@ function openDvizView(id) {
             paintTop(e);
             el._dv = { id: e.id, paintTop, owner: e.ownerId, e };
             if (e.coords) {
-                const map = dvMakeMap(el.querySelector('#dvViewMap'), e.coords, 16);
-                if (map) L.marker(e.coords, { icon: dvPin() }).addTo(map);
+                dvOpenMap(el.querySelector('#dvViewMap'), e.coords, 16).then((m) => { if (m) m.setPoint(e.coords); });
             }
             el.querySelector('[data-dv-owner]').onclick = () => { closeSheet(); if (typeof openUserProfile === 'function') openUserProfile({ id: e.ownerId, name: e.ownerName }); };
             const att = el.querySelector('[data-dv="service"]');
@@ -414,30 +482,27 @@ function openDvizForm(opts) {
             };
             paintAttach();
             // ---- карта: тап по карте ставит метку, метку можно двигать ----
-            let coords = null, marker = null;
+            let coords = null, pmap = null;
             const hint = el.querySelector('#dvMapHint');
-            const pmap = dvMakeMap(el.querySelector('#dvPickMap'), MAP_DEFAULT, 15);
+            const round5 = (c) => [Math.round(c[0] * 1e5) / 1e5, Math.round(c[1] * 1e5) / 1e5];
             const paintHint = () => {
                 hint.innerHTML = coords
                     ? `<i class="fas fa-circle-check"></i> Точка отмечена · ${dvFmtCoords(coords)} <button type="button" data-unmark>Убрать</button>`
                     : 'Нажмите на карту — отметьте, где встречаетесь. Люди увидят точное место и смогут проложить маршрут.';
             };
             const setPoint = (lat, lng, zoom) => {
-                coords = [Math.round(lat * 1e5) / 1e5, Math.round(lng * 1e5) / 1e5];
-                if (pmap) {
-                    if (marker) marker.setLatLng(coords);
-                    else {
-                        marker = L.marker(coords, { icon: dvPin(), draggable: true }).addTo(pmap);
-                        marker.on('dragend', () => { const p = marker.getLatLng(); coords = [Math.round(p.lat * 1e5) / 1e5, Math.round(p.lng * 1e5) / 1e5]; paintHint(); });
-                    }
-                    pmap.setView(coords, zoom || Math.max(pmap.getZoom(), 16));
-                }
+                coords = round5([lat, lng]);
+                if (pmap) pmap.setPoint(coords, zoom || Math.max(pmap.getZoom(), 16));
                 paintHint();
             };
-            if (pmap) pmap.on('click', (ev) => { setPoint(ev.latlng.lat, ev.latlng.lng, pmap.getZoom()); if (typeof haptic === 'function') haptic(8); });
+            dvOpenMap(el.querySelector('#dvPickMap'), MAP_DEFAULT, 15, {
+                draggable: true,
+                onClick: (c) => { setPoint(c[0], c[1], Math.max(pmap ? pmap.getZoom() : 16, 16)); if (typeof haptic === 'function') haptic(8); },
+                onDrag: (c) => { coords = round5(c); paintHint(); }
+            }).then((m) => { pmap = m; if (m && coords) m.setPoint(coords, 16); });
             hint.addEventListener('click', (ev) => {
                 if (!ev.target.closest('[data-unmark]')) return;
-                coords = null; if (marker && pmap) { pmap.removeLayer(marker); marker = null; } paintHint();
+                coords = null; if (pmap) pmap.clearPoint(); paintHint();
             });
             paintHint();
             const addr = el.querySelector('#dvAddr'), find = el.querySelector('#dvFind');

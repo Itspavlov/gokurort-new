@@ -1012,43 +1012,7 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .dv-rbtn { flex: none; padding: 11px 16px; border-radius: 99px; border: 1px solid var(--glass-border); color: var(--text); font: 700 13.5px var(--font); text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
 .dv-rbtn.main { flex: 1; justify-content: center; background: var(--sea, #2BC4D6); color: var(--on-sea, #04202a); border-color: transparent; }
 
-/* ===== v45: карточки движа на фото-фоне; плитки «Развлечений» по 2 в ряд ===== */
-.dv-card { flex: none; position: relative; overflow: hidden; isolation: isolate; min-height: 250px; padding: 0; gap: 0; justify-content: space-between; border-radius: 26px; border: 1px solid rgba(190,170,255,.28); background: #151736; color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.38); -webkit-backdrop-filter: none; backdrop-filter: none; }
-.dv-bg { position: absolute; inset: 0; z-index: -2; }
-.dv-bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.dv-card::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(8,8,26,.42) 0%, rgba(8,8,26,.04) 26%, rgba(8,8,26,.5) 58%, rgba(8,8,26,.88) 100%); }
-.dv-card:not(.has-photo).dv-g0 { background: linear-gradient(150deg, #5B4BD8 0%, #2A1F7A 62%, #14123A 100%); }
-.dv-card:not(.has-photo).dv-g1 { background: linear-gradient(150deg, #1F7A52 0%, #0E3A2B 62%, #07211A 100%); }
-.dv-card:not(.has-photo).dv-g2 { background: linear-gradient(150deg, #D9703F 0%, #7A3A6E 62%, #2A1A4A 100%); }
-.dv-card:not(.has-photo).dv-g3 { background: linear-gradient(150deg, #2F6FD6 0%, #1A2F78 62%, #0E1534 100%); }
-.dv-card:not(.has-photo).dv-g4 { background: linear-gradient(150deg, #18A0A0 0%, #0F5A66 62%, #0A2430 100%); }
-.dv-card:not(.has-photo).dv-g5 { background: linear-gradient(150deg, #C2457A 0%, #6A2A7A 62%, #1E1440 100%); }
-.dv-wm { position: absolute; right: -6px; top: 46px; font-size: 128px; line-height: 1; color: #fff; opacity: .16; transform: rotate(-8deg); }
-.dv-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 14px 0; }
-.dv-badge { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 99px; background: var(--sun); color: var(--dv-on, #2A1206); font: 800 13.5px var(--font); }
-.dv-by { display: inline-flex; align-items: center; gap: 7px; min-width: 0; padding: 3px 11px 3px 3px; border-radius: 99px; background: rgba(12,14,34,.5); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.16); }
-.dv-by .chat-avatar { width: 24px; height: 24px; font-size: 11px; flex: none; }
-.dv-by b { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-.dv-by .pf-check { color: #6FB4FF; font-size: 11px; }
-.dv-body { display: flex; flex-direction: column; gap: 9px; padding: 64px 14px 14px; }
-.dv-card .dv-title { font-size: 27px; line-height: 1.08; font-weight: 800; letter-spacing: -.4px; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.45); overflow-wrap: anywhere; }
-.dv-card .dv-text { color: rgba(255,255,255,.9); -webkit-line-clamp: 2; font-size: 14.5px; text-shadow: 0 1px 8px rgba(0,0,0,.4); }
-.dv-card .dv-meta span { background: rgba(12,14,34,.5); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.18); color: #fff; font-size: 13px; }
-.dv-card .dv-meta span i { color: rgba(255,255,255,.85); }
-.dv-card .dv-attach { background: rgba(12,14,34,.5); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-color: rgba(255,255,255,.2); color: #fff; }
-.dv-card .dv-attach small { color: rgba(255,255,255,.7); }
-.dv-card .dv-foot { gap: 8px; margin-top: 2px; }
-.dv-people { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
-.dv-people small { font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.92); white-space: nowrap; }
-.dv-avs { display: inline-flex; flex: none; }
-.dv-avs i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; color: #fff; border: 2px solid rgba(255,255,255,.85); margin-left: -8px; }
-.dv-avs i:first-child { margin-left: 0; }
-.dv-avs i.more { background: rgba(255,255,255,.22); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); font-size: 11px; }
-.dv-cm { flex: none; height: 40px; min-width: 40px; padding: 0 11px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 99px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.14); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; font: 700 13px var(--font); cursor: pointer; }
-.dv-card .dv-btn.main { flex: none; height: 42px; padding: 0 17px; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 99px; background: var(--sun); color: var(--dv-on, #2A1206); font: 800 14.5px var(--font); box-shadow: 0 6px 18px rgba(0,0,0,.3); }
-.dv-card .dv-btn.main.on { box-shadow: 0 0 0 2px rgba(255,255,255,.55), 0 6px 18px rgba(0,0,0,.3); }
-.dv-card .dv-own { color: rgba(255,255,255,.8); font-weight: 700; padding: 0 6px; }
-
+/* ===== v45: плитки «Развлечений» по 2 в ряд ===== */
 #chatMessages.cards:has(.sv-item) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; padding-left: 14px; padding-right: 14px; }
 #chatMessages.cards:has(.sv-item) > :not(.sv-item) { grid-column: 1 / -1; }
 .req-item.sv-item { margin: 0; min-width: 0; }
@@ -1098,3 +1062,45 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 :root[data-theme="peak"] .cat-chip.on,
 :root[data-theme="peak"] .tip-btn,
 :root[data-theme="peak"] .ad-pin.sel { color: #fff; }
+
+/* ===== v46: движ — облачка-сообщения в шахматном порядке ===== */
+.dv-feed { gap: 12px; padding-top: 16px; }
+.dv-feed .dv-card { flex: none; position: static; overflow: visible; min-height: 0; width: 90%; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; gap: 9px; color: #fff; cursor: pointer; display: flex; flex-direction: column; }
+.dv-card.L { align-self: flex-start; }
+.dv-card.R { align-self: flex-end; }
+.dv-c0 { --b1: #FF9548; --b2: #C8402E; --glow: rgba(255,130,60,.42); }
+.dv-c1 { --b1: #9461FF; --b2: #5A2FD0; --glow: rgba(140,90,255,.45); }
+.dv-c2 { --b1: #3FCBDB; --b2: #137A9A; --glow: rgba(50,200,220,.4); }
+.dv-bubble { position: relative; filter: drop-shadow(0 10px 16px var(--glow)); }
+.dv-bin { position: relative; overflow: hidden; min-height: 150px; padding: 14px; display: flex; border-radius: 30px; background: linear-gradient(165deg, var(--b1), var(--b2)); border: 1px solid rgba(255,255,255,.38); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -12px 26px rgba(0,0,0,.14); }
+.dv-bin::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,.26), transparent 55%); }
+.dv-pic { position: absolute; top: 0; right: 0; bottom: 0; width: 56%; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 46%); mask-image: linear-gradient(90deg, transparent 0%, #000 46%); }
+.dv-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dv-wm { position: absolute; right: 14px; top: 50%; transform: translateY(-50%) rotate(-6deg); font-size: 88px; line-height: 1; color: #fff; opacity: .38; }
+.dv-txt { position: relative; z-index: 1; width: 64%; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.dv-ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; font-size: 16px; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.4); }
+.dv-card .dv-title { margin: 0; font-size: 19.5px; line-height: 1.1; font-weight: 800; letter-spacing: -.3px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.25); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.dv-card .dv-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.dv-card .dv-meta span { display: block; max-width: 100%; padding: 3px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700; color: #fff; background: rgba(0,0,0,.2); border: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.dv-card .dv-meta span i { margin-right: 5px; color: #fff; opacity: .85; }
+.dv-act { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.dv-ppl { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 99px; background: rgba(0,0,0,.24); white-space: nowrap; }
+.dv-join { height: 32px; padding: 0 13px; border: 0; border-radius: 99px; background: #fff; color: var(--b2); font: 800 12.5px var(--font); cursor: pointer; white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+.dv-join.on { background: rgba(255,255,255,.22); color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+.dv-ownl { font-size: 12px; font-weight: 700; opacity: .9; }
+.dv-tail { position: absolute; z-index: 2; top: calc(100% - 3px); width: 36px; height: 22px; background: var(--b2); clip-path: path('M0 0 H36 C28 6 16 13 3 22 C6 14 4 6 0 0 Z'); }
+.dv-card.L .dv-tail { left: 24px; }
+.dv-card.R .dv-tail { right: 24px; transform: scaleX(-1); }
+.dv-under { display: flex; align-items: center; gap: 9px; padding: 0 4px; color: var(--text); }
+.dv-card.R .dv-under { flex-direction: row-reverse; text-align: right; }
+.dv-ava { width: 42px; height: 42px; font-size: 17px; flex: none; border: 2px solid rgba(255,255,255,.85); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.dv-who2 { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.dv-who2 b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dv-who2 small { font-size: 11px; color: var(--text-secondary); }
+.dv-card.L .dv-cm { margin-left: auto; }
+.dv-card.R .dv-cm { margin-right: auto; }
+.dv-feed .dv-cm { flex: none; height: auto; min-width: 0; padding: 8px 13px; display: inline-flex; align-items: center; gap: 7px; border-radius: 99px; border: 1px solid var(--glass-border); background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--text); font: 700 12.5px var(--font); cursor: pointer; }
+.dv-feed .dv-cm i { color: var(--sea, #2BC4D6); }
+
+/* метка точки сбора на Яндекс.Картах */
+.dv-ympin { width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #E5484D, #FF8A5C); color: #fff; font-size: 16px; border: 3px solid #fff; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
