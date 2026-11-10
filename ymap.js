@@ -69,11 +69,11 @@ const YM = (() => {
                 });
                 if (m.onDrag) pm.events.add('dragend', () => m.onDrag(pm.geometry.getCoordinates()));
                 map.geoObjects.add(pm);
-                const rec = { pm, onClick: m.onClick };
+                const rec = { pm, onClick: m.onClick, size: [w, hgt], anchor: [ax, ay], coords: m.coords };
                 byId[id] = rec;
                 (groups[m.group || ''] = groups[m.group || ''] || []).push({ id, pm });
                 return {
-                    setCoords(c) { pm.geometry.setCoordinates(c); },
+                    setCoords(c) { rec.coords = c; pm.geometry.setCoordinates(c); },
                     remove() { map.geoObjects.remove(pm); delete byId[id]; }
                 };
             },
@@ -105,12 +105,32 @@ const YM = (() => {
             invalidate() { try { map.container.fitToViewport(); } catch (_) {} },
             destroy() { try { map.destroy(); } catch (_) {} }
         };
-        // клики по HTML-меткам ловим на самом блоке: так не зависим от формы «области нажатия» метки
+        // Тап по метке. «Область нажатия» HTML-меток в Яндексе зависит от версии и телефона, а слой событий лежит над метками,
+        // поэтому попадание считаем сами: по тапу на карте переводим точку в пиксели и смотрим, какой метки она касается.
+        const tapPin = (rec) => { if (Date.now() - lastPin < 350) return; lastPin = Date.now(); rec.onClick(); };
+        const hitPin = (coords) => {
+            const p = h.project(coords), pad = 8;
+            let best = null, bd = 1e9;
+            Object.keys(byId).forEach((k) => {
+                const r = byId[k]; if (!r.onClick) return;
+                const c = h.project(r.coords);
+                const l = c.x - r.anchor[0], t = c.y - r.anchor[1];
+                if (p.x < l - pad || p.x > l + r.size[0] + pad || p.y < t - pad || p.y > t + r.size[1] + pad) return;
+                const d = Math.hypot(p.x - (l + r.size[0] / 2), p.y - (t + r.size[1] / 2));
+                if (d < bd) { bd = d; best = r; }
+            });
+            return best;
+        };
+        map.events.add('click', (e) => {
+            const r = hitPin(e.get('coords'));
+            if (r) tapPin(r);
+        });
+        // на случай, если тап дошёл до самой метки (мышь на компьютере)
         el.addEventListener('click', (ev) => {
             const t = ev.target.closest && ev.target.closest('[data-ymk]');
             if (!t) return;
             const rec = byId[t.dataset.ymk];
-            if (rec && rec.onClick) { lastPin = Date.now(); rec.onClick(); }
+            if (rec && rec.onClick) tapPin(rec);
         }, true);
         if (o.zoomControl) h.showZoom();
         if (o.interactive === false) h.setInteractive(false);
@@ -169,6 +189,19 @@ const YM = (() => {
         return h;
     }
 
+    // Щипок по карте должен менять масштаб карты, а не всей страницы: иначе на телефоне страница «уезжает»,
+    // кнопка закрытия остаётся за краем экрана, и выйти можно только сильно отдалив.
+    function guard(el, h, o) {
+        const stop = (ev) => { ev.preventDefault(); };
+        const move = (ev) => { if (h.interactive && ev.touches && ev.touches.length > 1) ev.preventDefault(); };
+        ['gesturestart', 'gesturechange', 'gestureend'].forEach((n) => el.addEventListener(n, stop, { passive: false }));
+        el.addEventListener('touchmove', move, { passive: false });
+        const set = h.setInteractive;
+        h.setInteractive = (on) => { h.interactive = !!on; el.style.touchAction = on ? 'none' : ''; set(on); };
+        h.setInteractive(o.interactive !== false);
+        return h;
+    }
+
     function open(el, o) {
         o = Object.assign({ zoom: 15, interactive: true, zoomControl: false }, o || {});
         if (!el) return Promise.resolve(null);
@@ -179,7 +212,7 @@ const YM = (() => {
             if (!el.isConnected) return null;
             el.innerHTML = '';
             return osm(el, o);
-        });
+        }).then((h) => h && guard(el, h, o));
     }
 
     return { open };

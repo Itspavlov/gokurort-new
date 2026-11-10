@@ -176,7 +176,7 @@ const THEMES = {
     dusk: { name: 'Закат',  meta: '#121216', bg: '#121216', accent: '#FF5E8A' }
 };
 const THEME_FONTS = {
-    sand: 'family=Fraunces:wght@600;700&family=Nunito:wght@500;600;700;800',
+    sand: 'family=Nunito:wght@500;600;700;800;900',
     peak: 'family=Manrope:wght@500;600;700;800',
     dusk: 'family=Space+Grotesk:wght@500;600;700'
 };

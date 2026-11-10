@@ -495,7 +495,7 @@
     --shadow: 0 12px 30px rgba(120, 80, 30, 0.16);
     --text: #2B2118; --text-secondary: rgba(43, 33, 24, 0.75); --text-muted: rgba(43, 33, 24, 0.55);
     --on-sea: #04201f; --on-accent: #fff;
-    --font: 'Nunito', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Fraunces', Georgia, serif;
+    --font: 'Nunito', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Nunito', -apple-system, 'Segoe UI', sans-serif;
 }
 :root[data-theme="peak"] {
     --sun-1: #6A5CFF; --sun-2: #A36BFF; --sea: #8B6CFF; --sun: linear-gradient(135deg, #6A5CFF 0%, #A36BFF 100%); --accent: #A58BFF;
@@ -1104,3 +1104,24 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 /* HTML-метки на Яндекс.Картах: блок по размеру метки, содержимое по центру */
 .ym-mk { display: flex; align-items: center; justify-content: center; }
 .pin-meet { background: linear-gradient(135deg, #E5484D, #FF8A5C); color: #fff; }
+
+/* ===== v47: картинки плиток подстраиваются под тему ===== */
+.group-photo { transition: filter .35s ease; object-fit: cover; }
+:root[data-theme="dark"] .group-photo { filter: saturate(.94) brightness(.94); }
+:root[data-theme="sand"] .group-photo { filter: saturate(1.06) brightness(1.04) contrast(.98); }
+:root[data-theme="peak"] .group-photo { filter: hue-rotate(-24deg) saturate(.86) brightness(.9) contrast(1.04); }
+:root[data-theme="dusk"] .group-photo { filter: hue-rotate(-10deg) saturate(.88) brightness(.8) contrast(1.06); }
+:root[data-theme="sand"] .group-card::after { background: linear-gradient(90deg, rgba(60, 28, 8, .5) 0%, rgba(60, 28, 8, 0) 62%), linear-gradient(180deg, rgba(60, 28, 8, 0) 42%, rgba(60, 28, 8, .55) 100%); }
+:root[data-theme="peak"] .group-card::after { background: linear-gradient(90deg, rgba(24, 14, 80, .6) 0%, rgba(24, 14, 80, 0) 62%), linear-gradient(180deg, rgba(60, 30, 150, .1) 0%, rgba(24, 14, 80, 0) 38%, rgba(24, 14, 80, .62) 100%); }
+:root[data-theme="dusk"] .group-card::after { background: linear-gradient(90deg, rgba(10, 6, 16, .62) 0%, rgba(10, 6, 16, 0) 62%), linear-gradient(180deg, rgba(10, 6, 16, 0) 38%, rgba(10, 6, 16, .62) 100%); }
+:root[data-theme="sand"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(60, 28, 8, .66) 0%, rgba(60, 28, 8, .3) 55%, rgba(60, 28, 8, 0) 100%); }
+:root[data-theme="peak"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(40, 20, 120, .78) 0%, rgba(90, 50, 200, .38) 55%, rgba(90, 50, 200, 0) 100%); }
+:root[data-theme="dusk"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(120, 20, 70, .74) 0%, rgba(224, 69, 122, .34) 55%, rgba(224, 69, 122, 0) 100%); }
+.gc-housing .group-photo { object-position: 30% 50%; }
+.gc-work .group-photo { object-position: 60% 55%; }
+.gc-trips .group-photo { object-position: 60% 55%; }
+.gc-services .group-photo { object-position: 70% 55%; }
+.group-card.gc-dating.strip .group-photo { object-position: 50% 50%; }
+/* подложка плиток под фото в тон теме (видна только если картинка не успела загрузиться) */
+:root[data-theme="sand"] :is(.gc-housing, .gc-work, .gc-trips, .gc-services) { background: linear-gradient(150deg, #F6B45A 0%, #E8801E 60%, #A8501A 100%); }
+:root[data-theme="dusk"] :is(.gc-housing, .gc-work, .gc-trips, .gc-services) { background: linear-gradient(150deg, #5A2A48 0%, #3A2040 60%, #1E1426 100%); }

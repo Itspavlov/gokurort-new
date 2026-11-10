@@ -154,6 +154,8 @@ function openAdMap() {
         else if (b.dataset.m === 'open') { const id = b.dataset.id; closeAdMap(); openListing(id); }
     });
     const box = document.getElementById('adMapBox');
+    adMapMoved = false;
+    box.addEventListener('pointerdown', () => { adMapMoved = true; }, { once: true });
     const token = adMapToken = {};
     // сразу ставим итоговый вид, без «наезда»: иначе карта сначала грузит квадрат плиток на дальнем зуме, потом приближается
     const first = filteredAds().filter(a => Array.isArray(a.coords)).map(a => a.coords);
@@ -162,12 +164,24 @@ function openAdMap() {
         if (!map) return;
         if (adMapToken !== token || !document.getElementById('adMapView')) { map.destroy(); return; }
         adMap = map;
-        if (first.length) map.fitBounds(first, { padding: 50, maxZoom: 15, animate: false });
+        fitAdMap(false);
         map.onClick(() => { adMapSel = null; paintAdMapCard(); markSelected(); });
         view.classList.add('intro');
         refreshAdMap(false, true);
-        setTimeout(() => { if (adMap === map) { map.invalidate(); startBoat(); } }, 160);
+        // блок карты получает размер не сразу (плавное появление): после этого подгоняем масштаб ещё раз
+        setTimeout(() => { if (adMap === map) { map.invalidate(); fitAdMap(false); startBoat(); } }, 160);
+        setTimeout(() => { if (adMap === map && !adMapMoved) { map.invalidate(); fitAdMap(false); } }, 700);
     });
+}
+
+// масштаб под город: все объявления с точками в кадре; нет точек — показываем посёлок целиком
+const AD_TOWN = [44.8928, 37.299];
+let adMapMoved = false;
+function fitAdMap(animate) {
+    if (!adMap) return;
+    const pts = filteredAds().filter(a => Array.isArray(a.coords)).map(a => a.coords);
+    if (pts.length) adMap.fitBounds(pts, { padding: 50, maxZoom: 15, animate: animate !== false });
+    else adMap.setView(AD_TOWN, 14, animate !== false);
 }
 
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && document.getElementById('adMapView') && !document.getElementById('sheet')) closeAdMap(); });
@@ -175,7 +189,7 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && docume
 function closeAdMap() {
     stopBoat();
     if (adMap) { try { adMap.destroy(); } catch (e) {} }
-    adMap = null; adMapSel = null; adMapToken = null;
+    adMap = null; adMapSel = null; adMapToken = null; adMapMoved = false;
     const v = document.getElementById('adMapView'); if (v) v.remove();
 }
 
@@ -209,7 +223,7 @@ function refreshAdMap(fit, initial) {
     });
     if (adMapSel && !list.some(a => String(a.id) === String(adMapSel))) adMapSel = null;
     paintAdMapCard(); markSelected(); paintMapTitle(withPoint.length, list.length - withPoint.length);
-    if (pts.length && fit !== false) adMap.fitBounds(pts, { padding: 50, maxZoom: 15 });
+    if (fit !== false) fitAdMap(true);
 }
 function paintMapTitle(n, noPoint) {
     const t = document.getElementById('adMapTitle'); if (!t) return;
