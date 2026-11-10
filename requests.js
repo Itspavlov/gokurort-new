@@ -29,7 +29,7 @@ const SEEK_LABELS = {
     housing:  { tabs: ['Запросы', 'Готовые предложения'], subs: ['сейчас ищут', 'сейчас предлагают'], btns: ['Хочу снять', 'Сдать жильё'] },
     work:     { tabs: ['Соискатели', 'Вакансии'], subs: ['сейчас ищут', 'готовые предложения'], btns: ['Ищу работу', 'Предлагаю работу'] },
     trips:    { tabs: ['Пассажиры', 'Водители'], subs: ['сейчас ищут', 'готовые предложения'], btns: ['Ищу поездку', 'Предлагаю поездку'] },
-    services: { tabs: ['Ищут развлечения', 'Предлагают развлечения'], subs: ['сейчас ищут', 'сейчас предлагают'], btns: ['Ищу развлечение', 'Предлагаю развлечение'] }
+    services: { tabs: ['Ищут развлечения', 'Предлагают развлечения'], subs: ['сейчас ищут', 'сейчас предлагают'], btns: ['Ищу развлечение', 'Разместить услугу'] }
 };
 const SEEK_TIP = 'Ваша карточка появится в ленте, и хозяева увидят её и смогут предложить жильё. Мы подберём варианты под ваш запрос и пришлём уведомление, как только найдётся что-то подходящее.';
 let seekTipTimer = null;
@@ -208,6 +208,7 @@ function updateDockState() {
 // ---------- вкладки сверху (что смотреть) и кнопки внизу (что создать) ----------
 // Вкладки стоят под чипсами типов, а внизу только две кнопки создания.
 function seekBarHTML(room) {
+    if (room === 'services') { reqView = 'offer'; return ''; }      // в «Развлечениях» нет вкладок «ищут / предлагают»: только услуги
     const L = secLabels(SEC[room] ? room : 'housing');
     if (reqView !== 'seek') reqView = 'offer';
     const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${L.subs[v === 'seek' ? 0 : 1]} 0</b></button>`;
@@ -218,6 +219,10 @@ function seekBarHTML(room) {
 const dockBtnHTML = (icon, label) => `<i class="fas ${icon}"></i> ${label}`;
 function cardsDockHTML(room) {
     const L = secLabels(SEC[room] ? room : 'housing');
+    if (room === 'services') {
+        return `<div class="cards-dock" id="cardsDock"><p class="dv-dock-hint">Морские прогулки, джипинг, экскурсии и другое</p>
+            <div class="dock-actions"><button type="button" class="dock-btn main" id="dockOffer" aria-label="Разместить услугу">${dockBtnHTML('fa-plus', L.btns[1])}</button></div></div>`;
+    }
     const long = (s) => s.length > 17 ? ' nogly' : '';
     return `<div class="cards-dock" id="cardsDock">
         <div class="dock-actions">
@@ -254,7 +259,7 @@ function setupCards() {
         if (ev.target.closest('#dockOffer')) {
             const sec = reqSection();
             if (sec === 'housing') openAdForm();                 // у хозяина с объявлениями спросит: поднять старое или создать новое
-            else if (sec === 'services') openServiceFlow();
+            else if (sec === 'services') openServiceEditor();            // сразу форма: название, фото, цена
             else openCardFlow('offer');
         }
     });
@@ -280,7 +285,9 @@ function cardsTour(force) {
     const sec = reqSection(), t = CARD_TIPS[sec];
     if (!t) return;
     const L = secLabels(sec);
-    runTour('cards-' + sec, [
+    runTour('cards-' + sec, sec === 'services' ? [
+        { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
+    ] : [
         { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' },
         { sel: '#dockSeek', title: 'Кнопка «' + L.btns[0] + '»', text: t.seek },
         { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: t.offer }
@@ -526,7 +533,7 @@ function tickCooldown() {
     clearInterval(reqTicker);
     const paint = () => {
         const w = cooldownLeft();
-        const housing = reqSection() === 'housing';
+        const housing = ['housing', 'services'].includes(reqSection());     // у объявлений и услуг своего таймера нет
         const seek = document.getElementById('dockSeek'), offer = document.getElementById('dockOffer'), L = secLabels();
         if (seek) seek.innerHTML = w > 0 ? `<i class="fas fa-clock"></i> ${fmtCountdown(w)}` : dockBtnHTML('fa-magnifying-glass', L.btns[0]);
         // у жилья «Сдаю» — обычное объявление, у него своего таймера нет

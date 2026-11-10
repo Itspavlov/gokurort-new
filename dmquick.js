@@ -145,7 +145,7 @@
         const body = `<div class="chat-bubble dm-photo-bubble ${mine ? 'chat-bubble-mine' : ''}"><img class="dm-photo" loading="lazy" alt="Фото" data-src="${e(mediaUrl(m.photo.id))}" src="${e(mediaUrl(m.photo.id))}">${m.text ? `<div class="dm-cap-t">${e(m.text)}</div>` : ''}</div>`;
         if (mine) return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap">${body}<div class="chat-time-mine">${time}</div></div></div>`;
         const nm = (m.from && m.from.name) || '?';
-        return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${e(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${e(nm)}</span><span class="chat-time">${time}</span></div>${body}</div></div>`;
+        return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" data-avn="${avEsc(nm)}" style="background:${dmColor(nm)}">${avInner(nm)}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${e(nm)}</span><span class="chat-time">${time}</span></div>${body}</div></div>`;
     };
 
     // просмотр фото на весь экран

@@ -46,7 +46,7 @@ function mediaMessageHTML(m, extraBelow) {
     const below = extraBelow || '';
     if (mine) return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap">${body}${below}<div class="chat-time-mine">${time}</div></div></div>`;
     const nm = (m.from && m.from.name) || '?';
-    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${escapeHtml(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div>${body}${below}</div></div>`;
+    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" data-avn="${avEsc(nm)}" style="background:${dmColor(nm)}">${avInner(nm)}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div>${body}${below}</div></div>`;
 }
 
 const _renderDmMessage = renderDmMessage;

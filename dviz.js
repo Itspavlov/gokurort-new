@@ -102,9 +102,11 @@ function openDvizScreen() {
             </div>
         </div>
         <div class="dv-feed" id="dvFeed"><div class="dv-empty"><i class="fas fa-spinner fa-spin"></i><b>Загружаю…</b></div></div>
-        <div class="cards-dock"><div class="dock-actions"><button type="button" class="dock-btn main" id="dvCreate"><i class="fas fa-plus"></i> Создать движ</button></div></div>`;
+        <div class="cards-dock dv-dock"><p class="dv-dock-hint"><i class="fas fa-globe"></i> Чат онлайн: телепортируйся на другие курорты и общайся со всеми</p>
+            <div class="dock-actions"><button type="button" class="dock-btn seek" id="dvOnline"><i class="fas fa-globe"></i> Чат онлайн</button><button type="button" class="dock-btn main" id="dvCreate"><i class="fas fa-plus"></i> Создать движ</button></div></div>`;
     screen.style.display = 'flex';
     screen.querySelector('#dvCreate').onclick = () => openDvizForm();
+    screen.querySelector('#dvOnline').onclick = () => openGroup('online');
     screen.querySelector('#dvFeed').addEventListener('click', onFeedClick);
     loadDviz();
 }
@@ -132,36 +134,25 @@ function dvArt(title) {
 function dvCardHTML(e, i) {
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = !!(acc && acc.id === e.ownerId);
-    const art = dvArt(e.title);
-    let h = 0; for (const ch of String(e.id)) h = (h * 31 + ch.charCodeAt(0)) % 3;
     const people = dvPeople(e);
     const cn = e.comments || 0;
-    // облачка идут в шахматном порядке: слева, справа, слева…; носик смотрит на аватарку автора под облачком
-    return `<article class="dv-card ${(i || 0) % 2 ? 'R' : 'L'} dv-c${h}" data-id="${dvEsc(e.id)}">
-        <div class="dv-bubble">
-            <div class="dv-bin">
-                <div class="dv-pic">${e.thumb ? `<img src="${dvEsc(e.thumb)}" alt="" loading="lazy">` : `<i class="fas ${art.icon} dv-wm"></i>`}</div>
-                <div class="dv-txt">
-                    <span class="dv-ic"><i class="fas fa-user-group"></i></span>
-                    <h3 class="dv-title">${dvEsc(e.title)}</h3>
-                    <div class="dv-meta">
-                        ${e.when ? `<span><i class="far fa-calendar"></i>${dvEsc(dvWhen(e.when))}</span>` : ''}
-                        ${e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : ''}
-                        ${e.coords && !e.place ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : ''}
-                    </div>
-                    <div class="dv-act">
-                        <span class="dv-ppl"><i class="fas fa-user-group"></i> ${people ? dvEsc(people) : 'пока никого'}</span>
-                        ${mine ? '<span class="dv-ownl">Ваш движ</span>' : `<button type="button" class="dv-join ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Я с вами'}</button>`}
-                    </div>
-                </div>
-            </div>
-            <i class="dv-tail"></i>
-        </div>
-        <div class="dv-under">
-            <span class="dv-ava chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</span>
-            <span class="dv-who2"><b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(e.created)}</small></span>
-            <button type="button" class="dv-cm" data-dv="comments"><i class="far fa-comment"></i> ${cn ? cn + ' ' + plural(cn, 'комментарий', 'комментария', 'комментариев') : 'Обсудить'}</button>
-        </div></article>`;
+    const lines = [
+        e.when ? `<span><i class="far fa-calendar"></i>${dvEsc(dvWhen(e.when))}</span>` : '',
+        e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : (e.coords ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : ''),
+        `<span><i class="fas fa-user-group"></i>${people ? dvEsc(people) : 'пока никого'}</span>`
+    ].join('');
+    // карточка того же вида, что у запросов на жильё: аватарка, имя, заголовок, строки, текст и кнопки
+    const join = mine ? '<span class="dv2-own"><i class="fas fa-crown"></i> Ваш движ</span>'
+        : `<button type="button" class="main dv2-join ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Я с вами'}</button>`;
+    return `<div class="req-card rq2 dv2 card-offer${mine ? ' mine' : ''}" data-id="${dvEsc(e.id)}">
+        ${e.thumb ? `<div class="dv2-pic"><img src="${dvEsc(e.thumb)}" alt="" loading="lazy"></div>` : ''}
+        <div class="rq-top"><div class="rq-ava" data-avn="${avEsc(e.ownerName)}" style="background:${dmColor(e.ownerName)}">${avInner(e.ownerName)}</div>
+            <div class="rq-who"><b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(e.created)}</small></div>
+            <em class="req-kind offer">Движ</em></div>
+        <div class="rq-title">${dvEsc(e.title)}</div>
+        <div class="req-lines">${lines}</div>
+        ${e.text ? `<p class="req-text">${dvEsc(e.text)}</p>` : ''}
+        <div class="req-actions">${join}<button type="button" data-dv="comments"><i class="far fa-comment"></i> ${cn ? cn + ' ' + plural(cn, 'комментарий', 'комментария', 'комментариев') : 'Обсудить'}</button></div></div>`;
 }
 
 function dvAttachHTML(a) {
@@ -178,7 +169,7 @@ function paintDviz() {
 }
 
 function onFeedClick(ev) {
-    const card = ev.target.closest('.dv-card');
+    const card = ev.target.closest('.dv-card, .dv2');
     if (!card) return;
     const id = card.dataset.id;
     const act = ev.target.closest('[data-dv]');
@@ -209,7 +200,7 @@ function dvCommentsHTML(e) {
     const list = e.commentList || [];
     return list.length ? list.map(c => {
         const can = acc && (acc.id === c.userId || acc.id === e.ownerId);
-        return `<div class="dv-comment" data-cid="${dvEsc(c.id)}"><div class="chat-avatar" style="background:${dmColor(c.name)}">${dvEsc(Array.from(c.name)[0] || '?')}</div>
+        return `<div class="dv-comment" data-cid="${dvEsc(c.id)}"><div class="chat-avatar" data-avn="${avEsc(c.name)}" style="background:${dmColor(c.name)}">${avInner(c.name)}</div>
             <div class="dv-cbody"><div class="dv-chead"><b>${dvEsc(c.name)}${c.userId === e.ownerId ? ' <em>автор</em>' : ''}</b><small>${fmtAgo(c.time)}</small>${can ? `<button type="button" data-cdel="${dvEsc(c.id)}" aria-label="Удалить комментарий"><i class="fas fa-trash"></i></button>` : ''}</div>
             <p>${dvEsc(c.text)}</p></div></div>`;
     }).join('') : '<div class="dv-nocomm"><i class="far fa-comment"></i><b>Комментариев пока нет</b><span>Спросите, что взять с собой и где встречаться.</span></div>';
@@ -235,7 +226,7 @@ function openDvizComments(id) {
         <div class="dv-comments dv-clist" id="dvCList"><div class="dv-nocomm"><i class="fas fa-spinner fa-spin"></i></div></div>
         <div class="dv-emoji" id="dvEmoji">${DV_EMOJI.map(m => `<button type="button" tabindex="-1">${m}</button>`).join('')}</div>
         <form class="dv-write" id="dvWrite">
-            <span class="chat-avatar" style="background:${acc ? dmColor(acc.name) : 'rgba(128,128,128,.4)'}">${acc ? dvEsc(Array.from(acc.name)[0] || '?') : '<i class="fas fa-user"></i>'}</span>
+            <span class="chat-avatar"${acc ? ` data-avn="${avEsc(acc.name)}"` : ''} style="background:${acc ? dmColor(acc.name) : 'rgba(128,128,128,.4)'}">${acc ? avInner(acc.name) : '<i class="fas fa-user"></i>'}</span>
             <input id="dvText" maxlength="400" placeholder="Добавьте комментарий…" autocomplete="off" enterkeyhint="send">
             <button type="submit" aria-label="Отправить" disabled><i class="fas fa-paper-plane"></i></button>
         </form></div>`;
@@ -318,7 +309,7 @@ function openDvizView(id) {
             ${e.coords ? `<div class="form-h" style="margin:12px 2px 8px">Точка сбора</div>
                 <div class="dv-map" id="dvViewMap" data-noswipe></div>${dvRouteHTML(e.coords)}` : ''}
             ${e.attached ? dvAttachHTML(e.attached) : ''}
-            <button type="button" class="sv-owner" data-dv-owner><span class="chat-avatar" style="background:${dmColor(e.ownerName)}">${dvEsc(Array.from(e.ownerName)[0] || '?')}</span>
+            <button type="button" class="sv-owner" data-dv-owner><span class="chat-avatar" data-avn="${avEsc(e.ownerName)}" style="background:${dmColor(e.ownerName)}">${avInner(e.ownerName)}</span>
                 <span><b>${dvEsc(mine ? 'Вы' : e.ownerName)}</b><small>Организатор · открыть профиль</small></span><i class="fas fa-chevron-right"></i></button>
             <div class="dv-going" id="dvGoing"></div>
             <div class="dv-actions" id="dvActions"></div>
@@ -326,7 +317,7 @@ function openDvizView(id) {
             const paintTop = (ev) => {
                 const g = el.querySelector('#dvGoing');
                 const jl = ev.joinList || [];
-                g.innerHTML = jl.length ? `<div class="dv-going-h">Идут (${jl.length}${ev.max ? ' из ' + ev.max : ''})</div><div class="dv-chips">${jl.map(j => `<span class="dv-chip"><i style="background:${dmColor(j.name)}">${dvEsc(Array.from(j.name)[0] || '?')}</i>${dvEsc(j.name)}</span>`).join('')}</div>` : '';
+                g.innerHTML = jl.length ? `<div class="dv-going-h">Идут (${jl.length}${ev.max ? ' из ' + ev.max : ''})</div><div class="dv-chips">${jl.map(j => `<span class="dv-chip"><i data-avn="${avEsc(j.name)}" style="background:${dmColor(j.name)}">${avInner(j.name)}</i>${dvEsc(j.name)}</span>`).join('')}</div>` : '';
                 el.querySelector('#dvActions').innerHTML = mine
                     ? '<button type="button" class="ghost-btn wide-btn dv-del" data-dv-del><i class="fas fa-trash"></i> Удалить движ</button>'
                     : `<button type="button" class="primary-btn wide-btn" data-dv-join>${ev.joined ? '<i class="fas fa-check"></i> Вы идёте — отменить' : '<i class="fas fa-hand"></i> Я с вами'}</button>`;

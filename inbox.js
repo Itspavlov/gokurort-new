@@ -26,7 +26,8 @@ function setUnread(n) { inboxUnread = Math.max(0, Number(n) || 0); paintBell(); 
 // «Сообщения» — личные, групповые, ответы и приглашения; «Мои публикации» — то, что происходит с вашими объявлениями и карточками
 let inboxItems = [];
 const NAV_MSG_KINDS = ['dm', 'group', 'reply', 'invite'];
-const NAV_PUB_KINDS = ['offer', 'match', 'request', 'review', 'listing'];
+const NAV_PUB_KINDS = ['offer', 'match', 'request', 'review', 'listing', 'dviz'];
+const NAV_CACHE = 'yy-navcache';
 const navCount = (kinds) => inboxItems.reduce((n, it) => n + (!it.read && kinds.includes(it.kind) ? (it.count || 1) : 0), 0);
 function paintNavBadges() {
     const set = (tab, n) => {
@@ -37,8 +38,23 @@ function paintNavBadges() {
         const it = b.closest('.nav-item');
         if (it) it.classList.toggle('has-badge', n > 0);
     };
-    set('messages', navCount(NAV_MSG_KINDS));
-    set('mypubs', navCount(NAV_PUB_KINDS));
+    const m = navCount(NAV_MSG_KINDS), p = navCount(NAV_PUB_KINDS);
+    set('messages', m);
+    set('mypubs', p);
+    try { localStorage.setItem(NAV_CACHE, JSON.stringify({ m, p })); } catch (_) {}
+}
+// при запуске показываем то, что было в прошлый раз, не дожидаясь сервера (на телефоне ответ приходит с задержкой)
+function paintNavFromCache() {
+    if (!getToken()) return;
+    try {
+        const c = JSON.parse(localStorage.getItem(NAV_CACHE) || 'null');
+        if (!c) return;
+        [['messages', c.m], ['mypubs', c.p]].forEach(([tab, n]) => {
+            const b = document.querySelector('.nav-item[data-tab="' + tab + '"] .nav-badge');
+            if (!b || !(n > 0)) return;
+            b.hidden = false; b.textContent = n > 99 ? '99+' : String(n);
+        });
+    } catch (_) {}
 }
 function setInboxItems(items) { inboxItems = Array.isArray(items) ? items : []; paintNavBadges(); }
 // отметка «прочитано» сразу и у нас: не ждём ответа сервера
@@ -48,8 +64,10 @@ function localMarkRead(sel) {
 }
 // вход во вкладку «Мои публикации» — вы увидели, что нового: цифра гаснет
 function markPubsSeen() {
-    const ids = inboxItems.filter(it => !it.read && NAV_PUB_KINDS.includes(it.kind)).map(it => it.id);
-    if (ids.length) markInboxRead({ ids: ids.slice(0, 60) });
+    Promise.resolve(refreshUnread()).then(() => {
+        const ids = inboxItems.filter(it => !it.read && NAV_PUB_KINDS.includes(it.kind)).map(it => it.id);
+        if (ids.length) markInboxRead({ ids: ids.slice(0, 60) });
+    });
 }
 
 function refreshUnread() {
@@ -139,7 +157,8 @@ const _oGr = openGroup; openGroup = function (id) { const r = _oGr.apply(this, a
 document.addEventListener('DOMContentLoaded', () => {
     const b = document.getElementById('bellBtn');
     if (b) b.addEventListener('click', openInbox);
-    paintNavBadges();
+    paintNavFromCache();
+    refreshUnread();
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUnread(); });
 setTimeout(refreshUnread, 1200);

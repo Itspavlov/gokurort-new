@@ -47,7 +47,7 @@ function serviceFeedHTML(s) {
         : `<button type="button" class="main" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i></button>`;
     return `<div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
         <div class="sv-t-bg">${s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : `<i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>`}</div>
-        <div class="sv-t-top"><span class="chat-avatar" style="background:${dmColor(s.ownerName)}">${e(Array.from(s.ownerName)[0] || '?')}</span>
+        <div class="sv-t-top"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
             <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></span>
             ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i>${s.photoCount}</em>` : ''}</div>
         <div class="sv-t-bottom">
@@ -86,7 +86,7 @@ function openServiceView(id) {
             <div class="sv-view-price">${e(svPrice(s))}</div>
             <div class="sv-view-meta"><span class="sv-tag">${e(SV_TAGS[s.tag] || '')}</span>${s.city ? `<span><i class="fas fa-location-dot"></i>${e(s.city)}</span>` : ''}</div>
             ${s.text ? `<p class="sv-view-text">${e(s.text)}</p>` : ''}
-            <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" style="background:${dmColor(s.ownerName)}">${e(Array.from(s.ownerName)[0] || '?')}</span>
+            <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
                 <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
             ${mine ? `<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button><button class="primary-btn" data-sv="bump" data-id="${e(s.id)}"><i class="fas fa-arrow-up"></i> Поднять</button></div>`
                 : `<button class="primary-btn wide-btn" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i> Написать</button>`}

@@ -523,7 +523,7 @@ function renderMessageHTML(message, userName) {
 
         return `
             <div class="chat-message"${idAttr}${tsAttr}>
-                <div class="chat-avatar" style="background: ${color};">${escapeHtml(Array.from(String(message.user || '?'))[0] || '?')}</div>
+                <div class="chat-avatar" data-avn="${avEsc(message.user || '?')}" style="background: ${color};">${avInner(message.user || '?')}</div>
                 <div class="chat-bubble-wrap">
                     <div class="chat-bubble-header">
                         <span class="chat-user-name">${escapeHtml(message.user)}</span>
@@ -559,15 +559,19 @@ function openGroup(groupId, opts) {
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
         services: { name: 'Развлечения', icon: 'fas fa-ship', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] },
-        dating: { name: 'Курортный движ', icon: 'fas fa-champagne-glasses', ads: [] }
+        dating: { name: 'Курортный движ', icon: 'fas fa-champagne-glasses', ads: [] },
+        online: { name: 'Чат онлайн', icon: 'fas fa-globe', ads: [] }
     };
 
     const room = rooms[groupId];
     if (!room) return;
 
     openChatRoom(groupId, room.name, room.icon, room.ads, Object.assign({
-        noAttach: !!room.noAttach, hint: !!room.hint, cards: groupId !== 'dating',
-        welcomeText: groupId === 'dating'
+        noAttach: !!room.noAttach, hint: !!room.hint, cards: groupId !== 'dating' && groupId !== 'online',
+        welcomeTitle: groupId === 'online' ? 'Чат онлайн' : undefined,
+        welcomeText: groupId === 'online'
+            ? 'Общий чат всех курортов: телепортируйтесь к людям из других мест и общайтесь со всеми. Не публикуйте телефон и адрес, а о подозрительных людях сообщайте через жалобу.'
+            : groupId === 'dating'
             ? 'Раздел для тех, кому 18+. Здесь можно знакомиться и общаться. Не публикуйте телефон и адрес, а о подозрительных людях сообщайте через жалобу на сообщение.'
             : 'Переписки в разделе нет: нажмите кнопку «Ищу» или «Предлагаю» внизу и добавьте карточку. Договариваться можно в личных сообщениях.'
     }, opts || {}));

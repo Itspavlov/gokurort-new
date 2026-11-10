@@ -232,7 +232,7 @@ function renderDmMessage(m) {
         return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap"><div class="chat-bubble chat-bubble-mine"><div>${escapeHtml(m.text)}</div></div><div class="chat-time-mine">${time}</div></div></div>`;
     }
     const nm = (m.from && m.from.name) || '?';
-    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${escapeHtml(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble"><div>${escapeHtml(m.text)}</div></div></div></div>`;
+    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" data-avn="${avEsc(nm)}" style="background:${dmColor(nm)}">${avInner(nm)}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble"><div>${escapeHtml(m.text)}</div></div></div></div>`;
 }
 
 function openDmChat(conv, prefill, messages) {
@@ -379,7 +379,7 @@ function renderGroupMessage(m) {
     if (mine) {
         return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap"><div class="chat-bubble chat-bubble-mine">${reply}${ad}${rq}${text}</div>${chips}<div class="chat-time-mine">${time}</div></div></div>`;
     }
-    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${escapeHtml(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble">${reply}${ad}${rq}${text}</div>${chips}</div></div>`;
+    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" data-avn="${avEsc(nm)}" style="background:${dmColor(nm)}">${avInner(nm)}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble">${reply}${ad}${rq}${text}</div>${chips}</div></div>`;
 }
 
 function openGroupChat(group, messages) {
@@ -520,7 +520,7 @@ function inviteLink(code) {
 
 function openInviteSheet(group, afterDone) {
     const e = escapeHtml;
-    const membersHTML = (list) => list.map(m => `<div class="member-row"><div class="chat-avatar" style="background:${dmColor(m.name)}">${e(Array.from(m.name)[0] || '?')}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
+    const membersHTML = (list) => list.map(m => `<div class="member-row"><div class="chat-avatar" data-avn="${avEsc(m.name)}" style="background:${dmColor(m.name)}">${avInner(m.name)}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
     openSheet('Пригласить в «' + e(group.name) + '»', `
         <div class="members" id="invMembers">${membersHTML(group.members)}</div>
         <label class="field"><span>Имя друга в YuGi YuGi</span><input id="invName" maxlength="24" placeholder="Как он зарегистрирован"></label>
@@ -562,7 +562,7 @@ function openInviteSheet(group, afterDone) {
 function openGroupMenu() {
     if (!currentGroup) return;
     const g = currentGroup, e = escapeHtml;
-    const rows = g.members.map(m => `<div class="member-row"><div class="chat-avatar" style="background:${dmColor(m.name)}">${e(Array.from(m.name)[0] || '?')}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
+    const rows = g.members.map(m => `<div class="member-row"><div class="chat-avatar" data-avn="${avEsc(m.name)}" style="background:${dmColor(m.name)}">${avInner(m.name)}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
     openSheet(e(g.name), `
         <div class="members">${rows}</div>
         <button class="primary-btn wide-btn" id="gmInvite"><i class="fas fa-user-plus"></i> Пригласить</button>
@@ -690,7 +690,7 @@ function renderDialogs() {
                     <div class="swipe-row" data-conv="${escapeHtml(c.id)}">
                     <button type="button" class="swipe-del" data-del="${escapeHtml(c.id)}"><i class="fas fa-trash"></i> Удалить</button>
                     <div class="dialog-row swipe-fg" onclick="openDmById('${escapeHtml(c.id)}')">
-                        <div class="chat-avatar dialog-avatar" style="background:${dmColor(c.with)}">${escapeHtml(Array.from(c.with || '?')[0] || '?')}</div>
+                        <div class="chat-avatar dialog-avatar" data-avn="${avEsc(c.with || '?')}" style="background:${dmColor(c.with)}">${avInner(c.with || '?')}</div>
                         <div class="dialog-info">
                             <div class="dialog-name">${escapeHtml(c.with)}</div>
                             <div class="dialog-ad ${c.unread ? 'unread' : ''}">${escapeHtml(c.last ? (c.last.mine ? 'Вы: ' : '') + c.last.text : (c.adTitle || ''))}</div>
