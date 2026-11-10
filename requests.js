@@ -75,6 +75,31 @@ function loadRequests(cb) {
     }).catch(() => {});
 }
 
+
+// ---------- аватар и «в сети» владельца карточки ----------
+function seenText(ts) {
+    const min = Math.floor((Date.now() - ts) / 60000);
+    if (min < 1) return 'был в сети только что';
+    if (min < 60) return 'был в сети ' + min + ' мин назад';
+    const h = Math.floor(min / 60);
+    if (h < 24) return 'был в сети ' + h + ' ' + plural(h, 'час', 'часа', 'часов') + ' назад';
+    const d = Math.floor(h / 24);
+    if (d < 30) return 'был в сети ' + d + ' ' + plural(d, 'день', 'дня', 'дней') + ' назад';
+    return 'был в сети давно';
+}
+function reqPresenceHTML(r) {
+    const live = r.mine || r.ownerOnline || (r.ownerSeen && Date.now() - r.ownerSeen < 120000);
+    if (live) return '<div class="rq-pres on"><i></i>онлайн</div>';
+    if (r.ownerSeen) return `<div class="rq-pres"><i></i>${seenText(r.ownerSeen)}</div>`;
+    return '';
+}
+function reqAvatarHTML(r) {
+    const e = escapeHtml;
+    let src = r.mine ? ((typeof getProfile === 'function' && getProfile().avatar) || '') : avatarUrl(r.ownerAvatar);
+    if (src && !/^(avatars\/|data:image\/)/.test(src)) src = '';
+    return `<div class="rq-ava" style="background:${dmColor(r.ownerName)}">${src ? `<img src="${e(src)}" alt="">` : e(Array.from(r.ownerName)[0] || '?')}</div>`;
+}
+
 // ---------- карточки ----------
 function cardHTML(r) {
     const e = escapeHtml, sec = SEC[r.section];
@@ -89,9 +114,10 @@ function cardHTML(r) {
     const actions = r.status !== 'active' ? '' : (r.mine
         ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>`
         : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>`);
-    return `<div class="req-card card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
-        <div class="req-head"><div class="chat-avatar" style="background:${dmColor(r.ownerName)}">${e(Array.from(r.ownerName)[0] || '?')}</div>
-            <div class="req-title"><b>${e(r.title || '')}</b><small>${e(r.mine ? 'Вы' : r.ownerName)} · ${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+    return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+        <div class="rq-title">${e(r.title || '')}</div>
+        ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
         ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
         ${actions ? `<div class="req-actions">${actions}</div>` : ''}</div>`;
@@ -114,9 +140,10 @@ function reqCardHTML(r, opts = {}) {
     const actions = r.mine
         ? (r.status === 'active' ? found + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` : '');
-    return `<div class="req-card${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
-        <div class="req-head"><div class="chat-avatar" style="background:${dmColor(r.ownerName)}">${e(Array.from(r.ownerName)[0] || '?')}</div>
-            <div class="req-title"><b>${e(r.mine ? 'Вы ищете' : r.ownerName + ' ищет')} ${noun}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+    return `<div class="req-card rq2${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+        <div class="rq-title">${r.mine ? 'Ваш запрос' : 'Запрос'} на ${noun}</div>
+        ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
         ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
         ${actions ? `<div class="req-actions">${actions}</div>` : ''}</div>`;

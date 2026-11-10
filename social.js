@@ -1285,6 +1285,7 @@ async function publishAd(ad, remoteId, done) {
             const thumb = photos[0] ? await fitThumb(photos[0]) : '';
             const prof = getProfile();
             let avatar = prof.avatar || '';
+            if (avatar.startsWith('avatars/')) avatar = await avatarToDataURL(avatar);
             if (avatar && avatar.length * 0.75 > 110000) avatar = await fitPhoto(avatar, 110000) || '';
 
             const body = { id: remoteId || undefined, ad: { ...ad, photos, thumb }, profile: { phone: prof.phone || '', about: prof.about || '', avatar } };

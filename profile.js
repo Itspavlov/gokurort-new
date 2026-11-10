@@ -158,8 +158,9 @@ function openProfileEditor() {
     const p = getProfile();
     const accNow = typeof getAccount === 'function' ? getAccount() : null;
     if (accNow) p.name = accNow.name;      // у аккаунта имя одно: его видят в чатах, отзывах и объявлениях
-    let avatar = p.avatar || '';
+    let avatar = p.avatar || '', avatarId = p.avatarId || '';
     const e = escapeHtml;
+    const avGrid = Array.from({ length: AVATAR_COUNT }, (_, i) => { const id = avatarIdOf(i + 1); return `<button type="button" class="av-opt${avatarId === id ? ' on' : ''}" data-av="${id}" aria-label="Аватарка ${i + 1}"><img src="${avatarUrl(id)}" alt="" loading="lazy"></button>`; }).join('');
 
     openSheet('Мой профиль', `
         <div class="avatar-edit">
@@ -170,6 +171,7 @@ function openProfileEditor() {
             </div>
             <input type="file" id="pfFile" accept="image/*" hidden>
         </div>
+        <div class="av-pick"><div class="av-pick-h">Выберите аватарку</div><div class="av-grid" id="pfAvGrid" data-noswipe>${avGrid}</div></div>
         <label class="field"><span>Имя</span><input id="pfName" maxlength="${accNow ? 24 : 30}" value="${e(p.name || '')}" placeholder="Как к вам обращаться">${accNow ? '<small class="field-hint">Имя видят все: в чатах, отзывах и объявлениях. Менять можно раз в сутки.</small>' : ''}</label>
         <label class="field"><span>Телефон</span><input id="pfPhone" type="tel" maxlength="20" value="${e(p.phone || '')}" placeholder="+7 900 000-00-00"></label>
         <label class="field"><span>Город</span><input id="pfCity" maxlength="40" value="${e(p.city || '')}" placeholder="Где живёте"></label>
@@ -179,11 +181,18 @@ function openProfileEditor() {
         const file = root.querySelector('#pfFile');
         const box = root.querySelector('#pfAvatar');
         root.querySelector('#pfPick').onclick = () => file.click();
-        root.querySelector('#pfDrop').onclick = () => { avatar = ''; box.innerHTML = '<i class="fas fa-user"></i>'; };
+        const grid = root.querySelector('#pfAvGrid');
+        const markAv = () => grid.querySelectorAll('.av-opt').forEach(b => b.classList.toggle('on', b.dataset.av === avatarId));
+        grid.addEventListener('click', (ev) => {
+            const b = ev.target.closest('.av-opt'); if (!b) return;
+            avatarId = b.dataset.av; avatar = avatarUrl(avatarId);
+            box.innerHTML = `<img src="${avatar}" alt="">`; markAv();
+        });
+        root.querySelector('#pfDrop').onclick = () => { avatar = ''; avatarId = ''; box.innerHTML = '<i class="fas fa-user"></i>'; markAv(); };
         file.onchange = async () => {
             if (!file.files[0]) return;
             try {
-                avatar = await fileToDataURL(file.files[0], 320, 0.8);
+                avatar = await fileToDataURL(file.files[0], 320, 0.8); avatarId = ''; markAv();
                 box.innerHTML = `<img src="${avatar}" alt="">`;
             } catch (err) { showToast('Не удалось открыть фото'); }
         };
@@ -210,8 +219,10 @@ function openProfileEditor() {
                 phone: root.querySelector('#pfPhone').value.trim(),
                 city: root.querySelector('#pfCity').value.trim(),
                 about: root.querySelector('#pfAbout').value.trim(),
-                avatar
+                avatar, avatarId
             });
+            // готовую аватарку запоминаем на сервере: её видят другие в карточках запросов
+            if (getToken()) fetch(`${SERVER_URL}/api/auth/avatar`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() }, body: JSON.stringify({ avatar: avatarId }) }).catch(() => {});
             closeSheet();
             renderProfile();
             showToast('Профиль сохранён');

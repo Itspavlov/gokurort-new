@@ -109,6 +109,27 @@ const messagesCache = {
 const MAP_DEFAULT = [44.8946, 37.3100];
 const BEACH_DEFAULT = [44.8928, 37.2990];
 
+// Готовые аватарки: файлы avatars/av01.webp … av35.webp, на сервере хранится только id (av07)
+const AVATAR_COUNT = 35;
+const avatarIdOf = (n) => 'av' + String(n).padStart(2, '0');
+const avatarUrl = (id) => /^av(0[1-9]|[12]\d|3[0-5])$/.test(id || '') ? 'avatars/' + id + '.webp' : '';
+// В объявления аватарка уходит картинкой: готовую превращаем в маленькое изображение
+function avatarToDataURL(src) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onerror = () => resolve('');
+        img.onload = () => {
+            try {
+                const c = document.createElement('canvas'); c.width = c.height = 160;
+                c.getContext('2d').drawImage(img, 0, 0, 160, 160);
+                const o = c.toDataURL('image/webp', 0.8);
+                resolve(o.startsWith('data:image/webp') ? o : c.toDataURL('image/png'));
+            } catch (e) { resolve(''); }
+        };
+        img.src = src;
+    });
+}
+
 function getProfile() {
     try {
         const p = JSON.parse(localStorage.getItem('tell-profile') || 'null');
