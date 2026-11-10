@@ -1125,3 +1125,12 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 /* подложка плиток под фото в тон теме (видна только если картинка не успела загрузиться) */
 :root[data-theme="sand"] :is(.gc-housing, .gc-work, .gc-trips, .gc-services) { background: linear-gradient(150deg, #F6B45A 0%, #E8801E 60%, #A8501A 100%); }
 :root[data-theme="dusk"] :is(.gc-housing, .gc-work, .gc-trips, .gc-services) { background: linear-gradient(150deg, #5A2A48 0%, #3A2040 60%, #1E1426 100%); }
+
+/* ===== v48: карта — кнопки закрытия и фильтров непрозрачные; вкладки сверху — переключатель, а не главная кнопка ===== */
+.admap-top .chat-back-btn, .admap-top .chat-header-btn { background: var(--bg); border: 1px solid var(--glass-border); box-shadow: 0 4px 14px rgba(0, 0, 0, .22); -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--text); }
+.admap-top .admap-title { background: var(--bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .18); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.seek-bar .seek-tab { transition: transform .18s ease, color .18s ease; }
+.seek-bar .seek-tab.on { background: var(--glass-strong, rgba(255,255,255,.14)); color: var(--text); border-color: var(--glass-border); transform: scale(1.07); }
+.seek-bar .seek-tab.on span { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.seek-bar .seek-tab:not(.on) { font-weight: 600; }
+.seek-bar .seek-tab.on b { opacity: .9; }
