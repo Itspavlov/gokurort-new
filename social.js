@@ -345,6 +345,21 @@ function refreshGroupsCache(cb) {
     }), () => { if (cb) cb([]); });
 }
 
+function groupReqHTML(q) {
+    const e = escapeHtml;
+    const noun = (typeof REQ_NOUN !== 'undefined' && REQ_NOUN[q.category]) || 'жильё';
+    const lines = [
+        q.dateFrom ? `<span><i class="fas fa-calendar"></i>${fmtShortDate(q.dateFrom)}${q.dateTo ? '–' + fmtShortDate(q.dateTo) : ''}</span>` : '',
+        q.guests ? `<span><i class="fas fa-user-group"></i>${q.guests} ${plural(q.guests, 'гость', 'гостя', 'гостей')}</span>` : '',
+        q.budget ? `<span><i class="fas fa-ruble-sign"></i>до ${Number(q.budget).toLocaleString('ru-RU')} ₽/сутки</span>` : ''
+    ].join('');
+    const offerBtn = (q.section || 'housing') === 'housing' ? '<button type="button" class="main" data-greq="offer"><i class="fas fa-paper-plane"></i> Предложить жильё</button>' : '';
+    return `<div class="group-req"><div class="gr-h"><i class="fas fa-magnifying-glass"></i> ${(q.section || 'housing') === 'housing' ? 'Запрос на ' + e(noun) : e(q.title || 'Запрос')}</div>
+        <div class="gr-who">${e(q.ownerName || '')}${q.city ? ' · ' + e(q.city) : ''}</div>
+        ${lines ? `<div class="gr-lines">${lines}</div>` : ''}
+        ${q.text ? `<p class="gr-text">${e(q.text)}</p>` : ''}${offerBtn}</div>`;
+}
+
 function renderGroupMessage(m) {
     const me = getAccount();
     const mine = me && m.from && m.from.id === me.id;
@@ -357,13 +372,14 @@ function renderGroupMessage(m) {
             ${m.ad.location ? `<div class="group-ad-loc"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(m.ad.location)}</div>` : ''}
             <div class="group-ad-open">Открыть объявление <i class="fas fa-chevron-right"></i></div>
         </div>` : '';
+    const rq = m.req ? groupReqHTML(m.req) : '';
     const text = m.text ? `<div>${escapeHtml(m.text)}</div>` : '';
     const chips = `<div class="chat-reactions" data-for="${id}">${renderReactionChips(m)}</div>`;
     const time = formatTime(m.time);
     if (mine) {
-        return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap"><div class="chat-bubble chat-bubble-mine">${reply}${ad}${text}</div>${chips}<div class="chat-time-mine">${time}</div></div></div>`;
+        return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap"><div class="chat-bubble chat-bubble-mine">${reply}${ad}${rq}${text}</div>${chips}<div class="chat-time-mine">${time}</div></div></div>`;
     }
-    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${escapeHtml(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble">${reply}${ad}${text}</div>${chips}</div></div>`;
+    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" style="background:${dmColor(nm)};">${escapeHtml(Array.from(nm)[0] || '?')}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble">${reply}${ad}${rq}${text}</div>${chips}</div></div>`;
 }
 
 function openGroupChat(group, messages) {
@@ -602,6 +618,28 @@ function addAdToGroup(adId) {
                 }));
             });
         }
+    }));
+}
+
+// ---------- «В группу» на карточке запроса ----------
+// В группу уходит только id запроса, остальное сервер берёт из самого запроса. Знакомые видят карточку и жмут «Предложить жильё».
+function addReqToGroup(rid) {
+    loginRequired(() => refreshGroupsCache((list) => {
+        const send = (g) => socketAsk('group-send', { groupId: g.id, clientId: newClientId(), req: { id: rid } }, (res) => {
+            if (!res.ok) { showToast(res.message || 'Не удалось отправить'); return; }
+            closeSheet();
+            showToast('Запрос отправлен в группу «' + g.name + '»');
+        });
+        const rows = list.map(g => `<button class="group-pick" data-id="${escapeHtml(g.id)}"><i class="fas fa-users"></i><span>${escapeHtml(g.name)}</span><em>${g.members} ${memberWord(g.members)}</em></button>`).join('');
+        openSheet('Отправить запрос в группу', `
+            <p class="auth-note" style="margin:0 4px 12px">${list.length ? 'Выберите группу: участники увидят запрос и смогут предложить своё жильё.' : 'Создайте группу и добавьте знакомых с жильём: они увидят запрос и смогут предложить свой вариант.'}</p>
+            ${rows}<button class="group-pick new" id="reqGrpNew"><i class="fas fa-user-plus"></i><span>Новая группа</span></button>`, (el) => {
+            el.querySelectorAll('.group-pick[data-id]').forEach(b => b.addEventListener('click', () => { const g = list.find(x => x.id === b.dataset.id); if (g) send(g); }));
+            el.querySelector('#reqGrpNew').addEventListener('click', () => {
+                closeSheet();
+                openCreateGroupSheet((group) => { send({ id: group.id, name: group.name }); openGroupById(group.id); });
+            });
+        });
     }));
 }
 
@@ -897,7 +935,7 @@ function resolveTarget(msgEl) {
     if (currentGroup) {
         const m = currentGroup.messages.find(x => x.id === id);
         if (!m) return null;
-        return { kind: 'group', id, text: m.text, reply: { id, user: (m.from && m.from.name) || '', text: m.text ? m.text.slice(0, 100) : (m.ad ? '🏠 ' + m.ad.title : '') } };
+        return { kind: 'group', id, text: m.text, reply: { id, user: (m.from && m.from.name) || '', text: m.text ? m.text.slice(0, 100) : (m.req ? '🔎 Запрос: ' + (m.req.city || 'жильё') : m.ad ? '🏠 ' + m.ad.title : '') } };
     }
     const m = ((currentRoom && messagesCache[currentRoom]) || []).find(x => x.id === id);
     if (!m) return null;
@@ -1096,6 +1134,14 @@ function attachChatGestures() {
             ev.stopPropagation(); ev.preventDefault();
             const target = box.querySelector(`.chat-message[data-id="${CSS.escape(q.dataset.reply)}"]`);
             if (target) { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); target.classList.add('flash'); setTimeout(() => target.classList.remove('flash'), 1200); }
+            return;
+        }
+        const gr = ev.target.closest('.group-req [data-greq]');
+        if (gr) {
+            ev.stopPropagation(); ev.preventDefault();
+            const mid = gr.closest('.chat-message') && gr.closest('.chat-message').dataset.id;
+            const gm = currentGroup && currentGroup.messages.find(x => x.id === mid);
+            if (gm && gm.req) openOfferSheet({ ...gm.req });
             return;
         }
         const ga = ev.target.closest('.group-ad[data-ad]');

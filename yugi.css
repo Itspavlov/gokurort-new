@@ -1187,3 +1187,33 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .av-opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .av-opt:active { transform: scale(.92); }
 .av-opt.on { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--sun-1, #FF9A5C); transform: scale(1.04); }
+
+/* ===== v51: карточка запроса компактнее, отступы от краёв, кнопка «В группу» ===== */
+#chatMessages.cards:has(.chat-message-ad) > .req-item:not(.sv-item) { margin-left: 5px; margin-right: 5px; }
+.req-card.rq2 { padding: 11px 13px 12px; border-radius: 18px; }
+.rq-top { gap: 10px; }
+.rq-ava { width: 42px; height: 42px; font-size: 18px; box-shadow: 0 0 0 2px var(--rq-ring), 0 3px 9px rgba(0, 0, 0, .22); }
+.rq-who b { font-size: 15.5px; }
+.rq-who small { font-size: 10.5px; }
+.rq-title { margin-top: 8px; font-size: 14.5px; }
+.rq-pres { margin-top: 3px; font-size: 12px; }
+.req-card.rq2 .req-lines { margin-top: 7px; gap: 3px 11px; font-size: 12px; }
+.req-card.rq2 .req-lines i { margin-right: 4px; }
+.req-card.rq2 .req-text { margin-top: 6px; font-size: 13.5px; line-height: 1.38; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; cursor: pointer; }
+.req-card.rq2 .req-text.open { display: block; -webkit-line-clamp: unset; line-clamp: unset; }
+.req-card.rq2 .req-actions { margin-top: 9px; gap: 6px; }
+.req-card.rq2 .req-actions button { height: 34px; padding: 0 12px; font-size: 12.5px; }
+.req-card.rq2 .req-actions button.main { flex: 1 1 auto; }
+.req-card.rq2 .req-actions button.grp { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.req-card.rq2 .req-actions button.grp i { font-size: 12px; opacity: .85; }
+
+/* карточка запроса внутри группы */
+.group-req { display: block; margin: 2px 0 6px; padding: 10px 12px; border-radius: 14px; background: var(--rq-bg); border: 1px solid var(--rq-border); max-width: 270px; }
+.gr-h { font: 800 14px var(--font); margin-bottom: 2px; }
+.gr-h i { margin-right: 5px; opacity: .8; }
+.gr-who { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+.gr-lines { display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+.gr-lines i { margin-right: 4px; opacity: .8; }
+.gr-text { margin: 0 0 8px; font-size: 13px; line-height: 1.35; }
+.group-req button { width: 100%; height: 34px; border-radius: 999px; border: 0; background: var(--text); color: var(--bg); font: 800 12.5px var(--font); cursor: pointer; }
+.group-pick.new { border-style: dashed; }
