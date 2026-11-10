@@ -128,12 +128,35 @@ function onFavClick(ev) {
 function paintCardFavs() {
     document.querySelectorAll('.card-fav[data-fav]').forEach(b => { const on = favIds.has(b.dataset.fav); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); b.setAttribute('aria-label', on ? 'Убрать из избранного' : 'В избранное'); });
 }
+// Сердечко «улетает» с карточки в сердечко в шапке; там оно подпрыгивает
+function flyHeartToFav(from) {
+    const to = document.getElementById('roomFavBtn');
+    if (!to || !from || !from.isConnected) return;
+    const bump = () => { to.classList.remove('bump'); void to.offsetWidth; to.classList.add('bump'); setTimeout(() => to.classList.remove('bump'), 600); };
+    const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !to.animate) { bump(); return; }
+    const sz = 30, x0 = a.left + a.width / 2 - sz / 2, y0 = a.top + a.height / 2 - sz / 2;
+    const dx = (b.left + b.width / 2 - sz / 2) - x0, dy = (b.top + b.height / 2 - sz / 2) - y0;
+    const el = document.createElement('div');
+    el.className = 'fly-heart';
+    el.style.cssText = `left:${x0}px;top:${y0}px;width:${sz}px;height:${sz}px`;
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%"><path fill="#FF5A6E" d="M12 21.2l-1.5-1.3C5.4 15.3 2 12.2 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.800 3 16.500 3 19.600 3 22 5.400 22 8.500c0 3.700-3.400 6.800-8.500 11.400L12 21.200z"/></svg>';
+    document.body.appendChild(el);
+    const anim = el.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0, easing: 'cubic-bezier(.2,.7,.4,1)' },
+        { transform: `translate(${dx * .22}px,${dy * .22 - 36}px) scale(1.7) rotate(-12deg)`, opacity: 1, offset: .3, easing: 'cubic-bezier(.55,0,.8,.5)' },
+        { transform: `translate(${dx}px,${dy}px) scale(.6) rotate(8deg)`, opacity: .95, offset: 1 }
+    ], { duration: 800, fill: 'forwards' });
+    anim.onfinish = () => { el.remove(); bump(); };
+    anim.oncancel = () => { el.remove(); };
+}
 function toggleCardFav(id, btn) {
     loginRequired(() => {
         const on = !favIds.has(id);
         if (on) favIds.add(id); else favIds.delete(id);
         paintCardFavs();
-        if (on && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); }
+        if (on && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); flyHeartToFav(btn); }
         favApi('/api/favorites', { id, on }).then(d => {
             if (!d.ok) { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast(d.message || 'Не удалось сохранить'); }
             else { favIds = new Set(d.ids); paintCardFavs(); showToast(on ? 'Добавлено в избранное' : 'Убрано из избранного'); refreshFavSections(); }

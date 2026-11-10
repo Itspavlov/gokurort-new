@@ -236,13 +236,14 @@ function paintMapTitle(n, noPoint) {
 function setupFilters() {
     if (!isHousingRoom(currentRoom)) return;
     const head = document.querySelector('#group-screen .room-head');
-    if (!head || head.querySelector('#filtBtn')) { applyAdFilters(); return; }
+    if (!head || head.querySelector('#roomFavBtn')) { applyAdFilters(); return; }
     const help = head.querySelector('.chat-help-btn');
     const tools = document.createElement('div'); tools.className = 'head-tools';
-    tools.innerHTML = '<button type="button" class="chat-header-btn" id="filtBtn" aria-label="Фильтры"><i class="fas fa-sliders"></i><span class="fbadge" hidden>0</span></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
+    tools.innerHTML = '<button type="button" class="chat-header-btn" id="roomFavBtn" aria-label="Избранное"><i class="fas fa-heart"></i></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
     if (help) tools.appendChild(help);
     head.appendChild(tools);
-    tools.querySelector('#filtBtn').onclick = openFilterSheet;
+    tools.querySelector('#roomFavBtn').onclick = () => { if (typeof openFavorites === 'function') openFavorites(); };
+    const fb = document.getElementById('filtBtn'); if (fb) fb.onclick = openFilterSheet;
     tools.querySelector('#mapBtn').onclick = openAdMap;
     const wrap = document.querySelector('#group-screen .cat-chips-wrap');
     if (wrap && !document.getElementById('filterSum')) {

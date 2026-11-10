@@ -161,8 +161,8 @@ function updateDockState() {
     if (!msgs) return;
     const seeks = msgs.querySelectorAll('.req-item[data-kind="seek"]').length;
     const offers = msgs.querySelectorAll('.req-item[data-kind="offer"], .chat-message-ad').length;
-    const set = (v, n) => { const b = document.querySelector(`.seek-tab[data-v="${v}"] b`); if (b) b.textContent = n ? n : ''; };
-    set('seek', seeks); set('offer', offers);
+    const set = (v, txt, n) => { const b = document.querySelector(`.seek-tab[data-v="${v}"] b`); if (b) b.textContent = txt + ' ' + n; };
+    set('seek', 'сейчас ищут', seeks); set('offer', 'сейчас предлагают', offers);
     const empty = document.getElementById('reqEmpty');
     if (!empty) return;
     const shown = reqView === 'seek' ? seeks : reqView === 'offer' ? offers : seeks + offers;
@@ -180,8 +180,10 @@ function updateDockState() {
 function seekBarHTML(room) {
     const L = secLabels(SEC[room] ? room : 'housing');
     if (reqView !== 'seek') reqView = 'offer';
-    const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b></b></button>`;
-    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', L.tabs[0])}${t('offer', L.tabs[1])}</div></div>`;
+    const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${v === 'seek' ? 'сейчас ищут' : 'сейчас предлагают'} 0</b></button>`;
+    // кнопка «Фильтры» (только жильё) стоит справа от вкладок
+    const filt = (typeof isHousingRoom === 'function' && isHousingRoom(room)) ? '<button type="button" class="seek-filter" id="filtBtn" aria-label="Фильтры"><i class="fas fa-sliders"></i><span class="fbadge" hidden>0</span></button>' : '';
+    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', L.tabs[0])}${t('offer', L.tabs[1])}</div>${filt}</div>`;
 }
 const dockBtnHTML = (icon, label) => `<i class="fas ${icon}"></i> ${label}`;
 function cardsDockHTML(room) {
