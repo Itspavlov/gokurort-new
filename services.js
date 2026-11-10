@@ -1,6 +1,6 @@
 // ============================================
 // YuGi YuGi — карточки развлечений в профиле и раздел «Развлечения»
-//  • «Мои развлечения» в профиле: карточки с фото (до 4), ценой и описанием — морские прогулки, экскурсии, джипы…
+//  • «Мои развлечения» на вкладке «Мои публикации»: карточки с фото (до 4), ценой и описанием — морские прогулки, экскурсии, джипы…
 //  • другой пользователь видит их в профиле хозяина (вкладка «Развлечения») и в разделе «Развлечения»
 //  • в разделе есть быстрый поиск и категории, чтобы не листать всё подряд
 //  • «Предлагаю / Сдаю»: если карточки или объявления уже есть — предложим опубликовать старое заново или создать новое
@@ -146,7 +146,7 @@ function openServiceEditor(edit, after) {
         const s = edit || {}, e = escapeHtml;
         const photos = (s.photos || []).slice();
         openSheet(edit ? 'Изменить развлечение' : 'Новое развлечение', `
-            <p class="auth-note" style="margin:0 4px 12px">Например: «Морская прогулка на катере», «Экскурсия в горы», «Джип-тур». Карточку увидят в вашем профиле и в разделе «Развлечения».</p>
+            <p class="auth-note" style="margin:0 4px 12px">Например: «Морская прогулка на катере», «Экскурсия в горы», «Джип-тур». Карточку увидят в вашем профиле хозяина и в разделе «Развлечения».</p>
             <div class="form-h" style="margin:0 2px 8px">Фото · до ${SV_PHOTOS}</div>
             <div class="photo-grid sv-photo-grid" id="svPhotos"></div>
             <input type="file" id="svFile" accept="image/*" multiple hidden>
@@ -218,32 +218,8 @@ function deleteService(id) {
     }).catch(() => showToast('Нет связи с сервером'));
 }
 
-// ---------- профиль: «Мои услуги» ----------
-function mountMyServices() {
-    const root = document.getElementById('profileRoot');
-    if (!root) return;
-    const acc = typeof getAccount === 'function' ? getAccount() : null;
-    let box = document.getElementById('svMine');
-    if (!acc) { if (box) box.remove(); return; }
-    if (!box) {
-        box = document.createElement('div');
-        box.id = 'svMine';
-        const head = root.querySelector('.pf-head');
-        if (head) head.parentNode.insertBefore(box, head); else root.appendChild(box);
-    }
-    box.innerHTML = `<div class="section-head pf-head"><h2 class="section-title">Мои развлечения${myServices.length ? ': ' + myServices.length : ''}</h2></div>
-        ${myServices.length ? `<div class="sv-list">${myServices.map(s => serviceCardHTML(s, true)).join('')}</div>`
-            : '<p class="pf-empty">Сдаёте жильё и ещё катаете на катере, водите экскурсии или возите на джипах? Добавьте развлечение с фото: его увидят в вашем профиле.</p>'}
-        ${myServices.length < SV_MAX ? '<button type="button" class="ghost-btn wide-btn sv-add" data-sv="new"><i class="fas fa-plus"></i> Добавить развлечение</button>' : ''}`;
-}
-
-const _renderProfileSv = renderProfile;
-renderProfile = function () {
-    const r = _renderProfileSv.apply(this, arguments);
-    mountMyServices();
-    if (getToken()) loadMyServices(mountMyServices);
-    return r;
-};
+// ---------- «Мои развлечения» теперь на вкладке «Мои публикации» ----------
+function mountMyServices() { if (typeof paintPubs === 'function') paintPubs(); }
 
 // ---------- «Предлагаю / Сдаю»: старое или новое ----------
 function chooserRow(thumb, title, sub, btns) {
@@ -260,7 +236,7 @@ function openServiceFlow() {
         openSheet('Предлагаю развлечение', `
             <p class="auth-note" style="margin:0 4px 12px">У вас уже есть развлечения. Опубликуйте одну из них заново — она встанет наверх раздела, — или создайте новую.</p>
             <div class="rp-list">${rows}</div>
-            ${myServices.length < SV_MAX ? '<button type="button" class="primary-btn wide-btn" data-sv="new"><i class="fas fa-plus"></i> Создать новую карточку</button>' : '<p class="auth-note" style="margin:8px 4px 0">Достигнут предел: 10 карточек. Удалите ненужную в профиле.</p>'}`);
+            ${myServices.length < SV_MAX ? '<button type="button" class="primary-btn wide-btn" data-sv="new"><i class="fas fa-plus"></i> Создать новую карточку</button>' : '<p class="auth-note" style="margin:8px 4px 0">Достигнут предел: 10 карточек. Удалите ненужную во вкладке «Мои публикации».</p>'}`);
     }));
 }
 

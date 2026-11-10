@@ -22,13 +22,44 @@ function paintBell() {
 
 function setUnread(n) { inboxUnread = Math.max(0, Number(n) || 0); paintBell(); }
 
+// ---------- цифры на нижней панели ----------
+// «Сообщения» — личные, групповые, ответы и приглашения; «Мои публикации» — то, что происходит с вашими объявлениями и карточками
+let inboxItems = [];
+const NAV_MSG_KINDS = ['dm', 'group', 'reply', 'invite'];
+const NAV_PUB_KINDS = ['offer', 'match', 'request', 'review', 'listing'];
+const navCount = (kinds) => inboxItems.reduce((n, it) => n + (!it.read && kinds.includes(it.kind) ? (it.count || 1) : 0), 0);
+function paintNavBadges() {
+    const set = (tab, n) => {
+        const b = document.querySelector('.nav-item[data-tab="' + tab + '"] .nav-badge');
+        if (!b) return;
+        b.hidden = n <= 0;
+        b.textContent = n > 99 ? '99+' : String(n);
+        const it = b.closest('.nav-item');
+        if (it) it.classList.toggle('has-badge', n > 0);
+    };
+    set('messages', navCount(NAV_MSG_KINDS));
+    set('mypubs', navCount(NAV_PUB_KINDS));
+}
+function setInboxItems(items) { inboxItems = Array.isArray(items) ? items : []; paintNavBadges(); }
+// отметка «прочитано» сразу и у нас: не ждём ответа сервера
+function localMarkRead(sel) {
+    inboxItems.forEach(it => { if ((sel && sel.all) || (sel && sel.ids && sel.ids.includes(it.id)) || (sel && sel.open && it.open === sel.open)) it.read = true; });
+    paintNavBadges();
+}
+// вход во вкладку «Мои публикации» — вы увидели, что нового: цифра гаснет
+function markPubsSeen() {
+    const ids = inboxItems.filter(it => !it.read && NAV_PUB_KINDS.includes(it.kind)).map(it => it.id);
+    if (ids.length) markInboxRead({ ids: ids.slice(0, 60) });
+}
+
 function refreshUnread() {
-    if (!getToken()) { setUnread(0); return Promise.resolve(); }
-    return inboxApi('/api/notifications').then(d => { if (d && d.ok) setUnread(d.unread); }).catch(() => {});
+    if (!getToken()) { setUnread(0); setInboxItems([]); return Promise.resolve(); }
+    return inboxApi('/api/notifications').then(d => { if (d && d.ok) { setUnread(d.unread); setInboxItems(d.items); } }).catch(() => {});
 }
 
 function markInboxRead(sel) {
     if (!getToken()) return;
+    localMarkRead(sel);
     inboxApi('/api/notifications/read', sel).then(d => { if (d && d.ok) setUnread(d.unread); }).catch(() => {});
 }
 
@@ -55,18 +86,22 @@ function openInbox() {
                     : '<div class="req-empty"><i class="fas fa-bell"></i><b>Пока ничего нового</b><span>Здесь появятся сообщения, предложения жилья и новости по вашим запросам.</span></div>';
                 box.innerHTML = head + rows;
             };
-            const load = () => inboxApi('/api/notifications').then(d => { if (!d.ok) { box.innerHTML = '<p class="opt-empty">Не удалось загрузить</p>'; return; } setUnread(d.unread); box._d = d; draw(d); }).catch(() => { box.innerHTML = '<p class="opt-empty">Нет связи с сервером</p>'; });
+            const load = () => inboxApi('/api/notifications').then(d => { if (!d.ok) { box.innerHTML = '<p class="opt-empty">Не удалось загрузить</p>'; return; } setUnread(d.unread); setInboxItems(d.items); box._d = d; draw(d); }).catch(() => { box.innerHTML = '<p class="opt-empty">Нет связи с сервером</p>'; });
             load();
             el.addEventListener('click', (ev) => {
                 const item = ev.target.closest('.inbox-item');
                 if (item) {
+                    const it = box._d && box._d.items.find(x => x.id === item.dataset.id);
                     markInboxRead({ ids: [item.dataset.id] });
                     closeSheet();
-                    if (typeof openTarget === 'function') openTarget(item.dataset.open);
+                    // уведомления об объявлениях и запросах ведут во вкладку «Мои публикации»
+                    const go = (it && NAV_PUB_KINDS.includes(it.kind) && item.dataset.open === 'profile') ? 'mypubs' : item.dataset.open;
+                    if (go === 'mypubs') switchTab('mypubs');
+                    else if (typeof openTarget === 'function') openTarget(go);
                     return;
                 }
                 const b = ev.target.closest('button[data-a]'); if (!b) return;
-                if (b.dataset.a === 'all') inboxApi('/api/notifications/read', { all: true }).then(d => { if (d.ok) { setUnread(d.unread); load(); } });
+                if (b.dataset.a === 'all') inboxApi('/api/notifications/read', { all: true }).then(d => { if (d.ok) { setUnread(d.unread); localMarkRead({ all: true }); load(); } });
                 else if (b.dataset.a === 'prefs') openInboxPrefs(box._d && box._d.prefs);
             });
         });
@@ -104,6 +139,7 @@ const _oGr = openGroup; openGroup = function (id) { const r = _oGr.apply(this, a
 document.addEventListener('DOMContentLoaded', () => {
     const b = document.getElementById('bellBtn');
     if (b) b.addEventListener('click', openInbox);
+    paintNavBadges();
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUnread(); });
 setTimeout(refreshUnread, 1200);

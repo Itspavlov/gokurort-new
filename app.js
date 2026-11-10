@@ -277,7 +277,9 @@ function switchTab(tabName, animate = true) {
 
     moveNavIndicator(animate);
 
+    if (tabName !== 'mypubs') window._reqSecOverride = '';
     if (tabName === 'profile' && typeof renderProfile === 'function') renderProfile();
+    if (tabName === 'mypubs' && typeof renderMyPubs === 'function') { renderMyPubs(); setTimeout(() => { if (document.getElementById('tab-mypubs').style.display !== 'none' && typeof markPubsSeen === 'function') markPubsSeen(); }, 1500); }
     if (tabName === 'messages' && typeof renderDialogs === 'function') renderDialogs();
     if (tabName === 'search') renderFeatured();
 
@@ -856,6 +858,10 @@ async function handleImageSelect(event) {
 function goToProfileFromChat() {
     closeGroup();
     switchTab('profile');
+}
+function goToPubsFromChat() {
+    closeGroup();
+    switchTab('mypubs');
 }
 
 // ---------- ЗАКРЫТЬ ЧАТ ----------

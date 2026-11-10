@@ -103,24 +103,10 @@ function renderProfile() {
     const e = escapeHtml;
     const p = getProfile();
     const acc = typeof getAccount === 'function' ? getAccount() : null;
-    const mine = myAdsAll();
     const verified = !!(acc && acc.verified);
     const theme = typeof getTheme === 'function' ? getTheme() : 'sea';
 
     const meta = [p.city ? `<span><i class="fas fa-location-dot"></i>${e(p.city)}</span>` : '', p.phone ? `<span><i class="fas fa-phone"></i>${e(p.phone)}</span>` : ''].join('');
-
-    const rows = mine.map(ad => `
-        <div class="my-ad">
-            <div class="my-ad-thumb" onclick="openListing('${ad.id}')">${ad.image ? `<img src="${ad.image}" alt="">` : '<i class="fas fa-image"></i>'}</div>
-            <div class="my-ad-info" onclick="openListing('${ad.id}')">
-                <div class="my-ad-title">${e(ad.title)}</div>
-                <div class="my-ad-price">${e(ad.price)}</div>
-            </div>
-            <div class="my-ad-actions">
-                <button onclick="openAdForm('${ad.id}')" aria-label="Изменить"><i class="fas fa-pen"></i></button>
-                <button onclick="deleteMyAd('${ad.id}')" aria-label="Удалить"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`).join('');
 
     const name = p.name || (acc && acc.name) || 'Гость';
     root.innerHTML = `
@@ -138,19 +124,14 @@ function renderProfile() {
         <div class="pf-menu">
             <button type="button" class="pf-row" id="rowStats" onclick="openStats()" hidden><i class="fas fa-chart-simple"></i><span>Статистика</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowSubs" onclick="openSearchSubs()"><i class="fas fa-bell"></i><span>Подписки на поиск</span><i class="fas fa-chevron-right pf-go"></i></button>
-            <button type="button" class="pf-row" id="rowReq" onclick="openMyRequests()"><i class="fas fa-magnifying-glass"></i><span>Мои запросы</span><em id="rowReqCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
-            <button type="button" class="pf-row" id="rowMatch" onclick="openMatchingSheet()" hidden><i class="fas fa-users"></i><span>Подходящие арендаторы</span><em id="rowMatchCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
+            <button type="button" class="pf-row" id="rowInvite" onclick="copyInviteLink()"><i class="fas fa-user-plus"></i><span>Пригласить друзей</span><i class="fas fa-chevron-right pf-go"></i></button>
             <div class="pf-row pf-static theme-card"><div class="tc-h"><i class="fas fa-palette"></i><span>Тема</span></div>
                 <div class="theme-grid" role="group" aria-label="Тема">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="th-card ${theme === k ? 'on' : ''}" data-th="${k}" onclick="setTheme('${k}')"><span class="th-sw" style="background:${t.bg}"><b style="background:${t.accent}"></b><i style="background:${t.accent}"></i></span>${t.name}</button>`).join('')}</div>
             </div>
         </div>
 
-        <div class="section-head pf-head"><h2 class="section-title">Мои объявления${mine.length ? ': ' + mine.length : ''}</h2></div>
-        ${mine.length ? `<div class="my-ads">${rows}</div>` : '<p class="pf-empty">Сдаёте или продаёте жильё? Добавьте объявление: оно появится в чате выбранного типа.</p>'}
-        <button class="primary-btn wide-btn pf-add" onclick="openAdForm()"><i class="fas fa-plus"></i> Добавить жильё</button>
         ${acc ? '<button class="pf-logout" onclick="doLogout()"><i class="fas fa-arrow-right-from-bracket"></i> Выйти из аккаунта</button>' : ''}
     `;
-    setTimeout(() => { const r = document.getElementById('profileRoot'); if (r && r.offsetParent !== null) hostProfileTip(); }, 800);
 }
 
 // ---------- РЕДАКТОР ПРОФИЛЯ ----------

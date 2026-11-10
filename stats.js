@@ -39,7 +39,7 @@
                     <div><b>${l.rating ? String(l.rating).replace('.', ',') + ' ★' : '—'}</b><span>${l.reviews} ${typeof ratingWord === 'function' ? ratingWord(l.reviews) : 'отз.'}</span></div>
                 </div>
                 ${barsHTML(l.series, false)}
-            </button>`).join('') : '<p class="rv-empty">У вас пока нет объявлений. Добавьте первое в профиле.</p>';
+            </button>`).join('') : '<p class="rv-empty">У вас пока нет объявлений. Добавьте первое во вкладке «Мои публикации».</p>';
         return `
             <div class="st-tiles">${tiles}</div>
             <div class="st-chart"><div class="st-h">Просмотры по дням</div>${barsHTML(t.series, true)}</div>

@@ -21,14 +21,15 @@ const SEC = {
 };
 const isHousingReq = (r) => !r || !r.section || r.section === 'housing';
 // Раздел открытой комнаты: housing, work, trips или services
-const reqSection = () => (typeof currentRoom === 'string' && SEC[currentRoom]) ? currentRoom : 'housing';
+// на вкладке «Мои публикации» раздел задаёт выбранный чипс (window._reqSecOverride)
+const reqSection = () => (window._reqSecOverride && SEC[window._reqSecOverride]) ? window._reqSecOverride : (typeof currentRoom === 'string' && SEC[currentRoom]) ? currentRoom : 'housing';
 
 // Подписи вкладок (сверху, что смотреть) и кнопок (внизу, что создать) для каждого раздела
 const SEEK_LABELS = {
-    housing:  { tabs: ['Запросы', 'Готовые предложения'], btns: ['Хочу снять', 'Сдать жильё'] },
-    work:     { tabs: ['Ищут работу', 'Предлагают работу'], btns: ['Ищу работу', 'Предлагаю работу'] },
-    trips:    { tabs: ['Ищут поездку', 'Предлагают поездку'], btns: ['Ищу поездку', 'Предлагаю поездку'] },
-    services: { tabs: ['Ищут развлечения', 'Предлагают развлечения'], btns: ['Ищу развлечение', 'Предлагаю развлечение'] }
+    housing:  { tabs: ['Запросы', 'Готовые предложения'], subs: ['сейчас ищут', 'сейчас предлагают'], btns: ['Хочу снять', 'Сдать жильё'] },
+    work:     { tabs: ['Соискатели', 'Вакансии'], subs: ['сейчас ищут', 'готовые предложения'], btns: ['Ищу работу', 'Предлагаю работу'] },
+    trips:    { tabs: ['Пассажиры', 'Водители'], subs: ['сейчас ищут', 'готовые предложения'], btns: ['Ищу поездку', 'Предлагаю поездку'] },
+    services: { tabs: ['Ищут развлечения', 'Предлагают развлечения'], subs: ['сейчас ищут', 'сейчас предлагают'], btns: ['Ищу развлечение', 'Предлагаю развлечение'] }
 };
 const SEEK_TIP = 'Ваша карточка появится в ленте, и хозяева увидят её и смогут предложить жильё. Мы подберём варианты под ваш запрос и пришлём уведомление, как только найдётся что-то подходящее.';
 let seekTipTimer = null;
@@ -191,7 +192,7 @@ function updateDockState() {
     const seeks = msgs.querySelectorAll('.req-item[data-kind="seek"]').length;
     const offers = msgs.querySelectorAll('.req-item[data-kind="offer"], .chat-message-ad').length;
     const set = (v, txt, n) => { const b = document.querySelector(`.seek-tab[data-v="${v}"] b`); if (b) b.textContent = txt + ' ' + n; };
-    set('seek', 'сейчас ищут', seeks); set('offer', 'сейчас предлагают', offers);
+    const SB = secLabels().subs; set('seek', SB[0], seeks); set('offer', SB[1], offers);
     const empty = document.getElementById('reqEmpty');
     if (!empty) return;
     const shown = reqView === 'seek' ? seeks : reqView === 'offer' ? offers : seeks + offers;
@@ -209,7 +210,7 @@ function updateDockState() {
 function seekBarHTML(room) {
     const L = secLabels(SEC[room] ? room : 'housing');
     if (reqView !== 'seek') reqView = 'offer';
-    const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${v === 'seek' ? 'сейчас ищут' : 'сейчас предлагают'} 0</b></button>`;
+    const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${L.subs[v === 'seek' ? 0 : 1]} 0</b></button>`;
     // кнопка «Фильтры» (только жильё) стоит справа от вкладок
     const filt = (typeof isHousingRoom === 'function' && isHousingRoom(room)) ? '<button type="button" class="seek-filter" id="filtBtn" aria-label="Фильтры"><i class="fas fa-sliders"></i><span class="fbadge" hidden>0</span></button>' : '';
     return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', L.tabs[0])}${t('offer', L.tabs[1])}</div>${filt}</div>`;
@@ -454,17 +455,42 @@ function refreshMyRequests() {
         if (d && d.ok) { myReqs = d.requests; if (typeof d.cooldown === 'number') setCooldown(d.cooldown); paintMyRequests(); }
     }).catch(() => {});
 }
+// строка «моей карточки»: карточка и кнопка удаления под ней (используется в окне запросов и на вкладке «Мои публикации»)
+const myReqRow = (r) => `<div class="req-row">${reqCardHTML(r)}<button type="button" class="req-del" data-del="${escapeHtml(r.id)}" aria-label="Удалить запрос"><i class="fas fa-trash"></i><span>Удалить</span></button></div>`;
 function paintMyRequests() {
     const act = myReqs.filter(r => r.status === 'active');
     const cnt = document.getElementById('rowReqCount');
     if (cnt) { cnt.hidden = !act.length; cnt.textContent = String(act.length); }
+    if (typeof paintPubs === 'function') paintPubs();
     const box = document.getElementById('myReqBox');
     if (!box) return;
     if (!myReqs.length) { box.innerHTML = '<div class="req-empty"><i class="fas fa-magnifying-glass"></i><b>Запросов пока нет</b><span>Нажмите «Хочу снять» в разделе «Жильё»: хозяева увидят запрос, а подходящее жильё мы найдём сами.</span></div>'; return; }
     const hist = myReqs.filter(r => r.status !== 'active');
-    const row = (r) => `<div class="req-row">${reqCardHTML(r)}<button type="button" class="req-del" data-del="${escapeHtml(r.id)}" aria-label="Удалить запрос"><i class="fas fa-trash"></i><span>Удалить</span></button></div>`;
+    const row = myReqRow;
     box.innerHTML = (act.length ? '<div class="opt-sec">Активные</div>' + act.map(row).join('') : '')
         + (hist.length ? '<div class="opt-sec" style="margin-top:8px">История</div>' + hist.slice(0, 15).map(row).join('') : '');
+}
+
+function onMyReqBoxClick(ev) {
+        const del = ev.target.closest('.req-del');
+        if (del) {
+            if (!del.classList.contains('sure')) {      // первое нажатие — просим подтвердить
+                del.classList.add('sure'); del.querySelector('span').textContent = 'Точно?';
+                setTimeout(() => { if (del.isConnected) { del.classList.remove('sure'); del.querySelector('span').textContent = 'Удалить'; } }, 3000);
+                return;
+            }
+            del.disabled = true;
+            fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(del.dataset.del)}`, { method: 'DELETE', headers: reqAuthHeaders() }).then(r => r.json()).then(d => {
+                if (!d.ok) { del.disabled = false; showToast(d.message || 'Не удалось удалить'); return; }
+                myReqs = myReqs.filter(x => x.id !== del.dataset.del);
+                paintMyRequests(); showToast('Запрос удалён'); loadRequests();
+            }).catch(() => { del.disabled = false; showToast('Нет связи с сервером'); });
+            return;
+        }
+        const btn = ev.target.closest('button[data-act]'), card = ev.target.closest('.req-card');
+        if (!btn || !card) return;
+        const r = myReqs.find(x => x.id === card.dataset.rid); if (!r) return;
+        if (btn.dataset.act === 'edit') openRequestSheet(r); else onReqCardClick(ev);
 }
 
 function openMyRequests() {
@@ -473,27 +499,7 @@ function openMyRequests() {
             <button class="primary-btn wide-btn" id="myReqAdd" style="margin-top:12px"><i class="fas fa-magnifying-glass"></i> Хочу снять</button>`, (el) => {
             paintMyRequests(); refreshMyRequests();
             el.querySelector('#myReqAdd').onclick = () => openRequestSheet();
-            el.querySelector('#myReqBox').addEventListener('click', (ev) => {
-                const del = ev.target.closest('.req-del');
-                if (del) {
-                    if (!del.classList.contains('sure')) {      // первое нажатие — просим подтвердить
-                        del.classList.add('sure'); del.querySelector('span').textContent = 'Точно?';
-                        setTimeout(() => { if (del.isConnected) { del.classList.remove('sure'); del.querySelector('span').textContent = 'Удалить'; } }, 3000);
-                        return;
-                    }
-                    del.disabled = true;
-                    fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(del.dataset.del)}`, { method: 'DELETE', headers: reqAuthHeaders() }).then(r => r.json()).then(d => {
-                        if (!d.ok) { del.disabled = false; showToast(d.message || 'Не удалось удалить'); return; }
-                        myReqs = myReqs.filter(x => x.id !== del.dataset.del);
-                        paintMyRequests(); showToast('Запрос удалён'); loadRequests();
-                    }).catch(() => { del.disabled = false; showToast('Нет связи с сервером'); });
-                    return;
-                }
-                const btn = ev.target.closest('button[data-act]'), card = ev.target.closest('.req-card');
-                if (!btn || !card) return;
-                const r = myReqs.find(x => x.id === card.dataset.rid); if (!r) return;
-                if (btn.dataset.act === 'edit') openRequestSheet(r); else onReqCardClick(ev);
-            });
+            el.querySelector('#myReqBox').addEventListener('click', onMyReqBoxClick);
         });
     });
 }
@@ -504,20 +510,6 @@ function loadQuota(cb) {
     fetch(`${SERVER_URL}/api/listings/quota`, { headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.json()).then(d => { if (d && d.ok) cb(d.quota); }).catch(() => {});
 }
 const quotaText = (q) => `Сегодня опубликовано: ${q.used} из ${q.limit}` + (q.left === 0 ? '. Новые — завтра, редактировать можно всегда' : '');
-
-const _renderProfileReq = renderProfile;
-renderProfile = function () {
-    _renderProfileReq.apply(this, arguments);
-    const root = document.getElementById('profileRoot');
-    if (!root) return;
-    if (!getToken()) { const r = document.getElementById('rowReq'); if (r) r.hidden = true; return; }
-    const add = root.querySelector('.pf-add');
-    if (add) {
-        add.insertAdjacentHTML('beforebegin', '<div class="quota-line" id="quotaLineProf"></div>');
-        loadQuota((q) => { const el = document.getElementById('quotaLineProf'); if (el) { el.textContent = quotaText(q); el.classList.toggle('full', q.left === 0); } });
-    }
-    paintMyRequests(); refreshMyRequests(); refreshMatchingRequests();
-};
 
 const _openAdFormQuota = openAdForm;
 openAdForm = function () {
@@ -548,7 +540,7 @@ function tickCooldown() {
 // ---------- обновление в реальном времени ----------
 const _onSocialEventReq = onSocialEvent;
 onSocialEvent = function (ev, d) {
-    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('cardsDock')) loadRequests(); if (document.getElementById('myReqBox') || document.getElementById('rowReq')) refreshMyRequests(); if (document.getElementById('matchReqBox') || document.getElementById('rowMatch')) refreshMatchingRequests(); }, 400); return; }
+    if (ev === 'request-changed') { clearTimeout(onSocialEvent._rt); onSocialEvent._rt = setTimeout(() => { if (document.getElementById('cardsDock')) loadRequests(); if (document.getElementById('myReqBox') || document.getElementById('pubBody')) refreshMyRequests(); if (document.getElementById('matchReqBox') || document.getElementById('rowMatch')) refreshMatchingRequests(); }, 400); return; }
     return _onSocialEventReq.apply(this, arguments);
 };
 
