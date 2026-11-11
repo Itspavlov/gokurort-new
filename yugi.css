@@ -1367,3 +1367,14 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .dv2.cloud .dvb-comm, .dv2.cloud .dvb-under .dv2-join { height: 30px; border-radius: 15px; font-size: 11.5px; flex: 1 1 0; }
 .dv2.cloud .dvb-comm { gap: 5px; padding: 0 6px; }
 .dv2.cloud .dvb-under .dv2-own { font-size: 10.5px; }
+
+/* v57: «Твой курорт» — шапка выше, заголовок в одну строку и ниже, чтобы не закрывать картинку */
+.hero-scene { height: 350px; }
+.hero-title.hero-caps { font-size: 26px; line-height: 1.05; margin: 66px 0 3px; }
+.hero-caps span, .hero-caps em { display: inline; }
+.hero-caps em { letter-spacing: .01em; }
+.gc-services .group-photo { object-position: 50% 50%; }
+@media (max-width: 360px) { .hero-title.hero-caps { font-size: 25px; } }
+.hero-scene { height: 372px; }
+.hero-title.hero-caps { margin-top: 84px; }
+.group-grid { margin-top: 26px; }
