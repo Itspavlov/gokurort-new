@@ -83,7 +83,36 @@ function dvRouteHTML(c) {
 const dvPeople = (e) => e.max ? `${e.joins} из ${e.max}` : (e.joins ? String(e.joins) : '');
 
 // ---------- экран ----------
-function openDvizScreen() {
+let dvTab = 'dviz', dvSvcCat = '', dvSvcQ = '';
+
+function dvDockHTML() {
+    if (dvTab === 'svc') return '<div class="dock-actions svc-dock"><button type="button" class="dv-svc-add" data-sv="new"><i class="fas fa-plus"></i> Разместить услугу</button></div>';
+    return '<div class="dock-actions dv-create-dock"><button type="button" class="dock-btn main" id="dvCreate"><i class="fas fa-plus"></i> Создать движ</button></div>';
+}
+function dvPaneHTML() {
+    if (dvTab === 'svc') {
+        return `<div class="dv-svc" id="dvSvc">
+            <div class="dv-svc-bar">
+                <button type="button" class="dv-sbtn${dvSvcQ ? ' on' : ''}" id="dvSBtn" aria-label="Поиск" aria-expanded="${dvSvcQ ? 'true' : 'false'}"><i class="fas fa-magnifying-glass"></i></button>
+                <div class="dv-cat"><button type="button" class="dv-cat-btn" id="dvCatBtn" aria-haspopup="listbox" aria-expanded="false"><span id="dvCatLbl"></span><i class="fas fa-chevron-down"></i></button><div class="dv-cat-menu" id="dvCatMenu" role="listbox" hidden></div></div>
+            </div>
+            <label class="dv-sq" id="dvSQ"${dvSvcQ ? '' : ' hidden'}><i class="fas fa-magnifying-glass"></i><input id="dvSvcQ" type="search" enterkeyhint="search" autocomplete="off" maxlength="40" placeholder="Катер, джипы, дельфины…" value="${dvEsc(dvSvcQ)}"></label>
+            <div class="sv-grid" id="dvSvcGrid"></div></div>`;
+    }
+    return '<div class="dv-feed" id="dvFeed"><div class="dv-empty"><i class="fas fa-spinner fa-spin"></i><b>Загружаю…</b></div></div>';
+}
+function dvSetTab(tab) {
+    dvTab = tab === 'svc' ? 'svc' : 'dviz';
+    const scr = document.getElementById('group-screen');
+    if (!scr) return;
+    scr.querySelectorAll('.dv-tab').forEach(b => { const on = b.dataset.dvt === dvTab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    scr.querySelector('#dvPane').innerHTML = dvPaneHTML();
+    scr.querySelector('#dvDock').innerHTML = dvDockHTML();
+    scr.querySelector('#dvDock').classList.toggle('svc', dvTab === 'svc');
+    if (dvTab === 'svc') { dvBindSvc(); dvPaintSvc(); dvLoadSvc(); }
+    else { const f = scr.querySelector('#dvFeed'); f.addEventListener('click', onFeedClick); if (dvFeed.length) paintDviz(); loadDviz(); }
+}
+function openDvizScreen(tab) {
     if (typeof socket !== 'undefined' && socket && currentRoom) socket.emit('leave-room', currentRoom);
     currentRoom = null; currentDm = null; currentGroup = null;
     tabContents.forEach(section => section.style.display = 'none');
@@ -93,6 +122,7 @@ function openDvizScreen() {
         screen.id = 'group-screen'; screen.className = 'group-screen';
         document.getElementById('appMain').appendChild(screen);
     }
+    dvTab = tab === 'svc' ? 'svc' : 'dviz';
     screen.innerHTML = `
         <div class="chat-header room-head">
             <button class="chat-back-btn" onclick="closeGroup()" aria-label="Назад"><i class="fas fa-arrow-left"></i></button>
@@ -101,18 +131,64 @@ function openDvizScreen() {
                 <div class="chat-header-subtitle">найди компанию на отдых</div>
             </div>
         </div>
-        <div class="dv-feed" id="dvFeed"><div class="dv-empty"><i class="fas fa-spinner fa-spin"></i><b>Загружаю…</b></div></div>
-        <div class="cards-dock dv-dock"><p class="dv-dock-hint"><i class="fas fa-globe"></i> Чат онлайн: телепортируйся на другие курорты и общайся со всеми</p>
-            <div class="dock-actions"><button type="button" class="dock-btn seek" id="dvOnline"><i class="fas fa-globe"></i> Чат онлайн</button><button type="button" class="dock-btn main" id="dvCreate"><i class="fas fa-plus"></i> Создать движ</button></div></div>`;
+        <div class="seek-bar dv-tabs"><div class="seek-tabs" role="tablist" aria-label="Раздел">
+            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Движ</span><b>отдыхайте вместе</b></button>
+            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="svc"><span>Готовые услуги</span><b>морские прогулки, экскурсии и др.</b></button>
+        </div></div>
+        <div class="dv-pane" id="dvPane"></div>
+        <div class="cards-dock dv-dock" id="dvDock"></div>`;
     screen.style.display = 'flex';
-    screen.querySelector('#dvCreate').onclick = () => openDvizForm();
-    screen.querySelector('#dvOnline').onclick = () => openGroup('online');
-    screen.querySelector('#dvFeed').addEventListener('click', onFeedClick);
-    loadDviz();
+    screen.querySelector('.dv-tabs').addEventListener('click', (ev) => { const b = ev.target.closest('.dv-tab'); if (b && b.dataset.dvt !== dvTab) dvSetTab(b.dataset.dvt); });
+    screen.querySelector('#dvDock').addEventListener('click', (ev) => {
+        if (ev.target.closest('#dvCreate')) openDvizForm();
+    });
+    dvSetTab(dvTab);
+}
+
+// ---------- «Готовые услуги» внутри движа ----------
+function dvBindSvc() {
+    const q = document.getElementById('dvSvcQ'), btn = document.getElementById('dvCatBtn'), menu = document.getElementById('dvCatMenu');
+    if (!q || !btn || !menu) return;
+    const sb = document.getElementById('dvSBtn'), sq = document.getElementById('dvSQ');
+    sb.addEventListener('click', () => {
+        const open = sq.hidden; sq.hidden = !open; sb.setAttribute('aria-expanded', String(open));
+        if (open) q.focus(); else { q.value = ''; dvSvcQ = ''; sb.classList.remove('on'); dvPaintSvc(); }
+    });
+    q.addEventListener('input', () => { dvSvcQ = q.value.trim().toLowerCase(); sb.classList.toggle('on', !!dvSvcQ); dvPaintSvc(); });
+    q.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); q.blur(); } });
+    const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (ev) => { ev.stopPropagation(); const open = menu.hidden; menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); });
+    menu.addEventListener('click', (ev) => {
+        const it = ev.target.closest('[data-cat]'); if (!it) return;
+        dvSvcCat = it.dataset.cat; close(); dvPaintSvc();
+    });
+    document.getElementById('dvSvc').addEventListener('click', (ev) => { if (!ev.target.closest('.dv-cat')) close(); });
+}
+function dvLoadSvc() {
+    svApi('/api/services').then(({ d }) => { if (d && d.ok) serviceFeed = d.services || []; dvPaintSvc(); }).catch(() => dvPaintSvc());
+}
+function dvRefreshSvc() { if (dvTab === 'svc' && document.getElementById('dvSvc')) dvLoadSvc(); }
+function dvPaintSvc() {
+    const grid = document.getElementById('dvSvcGrid');
+    if (!grid) return;
+    const counts = {};
+    serviceFeed.forEach(s => { const t = s.tag || 'other'; counts[t] = (counts[t] || 0) + 1; });
+    const lbl = document.getElementById('dvCatLbl');
+    if (lbl) lbl.textContent = dvSvcCat ? (SV_TAGS[dvSvcCat] || 'Категория') : 'Все категории';
+    const menu = document.getElementById('dvCatMenu');
+    if (menu) {
+        const item = (t, label, icon, n) => `<button type="button" role="option" class="dv-cat-item ${dvSvcCat === t ? 'on' : ''}" data-cat="${t}" aria-selected="${dvSvcCat === t}"><i class="fas ${icon}"></i><span>${label}</span><b>${n || ''}</b></button>`;
+        menu.innerHTML = item('', 'Все категории', 'fa-border-all', serviceFeed.length) + Object.entries(SV_TAGS).map(([t, l]) => item(t, l, SV_ICONS[t], counts[t])).join('');
+    }
+    const list = serviceFeed.filter(s => (!dvSvcCat || (s.tag || 'other') === dvSvcCat)
+        && (!dvSvcQ || ((s.title || '') + ' ' + (SV_TAGS[s.tag] || '') + ' ' + (s.city || '')).toLowerCase().includes(dvSvcQ)));
+    grid.innerHTML = list.length ? list.map(serviceFeedHTML).join('')
+        : `<div class="dv-empty" style="grid-column:1/-1"><i class="fas fa-ship"></i><b>${serviceFeed.length ? 'Ничего не нашлось' : 'Пока нет готовых услуг'}</b><span>${serviceFeed.length ? 'Попробуйте другое слово или категорию.' : 'Катаете на катере или водите экскурсии? Разместите услугу кнопкой внизу.'}</span></div>`;
 }
 
 const _openGroupDv = openGroup;
-openGroup = function (id) { return id === 'dating' ? openDvizScreen() : _openGroupDv.apply(this, arguments); };
+// «Развлечения» переехали внутрь движа: вкладка «Готовые услуги»
+openGroup = function (id) { return id === 'dating' ? openDvizScreen('dviz') : id === 'services' ? openDvizScreen('svc') : _openGroupDv.apply(this, arguments); };
 
 function loadDviz() {
     dvGet('/api/dviz').then(({ d }) => {
@@ -134,25 +210,31 @@ function dvArt(title) {
 function dvCardHTML(e, i) {
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = !!(acc && acc.id === e.ownerId);
-    const people = dvPeople(e);
-    const cn = e.comments || 0;
-    const lines = [
+    const cn = e.comments || 0, joins = e.joins || 0;
+    const pres = reqPresenceHTML({ mine, ownerOnline: e.ownerOnline, ownerSeen: e.ownerSeen });
+    const meta = [
         e.when ? `<span><i class="far fa-calendar"></i>${dvEsc(dvWhen(e.when))}</span>` : '',
-        e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : (e.coords ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : ''),
-        `<span><i class="fas fa-user-group"></i>${people ? dvEsc(people) : 'пока никого'}</span>`
+        e.place ? `<span><i class="fas fa-location-dot"></i>${dvEsc(e.place)}</span>` : (e.coords ? '<span><i class="fas fa-map-location-dot"></i>Точка на карте</span>' : '')
     ].join('');
-    // карточка того же вида, что у запросов на жильё: аватарка, имя, заголовок, строки, текст и кнопки
+    // небольшие картинки под текстом: превью и счётчик остальных фото
+    const more = Math.max(0, (e.photoCount || (e.thumb ? 1 : 0)) - 1);
+    const pics = e.thumb ? `<div class="dvb-pics"><img src="${dvEsc(e.thumb)}" alt="" loading="lazy">${more ? `<span class="dvb-more">+${more}</span>` : ''}</div>` : '';
+    const talk = [cn ? `<i class="far fa-comments"></i>${cn} ${plural(cn, 'обсуждает', 'обсуждают', 'обсуждают')}` : '<i class="far fa-comments"></i>пока без обсуждений',
+        joins ? `<i class="fas fa-user-group"></i>${dvEsc(dvPeople(e))} ${e.max ? '' : plural(joins, 'идёт', 'идут', 'идут')}` : ''].filter(Boolean).join('<em></em>');
     const join = mine ? '<span class="dv2-own"><i class="fas fa-crown"></i> Ваш движ</span>'
         : `<button type="button" class="main dv2-join ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Я с вами'}</button>`;
-    return `<div class="req-card rq2 dv2 card-offer${mine ? ' mine' : ''}" data-id="${dvEsc(e.id)}">
-        ${e.thumb ? `<div class="dv2-pic"><img src="${dvEsc(e.thumb)}" alt="" loading="lazy"></div>` : ''}
-        <div class="rq-top"><div class="rq-ava" data-avn="${avEsc(e.ownerName)}" style="background:${dmColor(e.ownerName)}">${avInner(e.ownerName)}</div>
-            <div class="rq-who"><b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(e.created)}</small></div>
-            <em class="req-kind offer">Движ</em></div>
-        <div class="rq-title">${dvEsc(e.title)}</div>
-        <div class="req-lines">${lines}</div>
-        ${e.text ? `<p class="req-text">${dvEsc(e.text)}</p>` : ''}
-        <div class="req-actions">${join}<button type="button" data-dv="comments"><i class="far fa-comment"></i> ${cn ? cn + ' ' + plural(cn, 'комментарий', 'комментария', 'комментариев') : 'Обсудить'}</button></div></div>`;
+    // «облачко»: так видно, что это пишут обычные туристы, а не объявление
+    return `<div class="dv2 cloud${mine ? ' mine' : ''}" data-id="${dvEsc(e.id)}">
+        <div class="dv-bubble">
+            <div class="rq-top"><div class="rq-ava" data-avn="${avEsc(e.ownerName)}" style="background:${dmColor(e.ownerName)}">${avInner(e.ownerName)}</div>
+                <div class="rq-who"><b>${dvEsc(mine ? 'Вы' : e.ownerName)}${e.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b>${pres || `<small>${fmtAgo(e.created)}</small>`}</div></div>
+            <div class="dvb-title">${dvEsc(e.title)}</div>
+            ${e.text ? `<p class="dvb-text">${dvEsc(e.text)}</p>` : ''}
+            ${meta ? `<div class="dvb-meta">${meta}</div>` : ''}
+            ${pics}
+            <div class="dvb-talk">${talk}</div>
+        </div>
+        <div class="dvb-under"><button type="button" class="dvb-comm" data-dv="comments"><i class="far fa-comment"></i> ${cn ? 'Комментарии · ' + cn : 'Комментировать'}</button>${join}</div></div>`;
 }
 
 function dvAttachHTML(a) {

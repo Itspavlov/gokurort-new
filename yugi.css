@@ -1276,3 +1276,94 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .sv-t-btns button { width: 30px; height: 30px; font-size: 12px; }
 .sv-t-bg i { font-size: 56px; }
 .pub-chips .cat-chip b { top: -6px; right: -2px; box-shadow: 0 0 0 2px rgba(8, 20, 38, .45); }
+
+/* ===== v55: Курортный движ — «Движ» / «Готовые услуги», карточки-облачка ===== */
+:root, :root[data-theme="dark"] { --dv-cloud: #17506A; --dv-cloud-line: rgba(94, 220, 235, .34); }
+:root[data-theme="sand"] { --dv-cloud: #FFE6C2; --dv-cloud-line: #F0C58A; }
+:root[data-theme="peak"] { --dv-cloud: #33298C; --dv-cloud-line: rgba(180, 160, 255, .38); }
+:root[data-theme="dusk"] { --dv-cloud: #4B2139; --dv-cloud-line: rgba(255, 130, 170, .34); }
+.dv-tabs { margin-bottom: 4px; }
+.dv-tabs .seek-tab { font-size: 13px; }
+.dv-tabs .seek-tab b { font-size: 10px; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.dv-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dv-feed { padding-bottom: 150px; }
+/* облачко: однотонное, с хвостиком к аватарке, как сообщение в чате */
+.dv2.cloud { flex: none; margin: 0 0 6px; }
+.dv-bubble { position: relative; background: var(--dv-cloud); border: 1px solid var(--dv-cloud-line); border-radius: 24px 24px 24px 8px; padding: 12px 14px 11px; color: var(--text); box-shadow: 0 4px 14px rgba(0, 0, 0, .14); }
+.dv-bubble::after { content: ''; position: absolute; left: 22px; bottom: -8px; width: 15px; height: 15px; background: var(--dv-cloud); border-right: 1px solid var(--dv-cloud-line); border-bottom: 1px solid var(--dv-cloud-line); transform: rotate(45deg); border-radius: 0 0 5px 0; }
+.dv2.mine .dv-bubble { box-shadow: 0 0 0 2px var(--dv-cloud-line), 0 4px 14px rgba(0, 0, 0, .14); }
+.dv-bubble .rq-ava { width: 40px; height: 40px; font-size: 17px; }
+.dv-bubble .rq-who b { font-size: 15.5px; }
+.dv-bubble .rq-pres { margin-top: 2px; font-size: 12px; }
+.dvb-title { margin: 9px 0 3px; font: 800 16.5px/1.25 var(--font); letter-spacing: -.2px; }
+.dvb-text { margin: 0 0 6px; font-size: 14.5px; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.dvb-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 7px; font-size: 12.5px; color: var(--text-secondary); }
+.dvb-meta i { margin-right: 5px; opacity: .8; }
+.dvb-pics { display: flex; gap: 6px; margin: 2px 0 8px; }
+.dvb-pics img { width: 76px; height: 76px; border-radius: 14px; object-fit: cover; display: block; background: rgba(255, 255, 255, .1); }
+.dvb-more { width: 76px; height: 76px; border-radius: 14px; display: grid; place-items: center; font: 800 16px var(--font); background: rgba(255, 255, 255, .12); color: var(--text); }
+.dvb-talk { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font: 700 12.5px var(--font); color: var(--text-secondary); padding-top: 7px; border-top: 1px solid var(--dv-cloud-line); }
+.dvb-talk i { margin-right: 5px; }
+.dvb-talk em { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .6; }
+.dvb-under { display: flex; align-items: center; gap: 8px; padding: 14px 4px 0 8px; }
+.dvb-comm { flex: 1; min-width: 0; height: 40px; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 700 13.5px var(--font); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+.dvb-under .dv2-join { flex: 1; min-width: 0; height: 40px; border-radius: 20px; border: 0; background: var(--text); color: var(--bg); font: 800 14px var(--font); cursor: pointer; }
+.dvb-under .dv2-join.on { background: var(--dv-cloud); color: var(--text); border: 1px solid var(--dv-cloud-line); }
+.dvb-under .dv2-own { flex: 1; display: inline-flex; align-items: center; justify-content: flex-end; gap: 7px; font: 700 12.5px var(--font); color: var(--text-secondary); }
+.dvb-under .dv2-own i { color: var(--sun-2, #FFB35C); }
+/* «Готовые услуги» */
+.dv-svc { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dv-svc-bar { flex: none; display: flex; gap: 8px; padding: 8px 14px 4px; align-items: center; }
+.dv-svc-bar .ent-search { flex: 1 1 0; min-width: 0; height: 40px; }
+.dv-cat { position: relative; flex: none; max-width: 48%; }
+.dv-cat-btn { height: 40px; max-width: 100%; padding: 0 12px; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255, 255, 255, .14)); color: var(--text); font: 700 13px var(--font); display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.dv-cat-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-cat-btn i { font-size: 11px; opacity: .7; flex: none; transition: transform .18s; }
+.dv-cat-btn[aria-expanded="true"] i { transform: rotate(180deg); }
+.dv-cat-menu { position: absolute; z-index: 30; right: 0; top: 46px; width: 236px; max-height: 330px; overflow-y: auto; padding: 6px; border-radius: 18px; background: var(--bg); border: 1px solid var(--glass-border); box-shadow: 0 14px 34px rgba(0, 0, 0, .45); }
+.dv-cat-menu[hidden] { display: none; }
+.dv-cat-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 10px; border: 0; border-radius: 12px; background: transparent; color: var(--text); font: 600 14px var(--font); cursor: pointer; text-align: left; }
+.dv-cat-item i { width: 18px; text-align: center; color: var(--sea, #2BC4D6); }
+.dv-cat-item span { flex: 1; min-width: 0; }
+.dv-cat-item b { font-size: 12px; color: var(--text-secondary); }
+.dv-cat-item.on { background: var(--glass-strong, rgba(255, 255, 255, .14)); }
+.sv-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; padding: 8px 14px 100px; -webkit-overflow-scrolling: touch; }
+/* «Разместить услугу»: небольшая и спокойная, чтобы не бросаться в глаза отдыхающим */
+.dv-dock.svc { margin-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+.dv-dock.svc .dock-actions { justify-content: center; }
+.dv-svc-add { height: 36px; padding: 0 16px; border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255, 255, 255, .14)); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--text-secondary); font: 700 12.5px var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.dv-svc-add i { font-size: 11px; }
+
+/* v56: поиск значком, мелкие облачка-диалог (слева / справа), «Создать движ» по центру */
+.dv-svc-bar { gap: 8px; }
+.dv-sbtn { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255, 255, 255, .14)); color: var(--text); display: grid; place-items: center; font-size: 15px; cursor: pointer; }
+.dv-sbtn.on { background: var(--text); color: var(--bg); }
+.dv-svc-bar .dv-cat { flex: 1 1 auto; max-width: none; min-width: 0; }
+.dv-svc-bar .dv-cat-btn { width: 100%; justify-content: space-between; }
+.dv-sq { flex: none; display: flex; align-items: center; gap: 8px; height: 38px; margin: 2px 14px 4px; padding: 0 14px; border-radius: 19px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text-secondary); }
+.dv-sq[hidden] { display: none; }
+.dv-sq input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: 600 14px var(--font); }
+.dv-create-dock { justify-content: center; }
+.dv-create-dock .dock-btn { flex: 0 1 220px; }
+.dv-feed:has(.dv2.cloud) { padding-left: 12px; padding-right: 12px; }
+.dv2.cloud { width: 66%; max-width: 270px; margin: 0 auto 10px 0; }
+.dv-feed > .dv2.cloud:nth-child(even) { margin: 0 0 10px auto; }
+.dv2.cloud .dv-bubble { padding: 8px 10px 7px; border-radius: 16px 16px 16px 5px; box-shadow: 0 3px 9px rgba(0, 0, 0, .14); }
+.dv-feed > .dv2.cloud:nth-child(even) .dv-bubble { border-radius: 16px 16px 5px 16px; }
+.dv2.cloud .dv-bubble::after { left: 14px; bottom: -6px; width: 11px; height: 11px; }
+.dv-feed > .dv2.cloud:nth-child(even) .dv-bubble::after { left: auto; right: 14px; }
+.dv2.cloud .dv-bubble .rq-ava { width: 26px; height: 26px; font-size: 12px; }
+.dv2.cloud .dv-bubble .rq-who b { font-size: 12.5px; }
+.dv2.cloud .dv-bubble .rq-pres { margin-top: 0; font-size: 10.5px; }
+.dv2.cloud .dvb-title { margin: 6px 0 2px; font-size: 13.5px; }
+.dv2.cloud .dvb-text { margin: 0 0 4px; font-size: 12px; line-height: 1.32; -webkit-line-clamp: 3; }
+.dv2.cloud .dvb-meta { margin: 0 0 5px; gap: 2px 8px; font-size: 10.5px; }
+.dv2.cloud .dvb-pics { gap: 4px; margin: 0 0 5px; }
+.dv2.cloud .dvb-pics img, .dv2.cloud .dvb-more { width: 38px; height: 38px; border-radius: 9px; }
+.dv2.cloud .dvb-more { font-size: 12px; }
+.dv2.cloud .dvb-talk { padding-top: 5px; font-size: 10.5px; }
+.dv2.cloud .dvb-under { gap: 6px; padding: 10px 2px 0 4px; }
+.dv-feed > .dv2.cloud:nth-child(even) .dvb-under { flex-direction: row-reverse; padding: 10px 4px 0 2px; }
+.dv2.cloud .dvb-comm, .dv2.cloud .dvb-under .dv2-join { height: 30px; border-radius: 15px; font-size: 11.5px; flex: 1 1 0; }
+.dv2.cloud .dvb-comm { gap: 5px; padding: 0 6px; }
+.dv2.cloud .dvb-under .dv2-own { font-size: 10.5px; }

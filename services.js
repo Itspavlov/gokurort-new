@@ -200,6 +200,7 @@ function openServiceEditor(edit, after) {
 
 function afterServiceChange() {
     loadMyServices(() => { mountMyServices(); });
+    if (typeof dvRefreshSvc === 'function') dvRefreshSvc();
     if (typeof reqSection === 'function' && reqSection() === 'services' && document.getElementById('chatMessages')) loadRequests();
 }
 
