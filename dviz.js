@@ -80,6 +80,67 @@ function dvRouteHTML(c) {
         <a class="dv-rbtn" href="https://www.google.com/maps/dir/?api=1&destination=${la},${lo}" target="_blank" rel="noopener">Google</a>
         <a class="dv-rbtn" href="https://maps.apple.com/?daddr=${la},${lo}" target="_blank" rel="noopener">Apple</a></div>`;
 }
+// выбор точки на карте для других форм (развлечения): поиск адреса, «где я», тап по карте, метку можно двигать
+function mapPickHTML(title, hintText) {
+    return `<div class="form-h" style="margin:0 2px 8px">${title}</div>
+        <div class="dv-mapsearch"><input id="mpAddr" maxlength="120" placeholder="Найти адрес или место" enterkeyhint="search" autocomplete="off">
+            <button type="button" id="mpFind" aria-label="Найти"><i class="fas fa-magnifying-glass"></i></button>
+            <button type="button" id="mpLoc" aria-label="Где я"><i class="fas fa-location-crosshairs"></i></button></div>
+        <div class="dv-map" id="mpMap" data-noswipe></div>
+        <div class="dv-maphint" id="mpHint" data-hint="${dvEsc(hintText)}"></div>`;
+}
+function mapPickInit(el, initial, onName) {
+    let coords = initial && initial.length === 2 ? initial.slice() : null, pmap = null;
+    const hint = el.querySelector('#mpHint');
+    const round5 = (c) => [Math.round(c[0] * 1e5) / 1e5, Math.round(c[1] * 1e5) / 1e5];
+    const paintHint = () => {
+        hint.innerHTML = coords
+            ? `<i class="fas fa-circle-check"></i> Точка отмечена · ${dvFmtCoords(coords)} <button type="button" data-unmark>Убрать</button>`
+            : dvEsc(hint.dataset.hint);
+    };
+    const setPoint = (lat, lng, zoom) => {
+        coords = round5([lat, lng]);
+        if (pmap) pmap.setPoint(coords, zoom || Math.max(pmap.getZoom(), 16));
+        paintHint();
+    };
+    dvOpenMap(el.querySelector('#mpMap'), coords || MAP_DEFAULT, coords ? 16 : 15, {
+        draggable: true,
+        onClick: (c) => { setPoint(c[0], c[1], Math.max(pmap ? pmap.getZoom() : 16, 16)); if (typeof haptic === 'function') haptic(8); },
+        onDrag: (c) => { coords = round5(c); paintHint(); }
+    }).then((m) => { pmap = m; if (m && coords) m.setPoint(coords, 16); });
+    hint.addEventListener('click', (ev) => { if (!ev.target.closest('[data-unmark]')) return; coords = null; if (pmap) pmap.clearPoint(); paintHint(); });
+    paintHint();
+    const addr = el.querySelector('#mpAddr'), find = el.querySelector('#mpFind');
+    const doFind = () => {
+        const q = addr.value.trim();
+        if (!q) return;
+        find.disabled = true;
+        dvGeocode(q).then((r) => {
+            find.disabled = false;
+            if (!r) { showToast('Не нашли такое место — отметьте точку на карте'); return; }
+            setPoint(r.lat, r.lng, 17);
+            if (onName) onName(r.name);
+        }).catch(() => { find.disabled = false; showToast('Поиск адреса сейчас недоступен — отметьте точку на карте'); });
+    };
+    find.addEventListener('click', doFind);
+    addr.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); doFind(); } });
+    el.querySelector('#mpLoc').addEventListener('click', () => {
+        if (!navigator.geolocation) { showToast('Геолокация недоступна'); return; }
+        navigator.geolocation.getCurrentPosition((pos) => setPoint(pos.coords.latitude, pos.coords.longitude, 17),
+            () => showToast('Не удалось определить, где вы. Отметьте точку на карте'), { enableHighAccuracy: true, timeout: 8000 });
+    });
+    return { get: () => coords };
+}
+// окно «Карта» у карточки услуги: где причал или куда подойти, и ссылки на маршрут
+function openServiceMap(s) {
+    if (!s || !s.coords) { showToast('Автор не отметил точку на карте'); return; }
+    const e = escapeHtml;
+    openSheet('Карта · ' + e(s.title || 'услуга'), `
+        ${s.place ? `<p class="sv-where"><i class="fas fa-flag"></i><span>${e(s.place)}</span></p>` : ''}
+        <div class="dv-map" id="svViewMap" data-noswipe></div>${dvRouteHTML(s.coords)}`, (el) => {
+        dvOpenMap(el.querySelector('#svViewMap'), s.coords, 16).then((m) => { if (m) m.setPoint(s.coords); });
+    });
+}
 const dvPeople = (e) => e.max ? `${e.joins} из ${e.max}` : (e.joins ? String(e.joins) : '');
 
 // ---------- экран ----------

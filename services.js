@@ -45,7 +45,8 @@ function serviceFeedHTML(s) {
     const btns = mine
         ? `<button type="button" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button><button type="button" data-sv="bump" data-id="${e(s.id)}" aria-label="Поднять"><i class="fas fa-arrow-up"></i></button>`
         : `<button type="button" class="main" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i></button>`;
-    return `<div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
+    const mapBtn = s.coords ? `<button type="button" class="sv-mapbtn" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта</button>` : '';
+    return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
         <div class="sv-t-bg">${s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : `<i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>`}</div>
         <div class="sv-t-top"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
             <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></span>
@@ -55,7 +56,7 @@ function serviceFeedHTML(s) {
             <b class="sv-t-title">${e(s.title)}</b>
             ${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : ''}
             <div class="sv-t-foot"><span class="sv-t-price">${e(price)}${s.price && s.unit ? `<small>${e(s.unit)}</small>` : ''}</span><span class="sv-t-btns">${btns}</span></div>
-        </div></div>`;
+        </div></div>${mapBtn}</div>`;
 }
 
 // ---------- загрузка ----------
@@ -86,6 +87,7 @@ function openServiceView(id) {
             <div class="sv-view-price">${e(svPrice(s))}</div>
             <div class="sv-view-meta"><span class="sv-tag">${e(SV_TAGS[s.tag] || '')}</span>${s.city ? `<span><i class="fas fa-location-dot"></i>${e(s.city)}</span>` : ''}</div>
             ${s.text ? `<p class="sv-view-text">${e(s.text)}</p>` : ''}
+            ${s.coords ? `<button type="button" class="ghost-btn wide-btn sv-viewmap" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта${s.place ? ' · ' + e(s.place) : ''}</button>` : ''}
             <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
                 <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
             ${mine ? `<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button><button class="primary-btn" data-sv="bump" data-id="${e(s.id)}"><i class="fas fa-arrow-up"></i> Поднять</button></div>`
@@ -155,6 +157,8 @@ function openServiceEditor(edit, after) {
             <div class="rq-row"><label class="field"><span>Цена, ₽</span><input id="svPrice" type="number" inputmode="numeric" min="1" value="${s.price || ''}" placeholder="Можно пусто"></label>
             <label class="field"><span>Как считать</span><select id="svUnit">${SV_UNITS.map(u => `<option value="${e(u)}" ${(s.unit || '') === u ? 'selected' : ''}>${u || '—'}</option>`).join('')}</select></label></div>
             <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Анапа, причал"></label>
+            <label class="field"><span>Куда подойти</span><input id="svPlace" maxlength="120" value="${e(s.place || '')}" placeholder="Например: причал №3, у синего катера"></label>
+            ${mapPickHTML('Точка на карте: причал или место встречи', 'Нажмите на карту, чтобы отметить причал или место, куда подходить. Люди увидят карту под вашей карточкой и смогут проложить маршрут.')}
             <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="800" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>
             <div class="auth-error" id="svErr"></div>
             <button class="primary-btn wide-btn" id="svSave" type="button"><i class="fas fa-check"></i> ${edit ? 'Сохранить' : 'Опубликовать'}</button>`, (el) => {
@@ -164,6 +168,7 @@ function openServiceEditor(edit, after) {
                     + (photos.length < SV_PHOTOS ? '<button type="button" class="photo-add"><i class="fas fa-camera"></i><span>Добавить</span></button>' : '');
             };
             paint();
+            const picker = mapPickInit(el, s.coords, (name) => { const pl = el.querySelector('#svPlace'); if (pl && !pl.value.trim()) pl.value = name; });
             grid.addEventListener('click', (ev) => {
                 const del = ev.target.closest('[data-del]');
                 if (del) { photos.splice(Number(del.dataset.del), 1); paint(); return; }
@@ -183,7 +188,7 @@ function openServiceEditor(edit, after) {
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
-                const body = { id: s.id, title: v('#svTitle'), tag: el.querySelector('#svTag').value, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), text: v('#svText'), photos, thumb };
+                const body = { id: s.id, title: v('#svTitle'), tag: el.querySelector('#svTag').value, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, text: v('#svText'), photos, thumb };
                 try {
                     const { status, d } = await svApi('/api/services', { method: 'POST', headers: svAuth(), body: JSON.stringify(body) });
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
@@ -296,6 +301,11 @@ document.addEventListener('click', (ev) => {
         if (act === 'view') openServiceView(id);
         else if (act === 'new') { closeSheet(); openServiceEditor(); }
         else if (act === 'edit') { const s = known(); closeSheet(); openServiceEditor(s || { id, photoCount: 1 }); }
+        else if (act === 'map') {
+            const s = known();
+            if (s && s.coords) { closeSheet(); setTimeout(() => openServiceMap(s), 60); }
+            else svApi('/api/services/' + encodeURIComponent(id)).then(({ d }) => { if (d && d.ok) { closeSheet(); setTimeout(() => openServiceMap(d.service), 60); } });
+        }
         else if (act === 'bump') bumpService(id);
         else if (act === 'del') deleteService(id);
         else if (act === 'write') {
