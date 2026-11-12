@@ -1476,3 +1476,7 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 .ad-status.off { background: #5B6B7B; color: #fff; }
 .pub-quota { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin: 12px 4px 4px; padding: 9px 12px; border-radius: 12px; border: 1px dashed var(--glass-border); text-align: left; font: 600 12.5px/1.35 var(--font); }
 .pub-quota i { margin-top: 2px; opacity: .8; }
+
+/* v70: фото на главной доходит до самого верха экрана (под строкой состояния), без тёмной рамки над ним.
+   Верх снимка — ровное небо, поэтому полосу над ним закрашиваем тем же цветом, а сам снимок не трогаем. */
+#tab-search::before { content: ''; position: absolute; z-index: 0; left: -18px; right: -18px; top: calc(-92px - env(safe-area-inset-top, 0px) - 60px); height: calc(env(safe-area-inset-top, 0px) + 60px); background: #007cd4; pointer-events: none; }
