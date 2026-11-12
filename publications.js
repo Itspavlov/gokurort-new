@@ -176,3 +176,42 @@ if (typeof openGroup === 'function') {
     const _ogPub = openGroup;
     openGroup = function () { window._reqSecOverride = ''; return _ogPub.apply(this, arguments); };
 }
+
+// ============================================
+// После «Опубликовать»: форма закрывается, человек выходит из поиска/«Моих публикаций» и видит ленту,
+// где появилась его карточка: нужная комната, нужная вкладка, карточка подсвечена.
+// ============================================
+function pubFlash(sel, tries) {
+    tries = tries || 0;
+    const el = document.querySelector(sel);
+    if (!el) { if (tries < 12) setTimeout(() => pubFlash(sel, tries + 1), 300); return; }
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add('pub-new');
+    setTimeout(() => el.classList.remove('pub-new'), 2600);
+}
+
+// o: { section: 'housing'|'work'|'trips', kind: 'seek'|'offer', rid, adId, room }
+function pubShowInFeed(o) {
+    window._reqSecOverride = '';
+    const room = o.room || (o.section === 'housing' ? 'housing' : o.section);
+    const grp = document.getElementById('group-screen');
+    const here = typeof currentRoom === 'string' && grp && grp.offsetParent !== null && document.getElementById('chatMessages')
+        && (room === currentRoom || (o.section === 'housing' && !o.adId && typeof isHousingRoom === 'function' && isHousingRoom(currentRoom)));
+    const q = o.adId ? '.chat-message-ad[data-ad-id="' + String(o.adId).replace(/"/g, '') + '"]' : '.req-item[data-rid="' + String(o.rid || '').replace(/"/g, '') + '"]';
+    const go = () => {
+        reqView = o.kind === 'seek' ? 'seek' : 'offer';
+        if (typeof applyReqView === 'function') applyReqView();
+        pubFlash(q);
+    };
+    if (here) { if (typeof loadRequests === 'function') loadRequests(go); else go(); return; }
+    if (typeof closeAdForm === 'function' && document.getElementById('form-screen') && document.getElementById('form-screen').style.display !== 'none') closeAdForm();
+    if (typeof openGroup === 'function') openGroup(room);
+    setTimeout(() => { if (typeof loadRequests === 'function') loadRequests(go); else go(); }, 450);
+}
+
+// новая услуга: показываем ленту «Готовые услуги» и плитку автора
+function pubShowService(s) {
+    window._reqSecOverride = '';
+    if (typeof openDvizScreen === 'function') openDvizScreen('svc');
+    if (s && s.id) pubFlash('.sv-tile[data-id="' + String(s.id).replace(/"/g, '') + '"]');
+}

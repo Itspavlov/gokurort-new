@@ -1353,7 +1353,7 @@ async function publishAd(ad, remoteId, done) {
             const i = remoteAds.findIndex(a => a.id === saved.id);
             if (i >= 0) remoteAds[i] = saved; else remoteAds.unshift(saved);
             refreshHousingAds();
-            done(true);
+            done(true, saved);
         } catch (e) {
             showToast('Нет связи с сервером. Попробуйте позже.');
             done(false);

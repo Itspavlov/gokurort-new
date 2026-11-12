@@ -635,7 +635,8 @@ function openDvizForm(opts) {
                     if (!d || !d.ok) { err.textContent = (d && d.message) || 'Не удалось опубликовать'; btn.disabled = false; return; }
                     closeSheet();
                     showToast('Движ опубликован!');
-                    if (document.getElementById('dvFeed')) loadDviz(); else openDvizScreen();
+                    window._reqSecOverride = '';
+                    if (document.getElementById('dvFeed')) { loadDviz(); const f = document.getElementById('dvFeed'); if (f) f.scrollTop = 0; } else openDvizScreen('dviz');
                 } catch (_) { err.textContent = 'Нет связи с сервером'; btn.disabled = false; }
             });
         });

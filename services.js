@@ -197,6 +197,7 @@ function openServiceEditor(edit, after) {
                     showToast(edit ? 'Карточка обновлена' : 'Карточка опубликована');
                     afterServiceChange();
                     after && after(d.service);
+                    if (!edit && typeof pubShowService === 'function') setTimeout(() => pubShowService(d.service), 120);
                 } catch (_) { err.textContent = 'Нет связи с сервером'; btn.disabled = false; }
             });
         });

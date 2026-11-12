@@ -549,13 +549,18 @@ function saveAdForm() {
     // объявление публикуется на сервере: так его увидят все
     const remoteId = isRemoteAdId(formState.id) ? formState.id : null;
     const legacyId = formState.id && !remoteId ? formState.id : null;
-    publishAd(ad, remoteId, (ok) => {
+    const adCat = AD_CATS.find(c => c.id === formState.category) || AD_CATS[0];
+    publishAd(ad, remoteId, (ok, saved) => {
         if (!ok) return;
         if (legacyId) saveMyAds(getMyAds().filter(a => String(a.id) !== String(legacyId)));
         closeAdForm();
         renderProfile();
         renderFeatured();
-        showToast('Готово: объявление видно в чате «Жильё · ' + (AD_CATS.find(c => c.id === formState.category) || AD_CATS[0]).label + '»');
+        if (!remoteId && typeof pubShowInFeed === 'function') {
+            // новое объявление: сразу в ленту нужного типа жилья, вкладка «Готовые предложения»
+            showToast('Объявление опубликовано в «Жильё · ' + adCat.label + '»');
+            pubShowInFeed({ section: 'housing', kind: 'offer', room: adCat.room, adId: saved ? saved.id : ad.id });
+        } else showToast('Готово: объявление видно в чате «Жильё · ' + adCat.label + '»');
     });
 }
 

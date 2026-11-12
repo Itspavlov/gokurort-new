@@ -116,10 +116,8 @@ function openRouteMap(id) {
     });
 }
 
-// плашка «Карта» под карточкой: время до моря пешком прямо на кнопке
+// плашка «Карта» под карточкой
 function adMapBtnHTML(ad) {
     if (!ad || !Array.isArray(ad.coords)) return '';
-    const m = Array.isArray(ad.beach) ? distMeters(ad.coords, ad.beach) : 0;
-    const sub = m ? ` · до моря ${walkMinutes(m * 1.25)} мин` : '';
-    return `<button type="button" class="ad-mapbtn" onclick="event.stopPropagation();openRouteMap('${escapeHtml(String(ad.id))}')"><i class="fas fa-map-location-dot"></i> Карта${sub}</button>`;
+    return `<button type="button" class="ad-mapbtn" onclick="event.stopPropagation();openRouteMap('${escapeHtml(String(ad.id))}')"><i class="fas fa-map-location-dot"></i> Карта</button>`;
 }

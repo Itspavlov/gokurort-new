@@ -387,9 +387,8 @@ function openRequestSheet(edit) {
                     if (!reqEditing) setCooldown(d.cooldown || 60);
                     closeSheet();
                     showToast(reqEditing ? 'Запрос обновлён' : (d.matches ? 'Мы нашли ' + d.matches + ' ' + plural(d.matches, 'вариант', 'варианта', 'вариантов') + ' под ваш запрос' : (d.similar ? 'Точных вариантов нет, но есть ' + d.similar + ' в других типах жилья' : 'Запрос опубликован. Хозяева его увидят')));
-                    reqView = reqEditing ? reqView : 'seek';
-                    applyReqView();
-                    loadRequests(refreshMyRequests);
+                    if (reqEditing) { applyReqView(); loadRequests(refreshMyRequests); }
+                    else { refreshMyRequests(); pubShowInFeed({ section: 'housing', kind: 'seek', rid: d.request && d.request.id }); }
                     // после публикации сразу показываем найденные варианты во всплывающем окне
                     if (!reqEditing && (d.matches || d.similar)) setTimeout(() => openOptionsSheet(d.request), 350);
                     else if (!reqEditing) setTimeout(() => openNoMatchSheet(), 350);
@@ -446,8 +445,8 @@ function openCardSheet(kind, edit, prefill) {
                     if (!r) setCooldown(d.cooldown || 60);
                     closeSheet();
                     showToast(r ? 'Карточка обновлена' : 'Карточка опубликована');
-                    if (!r) { reqView = kind === 'offer' ? 'offer' : 'seek'; applyReqView(); }
-                    loadRequests(refreshMyRequests);
+                    if (r) loadRequests(refreshMyRequests);
+                    else { refreshMyRequests(); pubShowInFeed({ section: section, kind, rid: d.request && d.request.id }); }
                 }).catch(() => { err.textContent = 'Нет связи с сервером'; label(); });
             });
         });

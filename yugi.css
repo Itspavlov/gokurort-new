@@ -1415,3 +1415,8 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .rt-taxi { display: flex; align-items: center; gap: 9px; margin: 6px 0 4px; padding: 9px 12px; border-radius: 14px; background: rgba(255, 196, 0, .14); border: 1px solid rgba(255, 196, 0, .35); font: 700 13px var(--font); color: var(--text); }
 .rt-taxi i { color: #FFC400; }
 .rt-yx { margin-top: 8px; }
+
+/* v60: только что опубликованная карточка в ленте мигает рамкой */
+@keyframes pubNew { 0% { box-shadow: 0 0 0 0 rgba(45, 212, 218, .0); } 20% { box-shadow: 0 0 0 4px rgba(45, 212, 218, .75); } 100% { box-shadow: 0 0 0 0 rgba(45, 212, 218, 0); } }
+.pub-new { border-radius: 22px; animation: pubNew 2.4s ease-out 1; }
+.pub-new > .req-card, .pub-new .chat-bubble, .pub-new.sv-tile { animation: pubNew 2.4s ease-out 1; }
