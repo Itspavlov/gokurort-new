@@ -87,7 +87,9 @@ function resetTips() {
     showToast('Подсказки покажутся снова');
 }
 
+let tipWatch = null;
 function closeTip() {
+    if (tipWatch) { clearInterval(tipWatch); tipWatch = null; }
     if (tipEl) { tipEl.remove(); tipEl = null; }
     if (tipSpot) { tipSpot.remove(); tipSpot = null; }
     tipAnchor = null;
@@ -119,6 +121,7 @@ function showTip(step, onNext, onClose) {
     closeTip();
     const anchor = step.el || document.querySelector(step.sel);
     if (!anchor) return false;
+    if (!anchor.getClientRects().length) return 'hidden';     // экран уже закрыт (зашли и быстро вышли): подсказку не показываем
     tipAnchor = anchor;
     tipSpot = document.createElement('div');
     tipSpot.className = 'tip-spot';
@@ -152,13 +155,15 @@ function showTip(step, onNext, onClose) {
     window.addEventListener('resize', placeTip);
     placeTip();
     requestAnimationFrame(() => { if (tipEl) tipEl.classList.add('in'); });
+    // человек вышел с экрана, к которому относится подсказка: убираем её, а не оставляем висеть поверх главной
+    tipWatch = setInterval(() => { if (!tipAnchor || !document.body.contains(tipAnchor) || !tipAnchor.getClientRects().length) closeTip(); }, 250);
     return true;
 }
 
 // Тур из нескольких подсказок. Показывается один раз; force — по кнопке «?».
 function runTour(id, steps, force) {
     if (!force && tipSeen(id)) return;
-    const list = steps.filter(s => s.el || document.querySelector(s.sel));
+    const list = steps.filter(s => { const a = s.el || document.querySelector(s.sel); return a && a.getClientRects().length; });
     if (!list.length) return;
     let i = 0;
     const finish = () => { tipMark(id); closeTip(); };
@@ -167,6 +172,7 @@ function runTour(id, steps, force) {
         const last = i === list.length - 1;
         const ok = showTip(Object.assign({}, s, { index: i + 1, total: list.length, next: last ? 'Понятно' : 'Дальше' }),
             () => { if (last) finish(); else { i++; go(); } }, finish);
+        if (ok === 'hidden') { closeTip(); return; }               // не отмечаем как просмотренную: покажем в следующий раз
         if (!ok) finish();
     };
     go();

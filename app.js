@@ -263,6 +263,8 @@ const navItems = document.querySelectorAll('.nav-item');
 const tabContents = document.querySelectorAll('.tab-content');
 
 function switchTab(tabName, animate = true) {
+    if (typeof closeTip === 'function') closeTip();
+    if (typeof hideSeekTip === 'function') hideSeekTip();
     const groupScreen = document.getElementById('group-screen');
     if (groupScreen) groupScreen.style.display = 'none';
 
@@ -1032,7 +1034,15 @@ console.log('👤 Ваше имя:', getUserName());
         if (!btn) return;
         lastFire = Date.now();
         synthetic = true;
+        const t0 = performance.now(), wait = Math.round(t0 - ev.timeStamp);   // сколько касание ждало, пока страница освободится
         try { btn.click(); } finally { synthetic = false; }
+        // диагностика: адрес с ?perf=1 (или localStorage yy-perf=1) показывает, где теряется время
+        let on = false;
+        try { on = /[?&]perf=1/.test(location.search) || localStorage.getItem('yy-perf') === '1'; } catch (_) {}
+        if (on) requestAnimationFrame(() => requestAnimationFrame(() => {
+            const ms = Math.round(performance.now() - t0);
+            if (typeof showToast === 'function') showToast('Назад: касание ждало ' + wait + ' мс, экран сменился за ' + ms + ' мс');
+        }));
     }, true);
     document.addEventListener('click', (ev) => {
         const btn = ev.target.closest && ev.target.closest('.chat-back-btn');

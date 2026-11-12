@@ -87,6 +87,7 @@ function openAuthSheet(onDone, mode = 'login') {
             fetchRemoteAds();
             if (typeof renderProfile === 'function') renderProfile();
             if (typeof renderDialogs === 'function') renderDialogs();
+            if (typeof renderMyPubs === 'function') renderMyPubs();
             if (onDone) onDone();
         };
         submit.addEventListener('click', go);
@@ -108,6 +109,7 @@ async function doLogout() {
     fetchRemoteAds();
     if (typeof renderProfile === 'function') renderProfile();
     if (typeof renderDialogs === 'function') renderDialogs();
+    if (typeof renderMyPubs === 'function') renderMyPubs();
 }
 
 function accountCardHTML() {
