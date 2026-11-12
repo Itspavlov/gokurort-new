@@ -1052,33 +1052,3 @@ console.log('👤 Ваше имя:', getUserName());
     }, true);
 })();
 
-// панель диагностики эффектов: показывается при ?perf=1, каждая кнопка включает/выключает один эффект сразу
-(function litePanel() {
-    let on = false;
-    try { on = /[?&]perf=1/.test(location.search) || localStorage.getItem('yy-perf') === '1'; } catch (_) {}
-    if (!on) return;
-    const KEYS = [['bf', 'размытие под панелями'], ['fl', 'blur-фильтры'], ['bs', 'тени'], ['mx', 'blend'], ['bl', 'пятна фона'], ['mk', 'маски'], ['im', 'фото шапки']];
-    const box = document.createElement('div');
-    box.setAttribute('data-i18n-skip', '');
-    box.style.cssText = 'position:fixed;right:4px;top:38%;z-index:99999;display:flex;flex-direction:column;gap:4px;font:700 11px sans-serif';
-    const paint = () => box.querySelectorAll('button').forEach(b => {
-        const off = document.documentElement.classList.contains('lite-' + b.dataset.k);
-        b.style.background = off ? '#1b8a3a' : '#a02828';
-        b.textContent = (off ? 'ВЫКЛ ' : 'вкл ') + b.dataset.k;
-    });
-    KEYS.forEach(([k, name]) => {
-        const b = document.createElement('button');
-        b.type = 'button'; b.dataset.k = k; b.title = name;
-        b.style.cssText = 'padding:7px 8px;border:0;border-radius:8px;color:#fff;opacity:.92';
-        b.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            document.documentElement.classList.toggle('lite-' + k);
-            const list = KEYS.map(x => x[0]).filter(x => document.documentElement.classList.contains('lite-' + x));
-            try { localStorage.setItem('yy-lite', list.join(',')); } catch (_) {}
-            paint();
-        });
-        box.appendChild(b);
-    });
-    document.body.appendChild(box);
-    paint();
-})();
