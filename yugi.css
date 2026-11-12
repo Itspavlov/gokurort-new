@@ -1485,3 +1485,7 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 .chat-header.room-head { background: none !important; border: 0 !important; box-shadow: none !important; }
 /* логотип чуть ниже: размытие строки состояния в iOS не заходит на надпись */
 .app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
+
+/* v72: верхний край фото растворяется в небе над ним, чтобы линии края не было видно */
+.hero-photo { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 90px); mask-image: linear-gradient(180deg, transparent 0, #000 90px); }
+.hero-scene { background: #007cd4; }
