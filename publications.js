@@ -53,7 +53,6 @@ function renderMyPubs() {
     if (typeof loadDviz === 'function') loadDviz();
     if (typeof refreshMatchingRequests === 'function') refreshMatchingRequests();
     if (typeof loadQuota === 'function') loadQuota((q) => { pubQuota = q; paintPubs(); });
-    if (pubChip === 'housing') setTimeout(() => { if (typeof hostProfileTip === 'function' && root.offsetParent !== null) hostProfileTip(); }, 900);
 }
 
 const pubHead = (title, n) => `<div class="section-head pf-head"><h2 class="section-title">${title}${n ? ': ' + n : ''}</h2></div>`;
@@ -75,8 +74,8 @@ function pubAdsHTML() {
         </div>`).join('');
     const q = pubQuota ? `<div class="quota-line${pubQuota.left === 0 ? ' full' : ''}">${escapeHtml(quotaText(pubQuota))}</div>` : '';
     return pubHead('Мои объявления', mine.length)
-        + (mine.length ? `<div class="my-ads">${rows}</div>` : pubEmpty('Сдаёте или продаёте жильё? Добавьте объявление: оно появится в чате выбранного типа.'))
-        + q + '<button class="primary-btn wide-btn pub-add" onclick="openAdForm()"><i class="fas fa-plus"></i> Добавить жильё</button>';
+        + (mine.length ? `<div class="my-ads">${rows}</div>` : pubEmpty('Объявлений пока нет. Добавить жильё можно в разделе «Жильё» кнопкой «Сдать жильё».'))
+        + q;
 }
 
 function pubReqListHTML(sec) {
@@ -101,8 +100,7 @@ function paintPubs() {
         h += pubAdsHTML();
         h += `<div class="pf-menu pub-match"><button type="button" class="pf-row" id="rowMatch" onclick="openMatchingSheet()" ${hasMatch ? '' : 'hidden'}><i class="fas fa-users"></i><span>Подходящие арендаторы</span><em id="rowMatchCount" ${hasMatch ? '' : 'hidden'}>${hasMatch ? matchReqs.length : 0}</em><i class="fas fa-chevron-right pf-go"></i></button></div>`;
         h += pubHead('Мои запросы', pubReqs('housing').filter(r => r.status === 'active').length);
-        h += pubReqs('housing').length ? `<div class="req-mine" id="pubReqs">${pubReqListHTML('housing')}</div>` : pubEmpty('Ищете жильё? Нажмите «Хочу снять»: хозяева увидят запрос и предложат варианты.');
-        h += '<button class="ghost-btn wide-btn pub-add" data-pub="hseek"><i class="fas fa-magnifying-glass"></i> Хочу снять</button>';
+        h += pubReqs('housing').length ? `<div class="req-mine" id="pubReqs">${pubReqListHTML('housing')}</div>` : pubEmpty('Запросов пока нет. Подать запрос можно в разделе «Жильё» кнопкой «Хочу снять».');
     } else if (pubChip === 'work' || pubChip === 'trips') {
         h += `<div class="pub-two"><button type="button" class="ghost-btn" data-pub="seek"><i class="fas fa-magnifying-glass"></i> ${L.btns[0]}</button><button type="button" class="primary-btn" data-pub="offer"><i class="fas fa-plus"></i> ${L.btns[1]}</button></div>`;
         const has = pubReqs(pubChip).length;
@@ -137,7 +135,6 @@ document.addEventListener('click', (ev) => {
         root.querySelectorAll('.cat-chip[data-pc]').forEach(c => { const on = c === chip; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
         paintPubs();
         window.scrollTo({ top: 0 });
-        if (pubChip === 'housing') setTimeout(() => { if (typeof hostProfileTip === 'function' && root.offsetParent !== null) hostProfileTip(); }, 600);
         return;
     }
     const act = ev.target.closest('[data-pub]');

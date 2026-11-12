@@ -128,6 +128,12 @@ function renderProfile() {
             <div class="pf-row pf-static theme-card"><div class="tc-h"><i class="fas fa-palette"></i><span>Тема</span></div>
                 <div class="theme-grid" role="group" aria-label="Тема">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="th-card ${theme === k ? 'on' : ''}" data-th="${k}" onclick="setTheme('${k}')"><span class="th-sw" style="background:${t.bg}"><b style="background:${t.accent}"></b><i style="background:${t.accent}"></i></span>${t.name}</button>`).join('')}</div>
             </div>
+            <div class="pf-row pf-static lang-card"><div class="tc-h"><i class="fas fa-language"></i><span>Язык</span></div>
+                <div class="lang-seg" role="group" aria-label="Язык">
+                    <button type="button" data-lang="ru" data-i18n-skip class="${(typeof getLang === 'function' ? getLang() : 'ru') === 'ru' ? 'on' : ''}">Русский</button>
+                    <button type="button" data-lang="en" data-i18n-skip class="${(typeof getLang === 'function' ? getLang() : 'ru') === 'en' ? 'on' : ''}">English</button>
+                </div>
+            </div>
         </div>
 
         ${acc ? '<button class="pf-logout" onclick="doLogout()"><i class="fas fa-arrow-right-from-bracket"></i> Выйти из аккаунта</button>' : ''}

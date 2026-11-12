@@ -773,8 +773,8 @@ function renderHousingMessage(ad) {
                     </div>
                     <div class="ad-info">
                         <div class="ad-row1"><div class="chat-ad-price">${escapeHtml(ad.price)}${ad.isVerified ? ' <i class="fas fa-circle-check ad-ok" aria-label="Проверенный хозяин"></i>' : ''}</div>${rating}</div>
-                        <div class="chat-ad-title">${escapeHtml(ad.title)}</div>
-                        <div class="chat-ad-location"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
+                        <div class="chat-ad-title" data-ugc>${escapeHtml(ad.title)}</div>
+                        <div class="chat-ad-location" data-ugc><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
                         ${adAmenBadges(ad, 3)}
                     </div>
                 </div>
