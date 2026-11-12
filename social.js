@@ -263,7 +263,7 @@ function openDmChat(conv, prefill, messages) {
             <div class="chat-welcome">
                 <div class="chat-welcome-icon"><i class="fas fa-lock"></i></div>
                 <div class="chat-welcome-title">Личный чат</div>
-                <div class="chat-welcome-text">${e(conv.adTitle ? conv.adTitle + ' · ' : '')}Видите только вы и ${e(conv.with)}.</div>
+                <div class="chat-welcome-text">Один диалог по всем карточкам: жильё, развлечения, движ, запросы.${conv.adTitle ? ' Сейчас: ' + e(conv.adTitle) + '.' : ''} Видите только вы и ${e(conv.with)}.</div>
             </div>
         </div>
         <div class="chat-input-wrapper">

@@ -261,7 +261,7 @@ function openAdForm(editId) {
         amenities: new Set(old ? old.amenities : []),
         busy: new Set(old ? old.busy : []),
         coords: old && old.coords ? old.coords.slice() : MAP_DEFAULT.slice(),
-        beach: old && old.beach ? old.beach.slice() : BEACH_DEFAULT.slice(),
+        beach: SEA_POINT.slice(),
         pick: 'home',
         category: old ? adCategory(old) : 'apartment'
     };
@@ -327,16 +327,12 @@ function openAdForm(editId) {
 
             <div class="form-block">
                 <div class="form-h">Где находится</div>
-                <div class="seg seg-small" id="fmPick">
-                    <button type="button" data-pick="home" class="on"><i class="fas fa-home"></i> Жильё</button>
-                    <button type="button" data-pick="sea"><i class="fas fa-umbrella-beach"></i> Ближайшее море</button>
-                </div>
                 <div class="listing-map pick-map" id="pickMap"></div>
                 <div class="pick-bar">
                     <div class="pick-dist" id="pickDist"></div>
                     <button type="button" class="ghost-btn small" id="fmLocate"><i class="fas fa-crosshairs"></i> Я здесь</button>
                 </div>
-                <div class="form-hint">Нажмите на карту, чтобы поставить метку. Расстояние до моря посчитается само.</div>
+                <div class="form-hint">Нажмите на карту или перетащите метку жилья. Расстояние до моря и маршрут пешком и на машине посчитаются сами.</div>
             </div>
 
             <div class="form-block only-rent">
@@ -422,13 +418,6 @@ function wireAdForm(screen) {
         if (ev.target.closest('.photo-add')) file.click();
     };
 
-    screen.querySelector('#fmPick').onclick = (ev) => {
-        const b = ev.target.closest('button[data-pick]');
-        if (!b) return;
-        formState.pick = b.dataset.pick;
-        screen.querySelectorAll('#fmPick button').forEach(x => x.classList.toggle('on', x === b));
-    };
-
     screen.querySelector('#fmLocate').onclick = () => {
         if (!navigator.geolocation) { showToast('Геолокация недоступна'); return; }
         navigator.geolocation.getCurrentPosition(
@@ -467,17 +456,16 @@ function initPickMap() {
         const pin = (cls, icon) => `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`;
         pickMarkers.home = map.addMarker({ coords: formState.coords, html: pin('pin-home', 'fa-home'), size: [40, 40], draggable: true,
             onDrag: (c) => { formState.coords = c; updatePickDist(); } });
-        pickMarkers.sea = map.addMarker({ coords: formState.beach, html: pin('pin-sea', 'fa-umbrella-beach'), size: [40, 40], draggable: true,
-            onDrag: (c) => { formState.beach = c; updatePickDist(); } });
-        map.onClick((c) => setPickPoint(formState.pick, c));
+        pickMarkers.sea = map.addMarker({ coords: SEA_POINT, html: pin('pin-sea', 'fa-umbrella-beach'), size: [40, 40] });
+        map.onClick((c) => setPickPoint('home', c));
         map.fitBounds([formState.coords, formState.beach], { padding: 50, maxZoom: 16, animate: false });
         setTimeout(() => map.invalidate(), 250);
     });
 }
 
 function setPickPoint(which, latlng) {
-    if (which === 'home') formState.coords = latlng; else formState.beach = latlng;
-    const marker = pickMarkers[which === 'home' ? 'home' : 'sea'];
+    formState.coords = latlng;
+    const marker = pickMarkers.home;
     if (marker) marker.setCoords(latlng);
     updatePickDist();
 }

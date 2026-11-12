@@ -48,10 +48,10 @@
 
 /* нижняя панель: без цветной подсветки, пузырь остаётся */
 .nav-item.active .nav-icon { color: inherit; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .nav-item.active .nav-icon { color: inherit; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .nav-item.active .nav-icon { color: inherit; }
 .nav-item.active { color: var(--text); }
 .nav-indicator::before { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 4px 14px rgba(0, 0, 0, .25); background: rgba(255, 255, 255, .16); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .nav-indicator::before { background: rgba(0, 0, 0, .07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 14px rgba(0, 0, 0, .12); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .nav-indicator::before { background: rgba(0, 0, 0, .07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 14px rgba(0, 0, 0, .12); }
 
 @media (max-width: 360px) { .hero-title { font-size: 34px; } }
 
@@ -82,7 +82,7 @@
 .tip-btn { height: 38px; padding: 0 18px; border-radius: 19px; border: 0; background: var(--sun); color: #3A1406; font: 800 14px var(--font); cursor: pointer; }
 .tip-btn.ghost { background: rgba(255, 255, 255, .12); color: #F4F8FF; }
 .tip-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(236, 243, 255, .6); cursor: pointer; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .tip, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .tip::before { background: #1B2740; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .tip, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .tip::before { background: #1B2740; }
 @media (prefers-reduced-motion: reduce) { .tip, .tip-spot { transition: opacity .15s; } }
 
 /* ===== видеокружки ===== */
@@ -229,7 +229,7 @@
 
 /* ===== избранное ===== */
 /* ===== v8: шапка без рамки, компактный профиль ===== */
-.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .app-header {
+.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header {
     margin: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 14px; border-radius: 0; border: 0; box-shadow: none;
     -webkit-backdrop-filter: none; backdrop-filter: none;
     background: linear-gradient(to bottom, var(--bg) 64%, transparent);
@@ -497,17 +497,6 @@
     --on-sea: #04201f; --on-accent: #fff;
     --font: 'Nunito', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Nunito', -apple-system, 'Segoe UI', sans-serif;
 }
-:root[data-theme="peak"] {
-    --sun-1: #6A5CFF; --sun-2: #A36BFF; --sea: #8B6CFF; --sun: linear-gradient(135deg, #6A5CFF 0%, #A36BFF 100%); --accent: #A58BFF;
-    --bg: #0E1024;
-    --mesh: radial-gradient(520px 420px at 105% 0%, rgba(122, 92, 255, 0.34), transparent 70%), radial-gradient(520px 520px at -10% 48%, rgba(255, 140, 90, 0.13), transparent 70%), radial-gradient(560px 460px at 60% 108%, rgba(80, 120, 255, 0.18), transparent 70%), #0E1024;
-    --blob-a: rgba(122, 92, 255, 0.4); --blob-b: rgba(255, 140, 90, 0.2);
-    --glass: rgba(255, 255, 255, 0.07); --glass-strong: rgba(255, 255, 255, 0.13); --glass-border: rgba(190, 170, 255, 0.22);
-    --shadow: 0 14px 40px rgba(4, 4, 22, 0.62);
-    --text: #F2F0FF; --text-secondary: rgba(242, 240, 255, 0.76); --text-muted: rgba(242, 240, 255, 0.52);
-    --on-sea: #fff; --on-accent: #fff; --dv-on: #fff; --panel-dark: rgba(16, 16, 38, 0.74);
-    --font: 'Manrope', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Manrope', sans-serif;
-}
 :root[data-theme="dusk"] {
     --sun-1: #FF5E8A; --sun-2: #FFB35C; --sea: #8A5CFF; --sun: linear-gradient(135deg, #FF5E8A 0%, #FFB35C 100%); --accent: #FF5E8A;
     --bg: #121216;
@@ -532,11 +521,6 @@
 .req-kind { font: 700 11px var(--font); font-style: normal; padding: 3px 9px; border-radius: 999px; background: var(--glass-strong); color: var(--text-secondary); white-space: nowrap; }
 .req-kind.offer { color: var(--text); }
 
-/* ===== v21: «Горы» — фиолетовые плитки ===== */
-:root[data-theme="peak"] .gc-housing { background: linear-gradient(150deg, #7B6CFF 0%, #4A3FB8 60%, #1E1A5A 100%); }
-:root[data-theme="peak"] .gc-work    { background: linear-gradient(150deg, #5E8BFF 0%, #3A55C8 60%, #1B2A78 100%); }
-:root[data-theme="peak"] .gc-trips   { background: linear-gradient(150deg, #A36BFF 0%, #6A42C8 60%, #34207A 100%); }
-:root[data-theme="peak"] .gc-market  { background: linear-gradient(150deg, #FF8E6A 0%, #C2507E 60%, #5A2F78 100%); }
 
 
 /* ===== v22: стрелка закрытия слева в каждой нижней шторке ===== */
@@ -658,7 +642,6 @@
 .dock-btn.seek { background: linear-gradient(135deg, #1CC8B4 0%, #0E9F94 100%); color: #04211E; border-color: rgba(255,255,255,.22); box-shadow: 0 4px 14px rgba(14,159,148,.35); }
 :is([data-theme="sand"]) .dock-btn.seek { background: linear-gradient(135deg, #F7A94B 0%, #E8801E 100%); color: #2B1700; box-shadow: 0 4px 14px rgba(232,128,30,.35); }
 :is([data-theme="dusk"]) .dock-btn.seek { background: linear-gradient(135deg, #FF7A9C 0%, #E0457A 100%); color: #2A0614; box-shadow: 0 4px 14px rgba(224,69,122,.35); }
-:is([data-theme="peak"]) .dock-btn.seek { background: linear-gradient(135deg, #8B6CFF 0%, #5A44D8 100%); color: #fff; box-shadow: 0 4px 14px rgba(90,68,216,.4); }
 .dock-btn::after { content: ''; position: absolute; z-index: 1; top: -40%; bottom: -40%; left: -70%; width: 34%; transform: skewX(-22deg); pointer-events: none;
     background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.85) 50%, rgba(255,255,255,0) 100%); animation: coinGlint 4.2s ease-in-out infinite; }
 .dock-btn.main::after { background: linear-gradient(90deg, rgba(255,200,90,0) 0%, rgba(255,196,80,.9) 50%, rgba(255,200,90,0) 100%); animation-delay: 1.4s; }
@@ -752,19 +735,7 @@
 .hero-sea.sea-a { -webkit-mask-image: linear-gradient(180deg, transparent 53%, #000 59%, #000 68%, transparent 78%); mask-image: linear-gradient(180deg, transparent 53%, #000 59%, #000 68%, transparent 78%); }
 .hero-sea.sea-b { -webkit-mask-image: linear-gradient(180deg, transparent 64%, #000 74%, #000 100%); mask-image: linear-gradient(180deg, transparent 64%, #000 74%, #000 100%); }
 .hero-glint { position: absolute; left: 0; width: 100%; top: 52.90%; height: auto; pointer-events: none; opacity: .75; mix-blend-mode: screen; }
-.hero-para { position: absolute; left: 90.31%; top: 20.17%; width: 8.95%; height: auto; pointer-events: none; transform-origin: 26.0% 89.0%; will-change: transform; }
-@media (prefers-reduced-motion: no-preference) {
-    .hero-para { animation: paraSwing 6.4s ease-in-out infinite alternate, paraFloat 9s ease-in-out infinite alternate; }
-    .hero-sea.sea-a { animation: seaA 6.8s ease-in-out infinite alternate; }
-    .hero-sea.sea-b { animation: seaB 5.4s ease-in-out infinite alternate; }
-    .hero-glint.gl-a { animation: glint 2.9s ease-in-out infinite alternate; }
-    .hero-glint.gl-b { animation: glint 2.9s ease-in-out -1.45s infinite alternate; }
-}
-@keyframes paraSwing { from { transform: rotate(-3.2deg); } to { transform: rotate(3.2deg); } }
-@keyframes paraFloat { from { translate: -4px 2px; } to { translate: 5px -3px; } }
-@keyframes seaA { from { translate: -3px 0; } to { translate: 3px 1.5px; } }
-@keyframes seaB { from { translate: 5px 2px; } to { translate: -5px -2px; } }
-@keyframes glint { from { opacity: .12; } to { opacity: .85; } }
+.hero-para { position: absolute; left: 90.31%; top: 20.17%; width: 8.95%; height: auto; pointer-events: none; transform-origin: 26.0% 89.0%; }
 
 /* ===== v31: название местности в шапке, белый заголовок на любой теме, жильё — две колонки (4 карточки на экран) ===== */
 .hero-place { display: flex; width: fit-content; align-items: center; gap: 6px; height: 26px; padding: 0 12px 0 9px; margin: -34px 0 8px; border-radius: 13px; background: rgba(8, 18, 32, .4); border: 1px solid rgba(255, 255, 255, .32); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; font: 700 12.5px/1 var(--font); letter-spacing: .2px; text-shadow: 0 1px 6px rgba(0, 0, 0, .4); }
@@ -1046,22 +1017,6 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .sv-t-btns button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.24); background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; font-size: 13px; cursor: pointer; }
 .sv-t-btns button.main { border: 0; background: var(--sun); color: var(--dv-on, #2A1206); }
 
-/* «Горы»: на фиолетовых кнопках текст белый */
-:root[data-theme="peak"] .search-go,
-:root[data-theme="peak"] .placeholder-icon,
-:root[data-theme="peak"] .primary-btn,
-:root[data-theme="peak"] .avatar-circle,
-:root[data-theme="peak"] .chat-welcome-icon,
-:root[data-theme="peak"] .chat-send-btn,
-:root[data-theme="peak"] .cal-day.sel-start,
-:root[data-theme="peak"] .cal-day.sel-end,
-:root[data-theme="peak"] .act-write,
-:root[data-theme="peak"] .chip-toggle.on,
-:root[data-theme="peak"] .chip-toggle.on i,
-:root[data-theme="peak"] .seg button.on,
-:root[data-theme="peak"] .cat-chip.on,
-:root[data-theme="peak"] .tip-btn,
-:root[data-theme="peak"] .ad-pin.sel { color: #fff; }
 
 /* ===== v46: движ — облачка-сообщения в шахматном порядке ===== */
 .dv-feed { gap: 12px; padding-top: 16px; }
@@ -1109,13 +1064,10 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .group-photo { transition: filter .35s ease; object-fit: cover; }
 :root[data-theme="dark"] .group-photo { filter: saturate(.94) brightness(.94); }
 :root[data-theme="sand"] .group-photo { filter: saturate(1.06) brightness(1.04) contrast(.98); }
-:root[data-theme="peak"] .group-photo { filter: hue-rotate(-24deg) saturate(.86) brightness(.9) contrast(1.04); }
 :root[data-theme="dusk"] .group-photo { filter: hue-rotate(-10deg) saturate(.88) brightness(.8) contrast(1.06); }
 :root[data-theme="sand"] .group-card::after { background: linear-gradient(90deg, rgba(60, 28, 8, .5) 0%, rgba(60, 28, 8, 0) 62%), linear-gradient(180deg, rgba(60, 28, 8, 0) 42%, rgba(60, 28, 8, .55) 100%); }
-:root[data-theme="peak"] .group-card::after { background: linear-gradient(90deg, rgba(24, 14, 80, .6) 0%, rgba(24, 14, 80, 0) 62%), linear-gradient(180deg, rgba(60, 30, 150, .1) 0%, rgba(24, 14, 80, 0) 38%, rgba(24, 14, 80, .62) 100%); }
 :root[data-theme="dusk"] .group-card::after { background: linear-gradient(90deg, rgba(10, 6, 16, .62) 0%, rgba(10, 6, 16, 0) 62%), linear-gradient(180deg, rgba(10, 6, 16, 0) 38%, rgba(10, 6, 16, .62) 100%); }
 :root[data-theme="sand"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(60, 28, 8, .66) 0%, rgba(60, 28, 8, .3) 55%, rgba(60, 28, 8, 0) 100%); }
-:root[data-theme="peak"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(40, 20, 120, .78) 0%, rgba(90, 50, 200, .38) 55%, rgba(90, 50, 200, 0) 100%); }
 :root[data-theme="dusk"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(120, 20, 70, .74) 0%, rgba(224, 69, 122, .34) 55%, rgba(224, 69, 122, 0) 100%); }
 .gc-housing .group-photo { object-position: 30% 50%; }
 .gc-work .group-photo { object-position: 60% 55%; }
@@ -1156,7 +1108,6 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 /* ===== v50: карточка запроса — аватар и имя, «запрос на …», когда был в сети, текст; фон в тон теме ===== */
 :root, :root[data-theme="dark"] { --rq-bg: linear-gradient(150deg, #17506A 0%, #0F3650 100%); --rq-border: rgba(94, 220, 235, .34); --rq-on: #8DF5B2; --rq-ring: rgba(255, 255, 255, .55); }
 :root[data-theme="sand"] { --rq-bg: linear-gradient(150deg, #FFE9C9 0%, #FFD8A6 100%); --rq-border: #F0C58A; --rq-on: #1F9D55; --rq-ring: #fff; }
-:root[data-theme="peak"] { --rq-bg: linear-gradient(150deg, #3C3196 0%, #2A2373 100%); --rq-border: rgba(180, 160, 255, .38); --rq-on: #9BF7BC; --rq-ring: rgba(255, 255, 255, .55); }
 :root[data-theme="dusk"] { --rq-bg: linear-gradient(150deg, #54243F 0%, #38192E 100%); --rq-border: rgba(255, 130, 170, .34); --rq-on: #92F5B4; --rq-ring: rgba(255, 255, 255, .5); }
 .req-card.rq2 { background: var(--rq-bg); border-color: var(--rq-border); color: var(--text); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .16); padding: 14px 15px; }
 .req-card.rq2.mine { border-color: var(--rq-border); box-shadow: 0 0 0 2px var(--rq-border), 0 6px 18px rgba(0, 0, 0, .16); }
@@ -1280,7 +1231,6 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 /* ===== v55: Курортный движ — «Движ» / «Готовые услуги», карточки-облачка ===== */
 :root, :root[data-theme="dark"] { --dv-cloud: #17506A; --dv-cloud-line: rgba(94, 220, 235, .34); }
 :root[data-theme="sand"] { --dv-cloud: #FFE6C2; --dv-cloud-line: #F0C58A; }
-:root[data-theme="peak"] { --dv-cloud: #33298C; --dv-cloud-line: rgba(180, 160, 255, .38); }
 :root[data-theme="dusk"] { --dv-cloud: #4B2139; --dv-cloud-line: rgba(255, 130, 170, .34); }
 .dv-tabs { margin-bottom: 4px; }
 .dv-tabs .seek-tab { font-size: 13px; }
@@ -1420,3 +1370,33 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 @keyframes pubNew { 0% { box-shadow: 0 0 0 0 rgba(45, 212, 218, .0); } 20% { box-shadow: 0 0 0 4px rgba(45, 212, 218, .75); } 100% { box-shadow: 0 0 0 0 rgba(45, 212, 218, 0); } }
 .pub-new { border-radius: 22px; animation: pubNew 2.4s ease-out 1; }
 .pub-new > .req-card, .pub-new .chat-bubble, .pub-new.sv-tile { animation: pubNew 2.4s ease-out 1; }
+
+/* ===== v60: тема «Небо» вместо «Гор»: светлая, голубая, лёгкая ===== */
+:root[data-theme="sky"] {
+    --sun-1: #2AA8F2; --sun-2: #7BD6FF; --sea: #0E93D4; --sun: linear-gradient(135deg, #2AA8F2 0%, #7BD6FF 100%); --accent: #0C84C4;
+    --bg: #F0F8FF;
+    --mesh: radial-gradient(520px 420px at 105% 0%, rgba(150, 214, 255, 0.55), transparent 70%), radial-gradient(480px 480px at -10% 45%, rgba(196, 238, 226, 0.5), transparent 70%), #F0F8FF;
+    --blob-a: rgba(150, 214, 255, 0.5); --blob-b: rgba(196, 238, 226, 0.5);
+    --glass: rgba(255, 255, 255, 0.8); --glass-strong: rgba(255, 255, 255, 0.96); --glass-border: #CFE4F3;
+    --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    --shadow: 0 12px 30px rgba(30, 90, 140, 0.16);
+    --text: #10283C; --text-secondary: rgba(16, 40, 60, 0.76); --text-muted: rgba(16, 40, 60, 0.55);
+    --on-sea: #fff; --on-accent: #fff;
+    --font: 'Nunito', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Nunito', -apple-system, 'Segoe UI', sans-serif;
+}
+:is([data-theme="sky"]) .dock-btn.seek { background: linear-gradient(135deg, #5CC8FF 0%, #1E8FE0 100%); color: #05243a; box-shadow: 0 4px 14px rgba(30, 143, 224, .35); }
+:root[data-theme="sky"] .group-photo { filter: saturate(1.05) brightness(1.05) contrast(.98); }
+:root[data-theme="sky"] .group-card::after { background: linear-gradient(90deg, rgba(8, 44, 80, .5) 0%, rgba(8, 44, 80, 0) 62%), linear-gradient(180deg, rgba(8, 44, 80, 0) 42%, rgba(8, 44, 80, .55) 100%); }
+:root[data-theme="sky"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(8, 44, 80, .66) 0%, rgba(8, 44, 80, .3) 55%, rgba(8, 44, 80, 0) 100%); }
+:root[data-theme="sky"] :is(.gc-housing, .gc-work, .gc-trips, .gc-services) { background: linear-gradient(150deg, #7BD6FF 0%, #2AA8F2 60%, #1166B0 100%); }
+:root[data-theme="sky"] { --rq-bg: linear-gradient(150deg, #E3F4FF 0%, #C9E8FF 100%); --rq-border: #A9D3F0; --rq-on: #1F9D55; --rq-ring: #fff; --dv-cloud: #DCEFFF; --dv-cloud-line: #A9D3F0; }
+:root[data-theme="sky"] .req-card.rq2 .req-actions button:not(.main) { background: rgba(255, 255, 255, .65); }
+:root[data-theme="sky"] .req-card.rq2 .req-kind, :root[data-theme="sky"] .req-card.rq2 .req-status { background: rgba(255, 255, 255, .7); }
+
+/* v61: крестик у подсказки «Как это работает» */
+.seek-tip { padding-right: 44px; }
+.seek-tip-x { position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .14); color: #F4F8FF; display: grid; place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.seek-tip-x:active { background: rgba(255, 255, 255, .28); }
+
+/* v62: без задержки на тап (iOS ждал двойного касания), шапка без анимаций */
+button, a, [onclick], .dock-btn, .chat-back-btn, .group-card { touch-action: manipulation; }

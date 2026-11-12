@@ -105,9 +105,10 @@ const messagesCache = {
 };
 
 // ---------- ДАННЫЕ ПОЛЬЗОВАТЕЛЯ И ОБЪЯВЛЕНИЯ ----------
-// Центр карты и ближайшая точка моря по умолчанию: Архипо-Осиповка (координаты примерные, уточняются по карте)
-const MAP_DEFAULT = [44.3700, 38.5200];
-const BEACH_DEFAULT = [44.3678, 38.5210];
+// Центр карты: Архипо-Осиповка. SEA_POINT — единая точка у моря: расстояние и маршрут от любого жилья считаются до неё.
+const MAP_DEFAULT = [44.3625, 38.5265];
+const SEA_POINT = [44.358556, 38.528949];
+const BEACH_DEFAULT = SEA_POINT;
 
 // Готовые аватарки: файлы avatars/av01.webp … av35.webp, на сервере хранится только id (av07)
 const AVATAR_COUNT = 35;
@@ -162,7 +163,9 @@ let remoteAds = [];
 
 function getAllAds() {
     const base = typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [];
-    return [...remoteAds, ...getMyAds(), ...base];
+    const all = [...remoteAds, ...getMyAds(), ...base];
+    all.forEach(a => { if (a && Array.isArray(a.coords)) a.beach = SEA_POINT.slice(); });   // море у всех одно
+    return all;
 }
 
 function findAd(id) {
@@ -188,20 +191,20 @@ function adImg(ad, alt) {
 const html = document.documentElement;
 const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-// Темы: sea — «Морской вечер» (по умолчанию), sand — «Песок», peak — «Горы», dusk — «Закат».
+// Темы: sea — «Морской вечер» (по умолчанию), sand — «Песок», sky — «Небо», dusk — «Закат».
 // Старые «light» и «surf» (Прибой) переносятся на «Песок», «dark» — на «Морской вечер».
 const THEMES = {
     sea:  { name: 'Вечер',  meta: '#060F1C', bg: '#060F1C', accent: '#FF9A5C' },
     sand: { name: 'Песок',  meta: '#FBF3E4', bg: '#FBF3E4', accent: '#F08A24' },
-    peak: { name: 'Горы',   meta: '#0E1024', bg: '#0E1024', accent: '#8B6CFF' },
+    sky:  { name: 'Небо',   meta: '#F0F8FF', bg: '#F0F8FF', accent: '#0C84C4' },
     dusk: { name: 'Закат',  meta: '#121216', bg: '#121216', accent: '#FF5E8A' }
 };
 const THEME_FONTS = {
     sand: 'family=Nunito:wght@500;600;700;800;900',
-    peak: 'family=Manrope:wght@500;600;700;800',
+    sky: 'family=Nunito:wght@500;600;700;800;900',
     dusk: 'family=Space+Grotesk:wght@500;600;700'
 };
-const normTheme = (t) => (t === 'light' || t === 'surf') ? 'sand' : (THEMES[t] ? t : 'sea');
+const normTheme = (t) => (t === 'light' || t === 'surf') ? 'sand' : t === 'peak' ? 'sky' : (THEMES[t] ? t : 'sea');
 function getTheme() { return normTheme(html.getAttribute('data-theme')); }
 function loadThemeFont(theme) {
     const q = THEME_FONTS[theme]; if (!q || document.getElementById('font-' + theme)) return;

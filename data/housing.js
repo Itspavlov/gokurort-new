@@ -26,7 +26,7 @@ function _busy(ranges) {
 }
 
 // Точка на берегу (пример) — отсюда считаются расстояния
-const _BEACH = [44.3678, 38.5210];
+const _BEACH = [44.358556, 38.528949];
 function _near(dLat, dLng) { return [_BEACH[0] + dLat, _BEACH[1] + dLng]; }
 
 const HOUSING_ADS = [

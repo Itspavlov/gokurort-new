@@ -266,9 +266,7 @@ const _placeRemoteAdsF = placeRemoteAds;
 placeRemoteAds = function () { const r = _placeRemoteAdsF.apply(this, arguments); applyAdFilters(); return r; };
 
 // ============================================
-// Катер плывёт к берегу (вид сверху), за ним пена и волны «ёлочкой»; причалил — появляются цены.
-// Всё рисуется на холсте поверх карты. Касание карты пропускает анимацию.
-// При «уменьшении движения» в системе анимации нет.
+// Карта объявлений: цены на метках появляются сразу (анимацию катера убрали).
 // ============================================
 let boat = null;     // { raf, canvas, timers, skip }
 
@@ -294,116 +292,8 @@ function endBoat(now) {
     if (now) { view.classList.remove('intro'); pins.forEach(p => { p.style.transitionDelay = ''; }); }
 }
 
-function drawBoat(ctx, x, y, ang, alpha) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(0,25,45,.30)'; ctx.beginPath(); ctx.ellipse(5, 5, 9.5, 25, 0, 0, 7); ctx.fill();            // тень на воде
-    const hull = () => { ctx.beginPath(); ctx.moveTo(0, -27); ctx.bezierCurveTo(10, -15, 10, 9, 7.5, 23); ctx.lineTo(-7.5, 23); ctx.bezierCurveTo(-10, 9, -10, -15, 0, -27); ctx.closePath(); };
-    hull(); ctx.fillStyle = '#fff'; ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = '#FF7A3D'; ctx.beginPath(); ctx.moveTo(0, -23); ctx.lineTo(1.6, -12); ctx.lineTo(-1.6, -12); ctx.closePath(); ctx.fill();   // полоса на носу
-    ctx.fillStyle = '#dbe8ef'; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(6.5, 14); ctx.lineTo(-6.5, 14); ctx.closePath(); ctx.fill();   // палуба
-    ctx.fillStyle = '#2b6f96'; ctx.beginPath(); ctx.moveTo(-5, -6); ctx.lineTo(5, -6); ctx.lineTo(4, -1); ctx.lineTo(-4, -1); ctx.closePath(); ctx.fill();    // стекло
-    ctx.fillStyle = '#9fb4c0'; ctx.fillRect(-4, 4, 8, 7);                                                                                                      // сиденья
-    ctx.fillStyle = '#44525c'; ctx.fillRect(-3, 22, 6, 6);                                                                                                     // мотор
-    ctx.restore();
-}
-
 function startBoat() {
-    const view = document.getElementById('adMapView'), box = document.getElementById('adMapBox');
-    if (!adMap || !view || !box) return;
-    const ads = filteredAds().filter(a => Array.isArray(a.coords));
-    const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!ads.length || calm) { endBoat(true); return; }
-    const map = adMap, W = box.clientWidth || 360, H = box.clientHeight || 640;
-    mapControls(false);
-
-    // цель — середина береговых точек; море — со стороны «от жилья к берегу»
-    const withBeach = ads.filter(a => Array.isArray(a.beach));
-    const mean = (pts) => [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
-    const targetLL = withBeach.length ? mean(withBeach.map(a => a.beach)) : mean(ads.map(a => a.coords));
-    let T = map.project(targetLL);
-    T = { x: Math.max(48, Math.min(W - 48, T.x)), y: Math.max(120, Math.min(H - 170, T.y)) };
-    let sx = 0, sy = 0;
-    withBeach.forEach(a => { const h = map.project(a.coords), b = map.project(a.beach); sx += b.x - h.x; sy += b.y - h.y; });
-    let len = Math.hypot(sx, sy);
-    if (len < 2) { sx = -0.4; sy = 1; len = Math.hypot(sx, sy); }
-    sx /= len; sy /= len;
-    const tx = sx > 0 ? (W - T.x) / sx : sx < 0 ? (0 - T.x) / sx : Infinity, ty = sy > 0 ? (H - T.y) / sy : sy < 0 ? (0 - T.y) / sy : Infinity;
-    const run = Math.max(200, Math.min(tx, ty) + 70);
-    const S = { x: T.x + sx * run, y: T.y + sy * run };
-    // лёгкая дуга: катер не идёт по линейке
-    const mx = (S.x + T.x) / 2 - sy * run * 0.16, my = (S.y + T.y) / 2 + sx * run * 0.16;
-    const bez = (p) => { const u = 1 - p; return { x: u * u * S.x + 2 * u * p * mx + p * p * T.x, y: u * u * S.y + 2 * u * p * my + p * p * T.y }; };
-
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const canvas = document.createElement('canvas');
-    canvas.className = 'boat-fx'; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    box.appendChild(canvas);
-    const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
-
-    const parts = [], rings = [];
-    const rnd = (a, b) => a + Math.random() * (b - a);
-    const TAN = Math.tan(19.5 * Math.PI / 180);
-    const finish = () => {
-        if (!boat || boat.arrived) return;
-        boat.arrived = performance.now();
-        rings.push({ x: T.x, y: T.y, t: boat.arrived, life: 1500 }, { x: T.x, y: T.y, t: boat.arrived + 260, life: 1500 });
-        boat.timers.push(setTimeout(() => {
-            mapControls(true);
-            const pins = [...view.querySelectorAll('.ad-pin')];
-            pins.forEach((p, i) => { p.style.transitionDelay = (i * 70) + 'ms'; p.classList.add('show'); });
-            boat.timers.push(setTimeout(() => endBoat(true), Math.max(pins.length * 70 + 700, 2600)));
-        }, 450));
-    };
-    const skip = () => { if (boat) endBoat(true); };
-    boat = { raf: 0, canvas, timers: [], skip, arrived: 0 };
-    box.addEventListener('pointerdown', skip, { once: true });
-
-    const DUR = 4200, t0 = performance.now();
-    let last = t0, prev = bez(0), pos = prev, ang = Math.atan2(T.x - S.x, -(T.y - S.y));
-    const tick = (now) => {
-        if (!boat) return;
-        const dt = Math.min(64, now - last) / 1000; last = now;
-        const p = Math.min(1, (now - t0) / DUR), e = 1 - Math.pow(1 - p, 2.4);      // замедляется у берега
-        pos = bez(e);
-        const vx = pos.x - prev.x, vy = pos.y - prev.y, step = Math.hypot(vx, vy), speed = dt ? step / dt : 0;
-        if (step > 0.05) ang = Math.atan2(vx, -vy);
-        const dx = Math.sin(ang), dy = -Math.cos(ang), px = -dy, py = dx;           // вперёд и вбок
-        if (p < 1 && speed > 3) {
-            // пена за кормой + «ёлочка» разбегающихся волн
-            // частицы ставятся по всему пройденному за кадр отрезку: след получается сплошным при любой частоте кадров
-            const n = Math.min(22, Math.max(1, Math.ceil(step / 1.5)));
-            const u = Math.max(speed, 30) * TAN;
-            for (let k = 0; k < n; k++) {
-                const f = (k + Math.random()) / n, cx = prev.x + vx * f, cy = prev.y + vy * f, side = rnd(-3.5, 3.5);
-                parts.push({ x: cx - dx * 23 + px * side, y: cy - dy * 23 + py * side, vx: px * rnd(-7, 7), vy: py * rnd(-7, 7), r0: rnd(1.4, 2.6), r1: rnd(5, 9), a: rnd(.32, .6), life: rnd(1.4, 2.4), age: 0 });
-                if (k % 2 === 0) for (const sgn of [-1, 1]) {
-                    parts.push({ x: cx - dx * 8 + px * sgn * 5, y: cy - dy * 8 + py * sgn * 5, vx: px * sgn * u + rnd(-3, 3), vy: py * sgn * u + rnd(-3, 3), r0: 2, r1: 7.5, a: .13, life: 3, age: 0, soft: true });
-                }
-            }
-        }
-        prev = pos;
-
-        ctx.clearRect(0, 0, W, H);
-        for (let i = parts.length - 1; i >= 0; i--) {
-            const q = parts[i]; q.age += dt;
-            if (q.age >= q.life) { parts.splice(i, 1); continue; }
-            q.x += q.vx * dt; q.y += q.vy * dt;
-            const k = q.age / q.life, r = q.r0 + (q.r1 - q.r0) * k, al = q.a * Math.pow(1 - k, q.soft ? 1.3 : 1.7);
-            ctx.fillStyle = `rgba(255,255,255,${al.toFixed(3)})`;
-            ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 6.2832); ctx.fill();
-        }
-        for (let i = rings.length - 1; i >= 0; i--) {
-            const g = rings[i], k = (now - g.t) / g.life;
-            if (k < 0) continue;
-            if (k >= 1) { rings.splice(i, 1); continue; }
-            ctx.strokeStyle = `rgba(255,255,255,${(.8 * (1 - k)).toFixed(3)})`; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(g.x, g.y, 8 + k * 46, 0, 6.2832); ctx.stroke();
-        }
-        const fade = boat.arrived ? Math.max(0, 1 - (now - boat.arrived) / 600) : 1;
-        if (fade > 0) drawBoat(ctx, pos.x, pos.y, ang, fade);
-        if (p >= 1) finish();
-        boat.raf = requestAnimationFrame(tick);
-    };
-    boat.raf = requestAnimationFrame(tick);
+    // без анимации катера: сразу показываем цены на карте
+    if (!adMap || !document.getElementById('adMapView')) return;
+    endBoat(true);
 }

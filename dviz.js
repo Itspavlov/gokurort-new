@@ -463,7 +463,8 @@ function openDvizView(id) {
                 g.innerHTML = jl.length ? `<div class="dv-going-h">Идут (${jl.length}${ev.max ? ' из ' + ev.max : ''})</div><div class="dv-chips">${jl.map(j => `<span class="dv-chip"><i data-avn="${avEsc(j.name)}" style="background:${dmColor(j.name)}">${avInner(j.name)}</i>${dvEsc(j.name)}</span>`).join('')}</div>` : '';
                 el.querySelector('#dvActions').innerHTML = mine
                     ? '<button type="button" class="ghost-btn wide-btn dv-del" data-dv-del><i class="fas fa-trash"></i> Удалить движ</button>'
-                    : `<button type="button" class="primary-btn wide-btn" data-dv-join>${ev.joined ? '<i class="fas fa-check"></i> Вы идёте — отменить' : '<i class="fas fa-hand"></i> Я с вами'}</button>`;
+                    : `<button type="button" class="primary-btn wide-btn" data-dv-join>${ev.joined ? '<i class="fas fa-check"></i> Вы идёте — отменить' : '<i class="fas fa-hand"></i> Я с вами'}</button>
+                       <button type="button" class="ghost-btn wide-btn" data-dv-write style="margin-top:8px"><i class="fas fa-comment-dots"></i> Написать организатору</button>`;
                 const n = el.querySelector('#dvCN'); if (n) n.textContent = ev.comments || 0;
             };
             paintTop(e);
@@ -477,6 +478,11 @@ function openDvizView(id) {
             el.addEventListener('click', (ev) => {
                 if (ev.target.closest('[data-dv-join]')) { dvToggleJoin(e.id, () => dvRefreshOpen()); return; }
                 if (ev.target.closest('[data-dv-del]')) { dvDelete(e.id); return; }
+                if (ev.target.closest('[data-dv-write]')) {
+                    closeSheet();
+                    if (typeof startDm === 'function') startDm(e.ownerName, { id: String(e.id), title: 'Движ: ' + (e.title || '') }, 'Здравствуйте! Про движ «' + (e.title || '') + '». ');
+                    return;
+                }
                 if (ev.target.closest('[data-dv-comm]')) { openDvizComments(e.id); return; }
             });
         });

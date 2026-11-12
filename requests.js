@@ -41,7 +41,7 @@ function showSeekTip(anchor) {
     const r = anchor.getBoundingClientRect();
     const tip = document.createElement('div');
     tip.id = 'seekTip'; tip.className = 'seek-tip'; tip.setAttribute('role', 'status');
-    tip.innerHTML = `<b>Как это работает</b><span>${SEEK_TIP}</span>`;
+    tip.innerHTML = `<button type="button" class="seek-tip-x" aria-label="Закрыть подсказку"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg></button><b>Как это работает</b><span>${SEEK_TIP}</span>`;
     document.body.appendChild(tip);
     const w = Math.min(320, window.innerWidth - 24);
     tip.style.width = w + 'px';
@@ -50,7 +50,7 @@ function showSeekTip(anchor) {
     tip.style.top = (r.bottom + 10) + 'px';
     tip.style.setProperty('--ax', Math.round(r.left + r.width / 2 - left) + 'px');
     tip.addEventListener('click', hideSeekTip);
-    seekTipTimer = setTimeout(hideSeekTip, 8000);
+    seekTipTimer = setTimeout(hideSeekTip, 15000);
 }
 const secLabels = (sec) => SEEK_LABELS[sec || reqSection()] || SEEK_LABELS.housing;
 

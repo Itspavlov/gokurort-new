@@ -107,7 +107,7 @@
 .listing-price-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 
 .listing-price { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.8px; color: var(--sun-2); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .listing-price { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .listing-price { color: var(--accent); }
 
 .verified-chip { font-size: 12px; font-weight: 700; color: var(--success); display: inline-flex; gap: 6px; align-items: center; }
 
@@ -133,7 +133,7 @@
 }
 
 .chip i { color: var(--sun-2); font-size: 13px; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .chip i { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .chip i { color: var(--accent); }
 
 .chip-soft { font-weight: 500; }
 
@@ -176,7 +176,7 @@
 .owner-name { font-size: 16px; font-weight: 800; }
 .owner-sub { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
 .owner-rating { color: var(--sun-2); font-weight: 800; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .owner-rating { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .owner-rating { color: var(--accent); }
 .owner-about { margin-top: 12px; font-size: 14px; color: var(--text-secondary); line-height: 1.55; }
 
 /* ---------- РАЗДЕЛЫ ---------- */
@@ -203,7 +203,7 @@
     font-size: 15px;
 }
 
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .term-icon { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .term-icon { color: var(--accent); }
 
 .term-label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 .term-value { font-size: 14.5px; font-weight: 600; line-height: 1.35; }
@@ -375,7 +375,7 @@
 .cal-summary.ready { border-style: solid; border-color: rgba(255, 179, 92, 0.55); color: var(--text); }
 .cal-summary b { font-weight: 800; }
 .cal-total { margin-left: auto; font-family: var(--font-display); font-weight: 700; color: var(--sun-2); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .cal-total { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .cal-total { color: var(--accent); }
 
 /* ---------- ЛЕНТА ВНУТРИ СТРАНИЦЫ ---------- */
 .featured-list-inner { margin: 0 -18px; padding: 4px 18px 8px; }
@@ -397,7 +397,7 @@
     box-shadow: var(--glass-hi), var(--shadow);
 }
 
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .listing-actions { background: rgba(255, 255, 255, 0.85); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .listing-actions { background: rgba(255, 255, 255, 0.85); }
 
 .act-call, .act-write {
     height: 52px;
@@ -533,7 +533,7 @@
 .my-ad-info { flex: 1; min-width: 0; cursor: pointer; }
 .my-ad-title { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .my-ad-price { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--sun-2); margin: 2px 0; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .my-ad-price { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .my-ad-price { color: var(--accent); }
 .my-ad-loc { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .my-ad-actions { display: flex; flex-direction: column; gap: 6px; }
@@ -760,7 +760,7 @@
     backdrop-filter: none;
     background: rgba(255, 255, 255, 0.10);
 }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .chat-bubble, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"]) .chat-welcome { background: rgba(255, 255, 255, 0.88); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .chat-bubble, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .chat-welcome { background: rgba(255, 255, 255, 0.88); }
 .chat-bubble-mine { background: var(--sun); }
 .chat-messages { touch-action: pan-y; overscroll-behavior: contain; contain: content; }
 .chat-message { contain: layout style; }
