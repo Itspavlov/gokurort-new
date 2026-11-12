@@ -1412,3 +1412,6 @@ button, a, [onclick], .dock-btn, .chat-back-btn, .group-card { touch-action: man
 .lang-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); }
 .lang-seg button { height: 38px; border: 0; border-radius: 10px; background: transparent; color: var(--text-secondary); font: 700 14px var(--font); cursor: pointer; outline: none; }
 .lang-seg button.on { background: var(--accent); color: #fff; }
+
+/* v65: пока открыт чат раздела, страница под ним не прокручивается */
+html:has(#group-screen[style*="flex"]) body { overflow: hidden; }

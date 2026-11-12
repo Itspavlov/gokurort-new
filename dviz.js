@@ -176,7 +176,7 @@ function dvSetTab(tab) {
 function openDvizScreen(tab) {
     if (typeof socket !== 'undefined' && socket && currentRoom) socket.emit('leave-room', currentRoom);
     currentRoom = null; currentDm = null; currentGroup = null;
-    tabContents.forEach(section => section.style.display = 'none');
+    tabContents.forEach(section => { if (section.id === 'tab-search' && section.style.display !== 'none') return; section.style.display = 'none'; });   // главная остаётся под экраном чата: «Назад» не пересобирает её заново
     let screen = document.getElementById('group-screen');
     if (!screen) {
         screen = document.createElement('section');

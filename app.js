@@ -588,7 +588,7 @@ function openGroup(groupId, opts) {
 function openChatRoom(roomId, roomName, roomIcon, ads, opts = {}) {
     if (socket && currentRoom && currentRoom !== roomId) socket.emit('leave-room', currentRoom);
 
-    tabContents.forEach(section => section.style.display = 'none');
+    tabContents.forEach(section => { if (section.id === 'tab-search' && section.style.display !== 'none') return; section.style.display = 'none'; });   // главная остаётся под экраном чата: «Назад» не пересобирает её заново
 
     const welcomeTitle = opts.welcomeTitle || (opts.cards ? `Раздел «${roomName}»` : `Добро пожаловать в чат «${roomName}»`);
     const welcomeText = opts.welcomeText || 'Общайтесь, задавайте вопросы, делитесь фото.';
@@ -1036,12 +1036,13 @@ console.log('👤 Ваше имя:', getUserName());
         synthetic = true;
         const t0 = performance.now(), wait = Math.round(t0 - ev.timeStamp);   // сколько касание ждало, пока страница освободится
         try { btn.click(); } finally { synthetic = false; }
+        const js = Math.round(performance.now() - t0);
         // диагностика: адрес с ?perf=1 (или localStorage yy-perf=1) показывает, где теряется время
         let on = false;
         try { on = /[?&]perf=1/.test(location.search) || localStorage.getItem('yy-perf') === '1'; } catch (_) {}
         if (on) requestAnimationFrame(() => requestAnimationFrame(() => {
             const ms = Math.round(performance.now() - t0);
-            if (typeof showToast === 'function') showToast('Назад: касание ждало ' + wait + ' мс, экран сменился за ' + ms + ' мс');
+            if (typeof showToast === 'function') showToast('Назад: касание ждало ' + wait + ' мс, скрипт ' + js + ' мс, экран сменился за ' + ms + ' мс');
         }));
     }, true);
     document.addEventListener('click', (ev) => {
