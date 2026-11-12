@@ -31,6 +31,14 @@ function pubCounts() {
     };
 }
 
+// активная кнопка раздела встаёт в видимую часть ряда
+function pubCenterChip() {
+    const row = document.querySelector('#pubRoot .pub-chips'), on = row && row.querySelector('.cat-chip.on');
+    if (!on) return;
+    const to = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+    row.scrollTo ? row.scrollTo({ left: Math.max(0, to), behavior: 'smooth' }) : (row.scrollLeft = Math.max(0, to));
+}
+
 function pubSetSection() { window._reqSecOverride = pubChip === 'dviz' ? '' : pubChip; }
 
 function renderMyPubs() {
@@ -46,6 +54,7 @@ function renderMyPubs() {
         `<button type="button" role="tab" class="cat-chip ${pubChip === k ? 'on' : ''}" data-pc="${k}" aria-selected="${pubChip === k}"><i class="fas ${ic}"></i><span>${l}</span><b hidden></b></button>`).join('')}</div></div>
         <div id="pubBody" class="pub-body"></div>`;
     paintPubs();
+    pubCenterChip();
     // подгружаем свежее; каждое обновление перерисовывает список
     if (typeof refreshMyRequests === 'function') refreshMyRequests();
     if (typeof loadMyServices === 'function') loadMyServices(paintPubs);
@@ -55,25 +64,31 @@ function renderMyPubs() {
     if (typeof loadQuota === 'function') loadQuota((q) => { pubQuota = q; paintPubs(); });
 }
 
-const pubHead = (title, n) => `<div class="section-head pf-head"><h2 class="section-title">${title}${n ? ': ' + n : ''}</h2></div>`;
+// количество видно на кнопках-разделах сверху, в заголовке его не дублируем
+const pubHead = (title) => `<div class="section-head pf-head"><h2 class="section-title">${title}</h2></div>`;
 const pubEmpty = (text) => `<p class="pf-empty">${text}</p>`;
 
 function pubAdsHTML() {
     const e = escapeHtml, mine = myAdsAll();
-    const rows = mine.map(ad => `
+    // «Скрыто» — объявление лежит только на этом устройстве и ещё не опубликовано для всех; «Активно» — его видят все
+    const localIds = new Set(getMyAds().map(a => String(a.id)));
+    const rows = mine.map(ad => {
+        const hid = localIds.has(String(ad.id));
+        return `
         <div class="my-ad">
             <div class="my-ad-thumb" onclick="openListing('${ad.id}')">${ad.image ? `<img src="${ad.image}" alt="">` : '<i class="fas fa-image"></i>'}</div>
             <div class="my-ad-info" onclick="openListing('${ad.id}')">
                 <div class="my-ad-title">${e(ad.title)}</div>
-                <div class="my-ad-price">${e(ad.price)}</div>
+                <div class="my-ad-meta"><span class="my-ad-price">${e(ad.price)}</span><span class="ad-status ${hid ? 'off' : 'on'}" ${hid ? 'title="Видно только вам: объявление ещё не опубликовано для всех"' : ''}>${hid ? 'Скрыто' : 'Активно'}</span></div>
             </div>
             <div class="my-ad-actions">
                 <button onclick="openAdForm('${ad.id}')" aria-label="Изменить"><i class="fas fa-pen"></i></button>
                 <button onclick="deleteMyAd('${ad.id}')" aria-label="Удалить"><i class="fas fa-trash"></i></button>
             </div>
-        </div>`).join('');
-    const q = pubQuota ? `<div class="quota-line${pubQuota.left === 0 ? ' full' : ''}">${escapeHtml(quotaText(pubQuota))}</div>` : '';
-    return pubHead('Мои объявления', mine.length)
+        </div>`;
+    }).join('');
+    const q = pubQuota ? `<div class="quota-line pub-quota${pubQuota.left === 0 ? ' full' : ''}"><i class="fas fa-calendar-plus"></i><span>${escapeHtml(quotaText(pubQuota))}</span></div>` : '';
+    return pubHead('Мои объявления')
         + (mine.length ? `<div class="my-ads">${rows}</div>` : pubEmpty('Объявлений пока нет. Добавить жильё можно в разделе «Жильё» кнопкой «Сдать жильё».'))
         + q;
 }
@@ -134,6 +149,7 @@ document.addEventListener('click', (ev) => {
         pubSetSection();
         root.querySelectorAll('.cat-chip[data-pc]').forEach(c => { const on = c === chip; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
         paintPubs();
+        pubCenterChip();
         window.scrollTo({ top: 0 });
         return;
     }

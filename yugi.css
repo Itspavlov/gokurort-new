@@ -1451,3 +1451,28 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 .fr-lims { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .fr-lim { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); font: 600 13px var(--font); }
 .fr-lim b { font-weight: 800; }
+
+/* ===== v69: без тёмной полосы под шапкой; «Мои публикации»: разделы в один ряд со скроллом, статус объявления, строка лимита ===== */
+/* шапка уезжает вместе со страницей и без фона: под ней нет тёмной полосы, плитки не обрезаются рамкой */
+.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header { position: relative; z-index: 100; background: none !important; }
+
+/* разделы одним рядом, листается вбок; цифры внутри кнопки, не обрезаются */
+.pub-chips-wrap { margin: 0 -18px 12px; }
+.pub-chips { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 8px 18px 16px; margin: -6px 0 -8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x; scroll-snap-type: x proximity; }
+.pub-chips::-webkit-scrollbar { display: none; }
+.pub-chips .cat-chip, .pub-chips .cat-chip:last-child { position: static; flex: none; flex-direction: row; grid-column: auto; height: 40px; gap: 7px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; line-height: 1; white-space: nowrap; scroll-snap-align: center; }
+.pub-chips .cat-chip i { font-size: 14px; }
+.pub-chips .cat-chip.on { box-shadow: 0 3px 10px rgba(255, 122, 89, .32); }
+.pub-chips .cat-chip b, .pub-chips .cat-chip.on b { position: static; min-width: 20px; height: 20px; padding: 0 6px; margin: 0 -4px 0 0; border-radius: 10px; font-size: 12px; line-height: 20px; box-shadow: none; background: #1F4E6B; color: #fff; }
+.pub-chips .cat-chip.on b { background: #3A1406; }
+.pub-chips .cat-chip b[hidden] { display: none; }
+
+/* статус объявления и строка лимита */
+.my-ad-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; min-width: 0; }
+.my-ad-meta .my-ad-price { margin: 0; }
+.ad-status { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 8px; border-radius: 9px; font: 800 10.5px/1 var(--font); letter-spacing: .1px; }
+.ad-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ad-status.on { background: #1E8E5A; color: #fff; }
+.ad-status.off { background: #5B6B7B; color: #fff; }
+.pub-quota { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin: 12px 4px 4px; padding: 9px 12px; border-radius: 12px; border: 1px dashed var(--glass-border); text-align: left; font: 600 12.5px/1.35 var(--font); }
+.pub-quota i { margin-top: 2px; opacity: .8; }

@@ -742,6 +742,12 @@ YuGi YuGi — жильё, работа, попутчики и развлечен
 Русский => Русский
 English => English
 Мои друзья => My friends
+Сегодня осталось публикаций: => Posts left today:
+На сегодня лимит исчерпан => Today's limit is used up
+Новые — завтра или после приглашения друга (Профиль → Мои друзья). Править можно всегда => New ones tomorrow or after inviting a friend (Profile → My friends). Editing is always free
+Активно => Active
+Скрыто => Hidden
+Видно только вам: объявление ещё не опубликовано для всех => Only you can see this: the listing is not published for everyone yet
 Сегодня в разделе опубликовано: => Posted today in this section:
 Новые — завтра или после приглашения друга (Профиль → Мои друзья), править можно всегда => New ones tomorrow or after inviting a friend (Profile → My friends); editing is always free
 Войдите, чтобы получить свою ссылку для друзей. => Sign in to get your link for friends.
