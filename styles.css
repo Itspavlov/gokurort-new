@@ -859,7 +859,7 @@ button { font-family: inherit; }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in { animation: fadeIn 0.3s ease; }
+.fade-in { animation: fadeIn 0.18s ease; }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }

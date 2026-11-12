@@ -268,7 +268,9 @@ function switchTab(tabName, animate = true) {
     const target = document.getElementById('tab-' + tabName);
     if (target) {
         target.style.display = 'block';
-        target.classList.add('fade-in');
+        // плавное появление только при нажатии на вкладку; «Назад» показывает экран сразу
+        target.classList.remove('fade-in');
+        if (animate) { void target.offsetWidth; target.classList.add('fade-in'); }
     }
 
     navItems.forEach(item => {
@@ -283,7 +285,7 @@ function switchTab(tabName, animate = true) {
     if (tabName === 'messages' && typeof renderDialogs === 'function') renderDialogs();
     if (tabName === 'search') renderFeatured();
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: animate ? 'smooth' : 'instant' });
 }
 
 navItems.forEach(item => {
@@ -956,6 +958,10 @@ function renderFeatured() {
     const top = [...(typeof HOUSING_ADS !== 'undefined' ? HOUSING_ADS : [])].sort((a, b) => b.views - a.views);
     const hot = [...mine, ...top].slice(0, 7);
 
+    // если подборка не изменилась, не перерисовываем: иначе при каждом «Назад» заново декодируются все фото
+    const sig = hot.map(a => [a.id, a.updated || '', a.price, a.title, a.location, (a.image || '').length, a.rating || '', a.reviewCount || '', a.isUrgent ? 1 : 0, a.isVerified ? 1 : 0, Array.isArray(a.coords) ? 1 : 0].join('~')).join('|');
+    if (list.dataset.sig === sig && list.children.length) return;
+    list.dataset.sig = sig;
     list.innerHTML = hot.map(ad => `
         <div class="ad-card" onclick="openListing('${ad.id}')">
             <div class="ad-card-img">
