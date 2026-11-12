@@ -1480,3 +1480,8 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 /* v70: фото на главной доходит до самого верха экрана (под строкой состояния), без тёмной рамки над ним.
    Верх снимка — ровное небо, поэтому полосу над ним закрашиваем тем же цветом, а сам снимок не трогаем. */
 #tab-search::before { content: ''; position: absolute; z-index: 0; left: -18px; right: -18px; top: calc(-92px - env(safe-area-inset-top, 0px) - 60px); height: calc(env(safe-area-inset-top, 0px) + 60px); background: #007cd4; pointer-events: none; }
+
+/* v71: в комнатах (жильё, работа…) за кнопками «назад», «карта», «сердце» нет тёмной подложки: общее правило для шапок чата её возвращало */
+.chat-header.room-head { background: none !important; border: 0 !important; box-shadow: none !important; }
+/* логотип чуть ниже: размытие строки состояния в iOS не заходит на надпись */
+.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
