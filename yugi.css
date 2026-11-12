@@ -1415,3 +1415,12 @@ button, a, [onclick], .dock-btn, .chat-back-btn, .group-card { touch-action: man
 
 /* v65: пока открыт чат раздела, страница под ним не прокручивается */
 html:has(#group-screen[style*="flex"]) body { overflow: hidden; }
+
+/* v66: переключатели эффектов для проверки, что тормозит отрисовку (только при ?lite=…) */
+html.lite-bf *, html.lite-bf *::before, html.lite-bf *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.lite-fl *, html.lite-fl *::before, html.lite-fl *::after { -webkit-filter: none !important; filter: none !important; }
+html.lite-bs *, html.lite-bs *::before, html.lite-bs *::after { box-shadow: none !important; text-shadow: none !important; }
+html.lite-mx *, html.lite-mx *::before, html.lite-mx *::after { mix-blend-mode: normal !important; }
+html.lite-bl body::before, html.lite-bl body::after { display: none !important; }
+html.lite-mk *, html.lite-mk *::before, html.lite-mk *::after { -webkit-mask-image: none !important; mask-image: none !important; }
+html.lite-im .group-photo, html.lite-im .hero-photo, html.lite-im .hero-stage { display: none !important; }

@@ -3,6 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <script>
+    // диагностика отрисовки: ?lite=bf,fl,bs,mx,bl,mk,im выключает отдельные эффекты (lite=0 — вернуть всё)
+    (function () {
+        try {
+            var m = location.search.match(/[?&]lite=([\w,]*)/);
+            if (m) localStorage.setItem('yy-lite', m[1] === '0' ? '' : m[1]);
+            var v = localStorage.getItem('yy-lite') || '';
+            v.split(',').forEach(function (k) { if (/^(bf|fl|bs|mx|bl|mk|im)$/.test(k)) document.documentElement.classList.add('lite-' + k); });
+        } catch (e) {}
+    })();
+    </script>
     <meta name="theme-color" content="#060F1C">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -19,7 +30,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css?v=2c">
     <link rel="stylesheet" href="features.css?v=3">
-    <link rel="stylesheet" href="yugi.css?v=67">
+    <link rel="stylesheet" href="yugi.css?v=68">
 </head>
 <body>
 
