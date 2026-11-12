@@ -1489,3 +1489,7 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 /* v72: верхний край фото растворяется в небе над ним, чтобы линии края не было видно */
 .hero-photo { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 90px); mask-image: linear-gradient(180deg, transparent 0, #000 90px); }
 .hero-scene { background: #007cd4; }
+
+/* v73: пока открыта главная и она наверху, область под строкой состояния голубая, как небо на фото */
+#topTint { display: none; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 1; background: #007cd4; pointer-events: none; }
+html.on-home-top #topTint { display: block; }

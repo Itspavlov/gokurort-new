@@ -218,6 +218,7 @@ function setTheme(theme) {
     try { localStorage.setItem('tell-theme', theme); } catch (e) {}
     if (metaTheme) metaTheme.setAttribute('content', THEMES[theme].meta);
     loadThemeFont(theme);
+    if (typeof window.syncTopTint === 'function') window.syncTopTint();
     document.querySelectorAll('.theme-grid button').forEach(b => b.classList.toggle('on', b.dataset.th === theme));
 }
 setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'sea');
@@ -1052,3 +1053,30 @@ console.log('👤 Ваше имя:', getUserName());
     }, true);
 })();
 
+
+
+// ---------- цвет под строкой состояния ----------
+// Вверху главной лежит фото с голубым небом. iOS красит область под часами в цвет темы, и она резала фото
+// тёмной или белой полосой. Пока открыта главная и страница наверху, красим эту область в цвет неба с фото.
+(function () {
+    const HERO_BLUE = '#007cd4';
+    let state = '';
+    function sync() {
+        const ts = document.getElementById('tab-search'), gs = document.getElementById('group-screen');
+        const home = !!ts && ts.style.display !== 'none' && !(gs && gs.style.display && gs.style.display !== 'none') && !!document.querySelector('.hero-photo');
+        const top = home && (window.scrollY || 0) < 40;
+        const next = top ? 'top' : '';
+        if (next === state) return;
+        state = next;
+        document.documentElement.classList.toggle('on-home-top', top);
+        if (metaTheme) metaTheme.setAttribute('content', top ? HERO_BLUE : THEMES[getTheme()].meta);
+    }
+    window.syncTopTint = function () { state = '\0'; sync(); };
+    const mo = new MutationObserver(sync);
+    document.querySelectorAll('.tab-content').forEach(el => mo.observe(el, { attributes: true, attributeFilter: ['style'] }));
+    // экран комнаты создаётся позже всех: подключаемся, как только он появится
+    const attach = () => { const g = document.getElementById('group-screen'); if (g && !g._tint) { g._tint = 1; mo.observe(g, { attributes: true, attributeFilter: ['style'] }); sync(); } return !!g; };
+    if (!attach()) { const bo = new MutationObserver(() => { if (attach()) bo.disconnect(); }); bo.observe(document.body, { childList: true, subtree: true }); }
+    window.addEventListener('scroll', sync, { passive: true });
+    sync();
+})();
