@@ -124,7 +124,7 @@ function renderProfile() {
         <div class="pf-menu">
             <button type="button" class="pf-row" id="rowStats" onclick="openStats()" hidden><i class="fas fa-chart-simple"></i><span>Статистика</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowSubs" onclick="openSearchSubs()"><i class="fas fa-bell"></i><span>Подписки на поиск</span><i class="fas fa-chevron-right pf-go"></i></button>
-            <button type="button" class="pf-row" id="rowInvite" onclick="copyInviteLink()"><i class="fas fa-user-plus"></i><span>Пригласить друзей</span><i class="fas fa-chevron-right pf-go"></i></button>
+            <button type="button" class="pf-row" id="rowFriends" onclick="openFriends()"><i class="fas fa-user-group"></i><span>Мои друзья</span><em id="rowFriendsCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
             <div class="pf-row pf-static theme-card"><div class="tc-h"><i class="fas fa-palette"></i><span>Тема</span></div>
                 <div class="theme-grid" role="group" aria-label="Тема">${Object.entries(THEMES).map(([k, t]) => `<button type="button" class="th-card ${theme === k ? 'on' : ''}" data-th="${k}" onclick="setTheme('${k}')"><span class="th-sw" style="background:${t.bg}"><b style="background:${t.accent}"></b><i style="background:${t.accent}"></i></span>${t.name}</button>`).join('')}</div>
             </div>

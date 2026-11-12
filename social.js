@@ -40,7 +40,7 @@ async function authRequest(mode, name, password) {
         res = await fetch(`${SERVER_URL}/api/auth/${mode}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, password })
+            body: JSON.stringify(mode === 'register' && typeof pendingRef === 'function' && pendingRef() ? { name, password, ref: pendingRef() } : { name, password })
         });
     } catch (e) {
         return { ok: false, message: 'Нет связи с сервером. Проверьте интернет.' };
@@ -81,6 +81,7 @@ function openAuthSheet(onDone, mode = 'login') {
             submit.disabled = false;
             if (!r || !r.ok) { err.textContent = (r && r.message) || 'Не получилось'; paint(); err.textContent = (r && r.message) || 'Не получилось'; return; }
             setSession(r.token, r.user);
+            if (m === 'register' && typeof clearRef === 'function') clearRef();     // ссылка друга сработала один раз
             closeSheet();
             reconnectSocket();
             showToast(m === 'login' ? 'Вы вошли как ' + r.user.name : 'Аккаунт создан. Добро пожаловать, ' + r.user.name + '!');

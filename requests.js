@@ -515,7 +515,7 @@ function loadQuota(cb) {
     if (!getToken()) return;
     fetch(`${SERVER_URL}/api/listings/quota`, { headers: { Authorization: 'Bearer ' + getToken() } }).then(r => r.json()).then(d => { if (d && d.ok) cb(d.quota); }).catch(() => {});
 }
-const quotaText = (q) => `Сегодня опубликовано: ${q.used} из ${q.limit}` + (q.left === 0 ? '. Новые — завтра, редактировать можно всегда' : '');
+const quotaText = (q) => `Сегодня в разделе опубликовано: ${q.used} из ${q.limit}` + (q.left === 0 ? '. Новые — завтра или после приглашения друга (Профиль → Мои друзья), править можно всегда' : '');
 
 const _openAdFormQuota = openAdForm;
 openAdForm = function () {

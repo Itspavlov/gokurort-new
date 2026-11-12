@@ -1433,3 +1433,21 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 [data-theme="dusk"] { --bar: rgba(18, 18, 22, .94); }
 :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) { --bar: var(--glass-strong); }
 .chat-header, .chat-input-wrapper, .cards-dock, .reply-bar, .listing-actions { background: var(--bar) !important; }
+
+/* v68: «Мои друзья» */
+.fr-link { display: flex; gap: 8px; margin-top: 10px; }
+.fr-link input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 600 13px var(--font); outline: none; }
+.fr-link .primary-btn { flex: none; height: 44px; padding: 0 16px; }
+.fr-prog { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; font: 600 14px var(--font); }
+.fr-prog b { color: var(--accent, var(--sea)); }
+.fr-dots { display: flex; gap: 6px; }
+.fr-dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--glass-border); }
+.fr-dots i.on { background: var(--accent, var(--sea)); border-color: var(--accent, var(--sea)); }
+.fr-list { display: flex; flex-direction: column; gap: 8px; }
+.fr-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); }
+.fr-row b { flex: 1; min-width: 0; font: 700 14px var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-row small { font: 600 12px var(--font); color: var(--text-secondary); text-align: right; }
+.fr-row small.ok { color: #1FA67A; }
+.fr-lims { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fr-lim { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); font: 600 13px var(--font); }
+.fr-lim b { font-weight: 800; }
