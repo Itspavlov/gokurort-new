@@ -1,5 +1,5 @@
 // ============================================
-// PERF.JS — диагностика (включается адресом ?perf=1): панель эффектов справа и показ ошибок скриптов внизу.
+// LAB.JS — диагностика (включается адресом ?perf=1): панель эффектов справа и показ ошибок скриптов внизу.
 // Отдельный файл: работает, даже если в app.js что-то упало на устройстве.
 // ============================================
 (function () {
@@ -34,6 +34,11 @@
         });
         document.body.appendChild(box);
         paint();
+        const mark = document.createElement('div');
+        mark.setAttribute('data-i18n-skip', '');
+        mark.textContent = 'LAB v2 · эффекты справа';
+        mark.style.cssText = 'position:fixed;left:50%;top:2px;transform:translateX(-50%);z-index:99999;font:700 10px sans-serif;color:#fff;background:#1b6f9a;border-radius:6px;padding:2px 8px;pointer-events:none;opacity:.9';
+        document.body.appendChild(mark);
 
         // ошибки скриптов: если что-то падает на этом устройстве, видно здесь
         const errBox = document.createElement('div');
