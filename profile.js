@@ -141,7 +141,8 @@ function openProfileEditor() {
     if (accNow) p.name = accNow.name;      // у аккаунта имя одно: его видят в чатах, отзывах и объявлениях
     let avatar = p.avatar || '', avatarId = p.avatarId || '';
     const e = escapeHtml;
-    const avGrid = Array.from({ length: AVATAR_COUNT }, (_, i) => { const id = avatarIdOf(i + 1); return `<button type="button" class="av-opt${avatarId === id ? ' on' : ''}" data-av="${id}" aria-label="Аватарка ${i + 1}"><img src="${avatarUrl(id)}" alt="" loading="lazy"></button>`; }).join('');
+    const AV_GROUPS = [['Животные', 1, 21], ['Цветы', 22, 28], ['Техника', 29, 35]];
+    const avGrid = AV_GROUPS.map(([name, from, to]) => `<div class="av-row"><div class="av-row-name">${name}</div><div class="av-scroll" data-noswipe>${Array.from({ length: to - from + 1 }, (_, i) => { const id = avatarIdOf(from + i); return `<button type="button" class="av-opt${avatarId === id ? ' on' : ''}" data-av="${id}" aria-label="${name}, ${i + 1}"><img src="${avatarUrl(id)}" alt="" loading="lazy"></button>`; }).join('')}</div></div>`).join('');
 
     openSheet('Мой профиль', `
         <div class="avatar-edit">
@@ -152,7 +153,7 @@ function openProfileEditor() {
             </div>
             <input type="file" id="pfFile" accept="image/*" hidden>
         </div>
-        <div class="av-pick"><div class="av-pick-h">Выберите аватарку</div><div class="av-grid" id="pfAvGrid" data-noswipe>${avGrid}</div></div>
+        <div class="av-pick"><div class="av-pick-h">Выберите аватарку</div><div class="av-groups" id="pfAvGrid">${avGrid}</div></div>
         <label class="field"><span>Имя</span><input id="pfName" maxlength="${accNow ? 24 : 30}" value="${e(p.name || '')}" placeholder="Как к вам обращаться">${accNow ? '<small class="field-hint">Имя видят все: в чатах, отзывах и объявлениях. Менять можно раз в сутки.</small>' : ''}</label>
         <label class="field"><span>Телефон</span><input id="pfPhone" type="tel" maxlength="20" value="${e(p.phone || '')}" placeholder="+7 900 000-00-00"></label>
         <label class="field"><span>Город</span><input id="pfCity" maxlength="40" value="${e(p.city || '')}" placeholder="Где живёте"></label>

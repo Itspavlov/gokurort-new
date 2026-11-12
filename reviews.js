@@ -248,6 +248,19 @@ document.addEventListener('click', (ev) => {
     openUserProfile({ name });
 }, true);
 
+// С любой карточки (запрос, движ, услуга) и из комментария к движу: тап по аватарке или имени открывает профиль человека.
+document.addEventListener('click', (ev) => {
+    const t = ev.target.closest('.req-item .rq-ava, .req-item .rq-who, .dv2 .rq-ava, .dv2 .rq-who, .sv-t-top .chat-avatar, .sv-t-top .sv-t-by, .dv-comment .chat-avatar, .dv-comment .dv-chead b, .sv-card .rq-ava, .sv-card .rq-who');
+    if (!t) return;
+    const box = t.closest('.rq-top, .sv-t-top, .dv-comment') || t;
+    const nameEl = box.querySelector('.rq-who b, .sv-t-by b, .dv-chead b');
+    const name = nameEl ? (nameEl.firstChild && nameEl.firstChild.nodeType === 3 ? nameEl.firstChild.textContent : nameEl.textContent).trim() : '';
+    if (!name || name === 'Вы') return;                         // свою карточку открывать как обычно
+    ev.stopPropagation(); ev.preventDefault();
+    if (typeof closeDvizComments === 'function' && t.closest('.dv-comment')) closeDvizComments();
+    openUserProfile({ name });
+}, true);
+
 // переход из уведомления «listing:ID»
 function openListingById(id) {
     if (typeof findAd === 'function' && findAd(id)) { openListing(id); return; }

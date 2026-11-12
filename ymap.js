@@ -83,7 +83,7 @@ const YM = (() => {
             },
             addLine(pts, f) {
                 f = f || {};
-                const line = new ym.Polyline(pts, {}, { strokeColor: f.color || '#2DD4DA', strokeWidth: f.width || 3, strokeStyle: 'shortdash', strokeOpacity: .95 });
+                const line = new ym.Polyline(pts, {}, { strokeColor: f.color || '#2DD4DA', strokeWidth: f.width || 3, strokeStyle: f.dash === false ? 'solid' : 'shortdash', strokeOpacity: .95 });
                 map.geoObjects.add(line);
                 return { remove() { map.geoObjects.remove(line); } };
             },
@@ -171,7 +171,7 @@ const YM = (() => {
             clearMarkers(g) { (groups[g || ''] || []).forEach(x => map.removeLayer(x)); groups[g || ''] = []; },
             addLine(pts, f) {
                 f = f || {};
-                const l = L.polyline(pts, { color: f.color || '#2DD4DA', weight: f.width || 3, dashArray: '2 8', lineCap: 'round' }).addTo(map);
+                const l = L.polyline(pts, { color: f.color || '#2DD4DA', weight: f.width || 3, dashArray: f.dash === false ? null : '2 8', lineCap: 'round', lineJoin: 'round' }).addTo(map);
                 return { remove() { map.removeLayer(l); } };
             },
             onClick(fn) { map.on('click', (ev) => { if (Date.now() - lastPin < 400) return; fn([ev.latlng.lat, ev.latlng.lng]); }); },

@@ -156,7 +156,7 @@ function openServiceEditor(edit, after) {
             <label class="field"><span>Категория</span><select id="svTag">${Object.entries(SV_TAGS).map(([k, v]) => `<option value="${k}" ${s.tag === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
             <div class="rq-row"><label class="field"><span>Цена, ₽</span><input id="svPrice" type="number" inputmode="numeric" min="1" value="${s.price || ''}" placeholder="Можно пусто"></label>
             <label class="field"><span>Как считать</span><select id="svUnit">${SV_UNITS.map(u => `<option value="${e(u)}" ${(s.unit || '') === u ? 'selected' : ''}>${u || '—'}</option>`).join('')}</select></label></div>
-            <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Анапа, причал"></label>
+            <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Архипо-Осиповка, причал"></label>
             <label class="field"><span>Куда подойти</span><input id="svPlace" maxlength="120" value="${e(s.place || '')}" placeholder="Например: причал №3, у синего катера"></label>
             ${mapPickHTML('Точка на карте: причал или место встречи', 'Нажмите на карту, чтобы отметить причал или место, куда подходить. Люди увидят карту под вашей карточкой и смогут проложить маршрут.')}
             <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="800" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>

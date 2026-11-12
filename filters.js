@@ -158,9 +158,9 @@ function openAdMap() {
     box.addEventListener('pointerdown', () => { adMapMoved = true; }, { once: true });
     const token = adMapToken = {};
     // сразу ставим итоговый вид, без «наезда»: иначе карта сначала грузит квадрат плиток на дальнем зуме, потом приближается
-    const first = filteredAds().filter(a => Array.isArray(a.coords)).map(a => a.coords);
-    const mid = first.length ? [first.reduce((x, p) => x + p[0], 0) / first.length, first.reduce((x, p) => x + p[1], 0) / first.length] : [44.8928, 37.299];
-    YM.open(box, { center: mid, zoom: first.length ? 13 : 11 }).then((map) => {
+    const first = filteredAds().filter(a => nearTown(a.coords)).map(a => a.coords);
+    const mid = first.length ? [first.reduce((x, p) => x + p[0], 0) / first.length, first.reduce((x, p) => x + p[1], 0) / first.length] : MAP_DEFAULT.slice();
+    YM.open(box, { center: mid, zoom: first.length ? 14 : 14 }).then((map) => {
         if (!map) return;
         if (adMapToken !== token || !document.getElementById('adMapView')) { map.destroy(); return; }
         adMap = map;
@@ -175,11 +175,13 @@ function openAdMap() {
 }
 
 // масштаб под город: все объявления с точками в кадре; нет точек — показываем посёлок целиком
-const AD_TOWN = [44.8928, 37.299];
+const AD_TOWN = MAP_DEFAULT.slice();
+// в кадр берём только то, что рядом с Архипо-Осиповкой (до 40 км): дальние точки не отдаляют карту
+const nearTown = (c) => Array.isArray(c) && distMeters(c, AD_TOWN) < 40000;
 let adMapMoved = false;
 function fitAdMap(animate) {
     if (!adMap) return;
-    const pts = filteredAds().filter(a => Array.isArray(a.coords)).map(a => a.coords);
+    const pts = filteredAds().filter(a => nearTown(a.coords)).map(a => a.coords);
     if (pts.length) adMap.fitBounds(pts, { padding: 50, maxZoom: 15, animate: animate !== false });
     else adMap.setView(AD_TOWN, 14, animate !== false);
 }

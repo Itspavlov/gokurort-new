@@ -229,8 +229,8 @@ function openListing(adId) {
         seaBlock = `
             <div class="sea-banner">
                 <div class="sea-icon"><i class="fas fa-umbrella-beach"></i></div>
-                <div><b>${fmtDist(m)} до моря</b><span>≈ ${walkMinutes(m)} мин пешком</span></div>
-            </div>`;
+                <div><b>${fmtDist(m)} до моря</b><span>≈ ${walkMinutes(m * 1.25)} мин пешком</span></div>
+            </div>${typeof routePanelHTML === 'function' ? routePanelHTML() : ''}`;
     }
 
     // другие объявления хозяина
@@ -386,14 +386,21 @@ function initListingMap(ad) {
     const el = document.getElementById('listingMap');
     if (!el) return;
     // карта «спит», пока по ней не тапнули — чтобы не мешала листать страницу
+    const secPanel = typeof routePanelInit === 'function' && ad.beach && el.closest('.l-section') && el.closest('.l-section').querySelector('.rt-panel');
+    let mapRef = null;
+    const rp = secPanel ? routePanelInit(secPanel, () => mapRef, ad) : null;
     YM.open(el, { center: ad.coords, zoom: 16, interactive: false }).then((map) => {
         if (!map) return;
         if (!el.isConnected) { map.destroy(); return; }
         map.addMarker({ coords: ad.coords, html: mapPin('pin-home', 'fa-home'), size: [40, 40] });
         if (ad.beach) {
             map.addMarker({ coords: ad.beach, html: mapPin('pin-sea', 'fa-umbrella-beach'), size: [40, 40] });
-            map.addLine([ad.coords, ad.beach], { color: '#2DD4DA', width: 3 });
-            map.fitBounds([ad.coords, ad.beach], { padding: 50, maxZoom: 17, animate: false });
+            mapRef = map;
+            if (rp) rp.redraw();
+            else {
+                map.addLine([ad.coords, ad.beach], { color: '#2DD4DA', width: 3 });
+                map.fitBounds([ad.coords, ad.beach], { padding: 50, maxZoom: 17, animate: false });
+            }
         }
         const hint = document.createElement('div');
         hint.className = 'map-hint';

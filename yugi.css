@@ -1389,3 +1389,29 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 .sv-viewmap { margin-bottom: 10px; }
 .sv-where { display: flex; align-items: flex-start; gap: 9px; margin: 0 2px 10px; font: 600 14px/1.35 var(--font); }
 .sv-where i { color: var(--sun-2, #FFB35C); margin-top: 2px; }
+
+/* v59: аватарки по группам: название слева, справа лента с горизонтальной прокруткой */
+.av-groups { display: flex; flex-direction: column; gap: 10px; }
+.av-row { display: flex; align-items: center; gap: 10px; }
+.av-row-name { flex: none; width: 74px; font: 700 13px/1.2 var(--font); color: var(--text-secondary); }
+.av-scroll { flex: 1; min-width: 0; display: flex; gap: 9px; overflow-x: auto; overflow-y: hidden; padding: 6px 4px 8px; scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x; }
+.av-scroll::-webkit-scrollbar { display: none; }
+.av-scroll .av-opt { flex: none; width: 52px; height: 52px; scroll-snap-align: start; }
+
+/* v59: плашка «Карта» под карточкой жилья и маршрут до моря */
+.ad-mapbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 32px; margin-top: 6px; border-radius: 16px; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255, 255, 255, .14)); color: var(--text); font: 700 12.5px var(--font); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ad-mapbtn i { color: var(--sea, #2BC4D6); }
+.chat-bubble-wrap > .ad-mapbtn { margin: 6px 0 0; }
+.ad-card .ad-mapbtn { height: 28px; font-size: 11.5px; margin-top: 7px; }
+.rt-map { height: 280px; }
+.rt-panel { margin: 10px 0 12px; }
+.rt-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 16px; background: var(--glass); border: 1px solid var(--glass-border); }
+.rt-tabs button { height: 38px; border: 0; border-radius: 12px; background: transparent; color: var(--text-secondary); font: 700 14px var(--font); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.rt-tabs button.on { background: linear-gradient(135deg, #2DD4DA, #4FA6FF); color: #06212b; }
+.rt-panel.car .rt-tabs button.on { background: linear-gradient(135deg, #FFB35C, #FF7A5C); }
+.rt-sum { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin: 12px 4px 6px; }
+.rt-sum b { font: 800 20px var(--font); color: var(--text); }
+.rt-sum span { font: 600 13px var(--font); color: var(--text-secondary); }
+.rt-taxi { display: flex; align-items: center; gap: 9px; margin: 6px 0 4px; padding: 9px 12px; border-radius: 14px; background: rgba(255, 196, 0, .14); border: 1px solid rgba(255, 196, 0, .35); font: 700 13px var(--font); color: var(--text); }
+.rt-taxi i { color: #FFC400; }
+.rt-yx { margin-top: 8px; }

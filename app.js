@@ -105,9 +105,9 @@ const messagesCache = {
 };
 
 // ---------- ДАННЫЕ ПОЛЬЗОВАТЕЛЯ И ОБЪЯВЛЕНИЯ ----------
-// Центр карты и ближайшая точка моря по умолчанию — поменяйте на свой город
-const MAP_DEFAULT = [44.8946, 37.3100];
-const BEACH_DEFAULT = [44.8928, 37.2990];
+// Центр карты и ближайшая точка моря по умолчанию: Архипо-Осиповка (координаты примерные, уточняются по карте)
+const MAP_DEFAULT = [44.3700, 38.5200];
+const BEACH_DEFAULT = [44.3678, 38.5210];
 
 // Готовые аватарки: файлы avatars/av01.webp … av35.webp, на сервере хранится только id (av07)
 const AVATAR_COUNT = 35;
@@ -773,6 +773,7 @@ function renderHousingMessage(ad) {
                         ${adAmenBadges(ad, 3)}
                     </div>
                 </div>
+                ${typeof adMapBtnHTML === 'function' ? adMapBtnHTML(ad) : ''}
                 <div class="chat-reactions" data-for="ad_${id}">${adChipsHTML(ad.id)}</div>
             </div>
         </div>
@@ -966,6 +967,7 @@ function renderFeatured() {
                 <div class="ad-card-price">${escapeHtml(ad.price)}${typeof ratingBadge === 'function' ? ratingBadge(ad) : ''}</div>
                 <div class="ad-card-title">${escapeHtml(ad.title)}</div>
                 <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
+                ${typeof adMapBtnHTML === 'function' ? adMapBtnHTML(ad) : ''}
             </div>
         </div>
     `).join('');
