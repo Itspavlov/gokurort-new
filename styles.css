@@ -92,15 +92,15 @@ body::after {
     content: '';
     position: fixed;
     z-index: -1;
-    width: 340px;
-    height: 340px;
+    width: 480px;
+    height: 480px;
     border-radius: 50%;
-    filter: blur(70px);
     pointer-events: none;
 }
 
-body::before { background: var(--blob-a); top: 8%; right: -120px; }
-body::after  { background: var(--blob-b); bottom: 12%; left: -140px; }
+/* мягкое пятно градиентом: выглядит как размытый круг, но не требует тяжёлого blur-фильтра на весь экран */
+body::before { background: radial-gradient(closest-side, var(--blob-a) 30%, transparent 100%); top: calc(8% - 70px); right: -190px; }
+body::after  { background: radial-gradient(closest-side, var(--blob-b) 30%, transparent 100%); bottom: calc(12% - 70px); left: -210px; }
 
 
 button { font-family: inherit; }

@@ -1424,3 +1424,12 @@ html.lite-mx *, html.lite-mx *::before, html.lite-mx *::after { mix-blend-mode: 
 html.lite-bl body::before, html.lite-bl body::after { display: none !important; }
 html.lite-mk *, html.lite-mk *::before, html.lite-mk *::after { -webkit-mask-image: none !important; mask-image: none !important; }
 html.lite-im .group-photo, html.lite-im .hero-photo, html.lite-im .hero-stage { display: none !important; }
+
+/* v67: лёгкое «стекло». Размытие под панелями тормозило отрисовку в Safari: оставляем его только на нижней панели, шапке и
+   всплывающих окнах, а на карточках, сообщениях и мелких плашках убираем. Панели над прокручиваемым содержимым получают плотный фон. */
+html :not(.bottom-nav-inner):not(.toast):not(.vr-overlay):not(.msg-menu-overlay):not(.app-header),
+html *::before, html *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+:root, [data-theme] { --bar: rgba(8, 16, 30, .9); }
+[data-theme="dusk"] { --bar: rgba(18, 18, 22, .94); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) { --bar: var(--glass-strong); }
+.chat-header, .chat-input-wrapper, .cards-dock, .reply-bar, .listing-actions { background: var(--bar) !important; }
