@@ -1576,3 +1576,16 @@ html.on-home-top #topTint { display: block; }
 .sv-facts > div { padding: 8px 11px; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); min-width: 0; }
 .sv-facts small { display: block; font-size: 11px; color: var(--text-secondary); }
 .sv-facts b { display: block; font-size: 13.5px; overflow-wrap: anywhere; }
+
+/* v78 — шапка главной: место и температура столбиком слева (почти вплотную), всё уходит вместе с шапкой при прокрутке; «Твой курорт» в «Небе» читается на любом фоне */
+#tab-search > .hero-meta { position: relative; z-index: 20; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 3px; min-height: 84px; transform: translateY(-46px); }
+.hero-title.hero-caps { margin-top: 26px; }
+:root[data-theme="sky"] .hero-title, :root[data-theme="sky"] .hero-scene:has(.hero-stage) ~ .hero-title {
+    color: #FFFFFF;
+    text-shadow: 0 0 1px #0A2A52, 1px 1px 0 rgba(6, 32, 70, .6), -1px 1px 0 rgba(6, 32, 70, .6), 1px -1px 0 rgba(6, 32, 70, .6), -1px -1px 0 rgba(6, 32, 70, .6), 0 2px 10px rgba(6, 32, 70, .55);
+}
+:root[data-theme="sky"] .hero-title em {
+    background: none; -webkit-background-clip: border-box; background-clip: border-box;
+    color: #FFB22E; -webkit-text-fill-color: #FFB22E;
+    text-shadow: 0 0 1px #0A2A52, 1px 1px 0 rgba(6, 32, 70, .6), -1px 1px 0 rgba(6, 32, 70, .6), 1px -1px 0 rgba(6, 32, 70, .6), -1px -1px 0 rgba(6, 32, 70, .6), 0 2px 10px rgba(6, 32, 70, .55);
+}
