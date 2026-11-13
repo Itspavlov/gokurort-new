@@ -114,7 +114,7 @@ function cardHTML(r) {
     const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : `<em class="req-kind ${seek ? 'seek' : 'offer'}">${seek ? 'Ищет' : 'Предлагает'}</em>`;
     const actions = r.status !== 'active' ? '' : (r.mine
         ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>`
-        : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>`);
+        : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
     return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
         <div class="rq-title">${e(r.title || '')}</div>
@@ -142,7 +142,7 @@ function reqCardHTML(r, opts = {}) {
         ? `<button type="button" class="main" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}${r.similarCount ? (r.matchCount ? ' · ' : ': ') + 'другие типы ' + r.similarCount : ''}${r.offerCount ? ' · предложений ' + r.offerCount : ''}</button>` : '';
     const actions = r.mine
         ? (r.status === 'active' ? found + grp + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
-        : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` + grp : '');
+        : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` + grp + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.text || ('Запрос на ' + noun), icon: true }) : '') : '');
     return `<div class="req-card rq2${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
         <div class="rq-title">${r.mine ? 'Ваш запрос' : 'Запрос'} на ${noun}</div>

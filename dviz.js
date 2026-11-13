@@ -456,7 +456,8 @@ function openDvizView(id) {
                 <span><b>${dvEsc(mine ? 'Вы' : e.ownerName)}</b><small>Организатор · открыть профиль</small></span><i class="fas fa-chevron-right"></i></button>
             <div class="dv-going" id="dvGoing"></div>
             <div class="dv-actions" id="dvActions"></div>
-            <button type="button" class="dv-commbtn" data-dv-comm><i class="far fa-comment"></i><span>Комментарии <b id="dvCN">${e.comments || 0}</b></span><i class="fas fa-chevron-up"></i></button>`, (el) => {
+            <button type="button" class="dv-commbtn" data-dv-comm><i class="far fa-comment"></i><span>Комментарии <b id="dvCN">${e.comments || 0}</b></span><i class="fas fa-chevron-up"></i></button>
+            ${!mine && typeof sfReportBtn === 'function' ? `<div class="sf-row">${sfReportBtn({ kind: 'dviz', id: e.id, ownerId: e.ownerId, ownerName: e.ownerName, title: e.title })}</div>` : ''}`, (el) => {
             const paintTop = (ev) => {
                 const g = el.querySelector('#dvGoing');
                 const jl = ev.joinList || [];

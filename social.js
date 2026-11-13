@@ -40,7 +40,7 @@ async function authRequest(mode, name, password) {
         res = await fetch(`${SERVER_URL}/api/auth/${mode}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mode === 'register' && typeof pendingRef === 'function' && pendingRef() ? { name, password, ref: pendingRef() } : { name, password })
+            body: JSON.stringify(mode === 'register' ? Object.assign({ name, password, consent: true, consentVersion: (window.YUGI_LEGAL && window.YUGI_LEGAL.version) || '1' }, typeof pendingRef === 'function' && pendingRef() ? { ref: pendingRef() } : {}) : { name, password })
         });
     } catch (e) {
         return { ok: false, message: 'Нет связи с сервером. Проверьте интернет.' };
@@ -57,6 +57,7 @@ function openAuthSheet(onDone, mode = 'login') {
         </div>
         <label class="field"><span>Имя</span><input id="authName" maxlength="24" autocomplete="username" placeholder="Как вас видят другие" value="${e(getAccount() ? '' : (localStorage.getItem('tell-username') || '').startsWith('Гость_') ? '' : (localStorage.getItem('tell-username') || ''))}"></label>
         <label class="field"><span>Пароль</span><input id="authPass" type="password" maxlength="72" autocomplete="current-password" placeholder="Не короче 8 символов"></label>
+        <label class="sf-consent" id="authConsent" hidden><input type="checkbox" id="authAgree"><span>Я принимаю <a href="terms.html" target="_blank" rel="noopener">пользовательское соглашение</a> и <a href="privacy.html" target="_blank" rel="noopener">политику конфиденциальности</a> и даю согласие на обработку моих данных</span></label>
         <div class="auth-error" id="authError"></div>
         <button class="primary-btn wide-btn" id="authSubmit"></button>
         <p class="auth-note">Аккаунт нужен для личных сообщений и чтобы никто не писал под вашим именем. Восстановления пароля пока нет — запомните его.</p>`;
@@ -68,6 +69,7 @@ function openAuthSheet(onDone, mode = 'login') {
             el.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
             submit.textContent = m === 'login' ? 'Войти' : 'Создать аккаунт';
             el.querySelector('#authPass').setAttribute('autocomplete', m === 'login' ? 'current-password' : 'new-password');
+            el.querySelector('#authConsent').hidden = m !== 'register';
             err.textContent = '';
         };
         el.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => { m = t.dataset.mode; paint(); }));
@@ -76,6 +78,11 @@ function openAuthSheet(onDone, mode = 'login') {
             const name = el.querySelector('#authName').value.trim();
             const pass = el.querySelector('#authPass').value;
             if (!name || !pass) { err.textContent = 'Введите имя и пароль'; return; }
+            if (m === 'register' && !el.querySelector('#authAgree').checked) {
+                err.textContent = 'Отметьте согласие с соглашением и политикой';
+                const box = el.querySelector('#authConsent'); box.classList.add('sf-shake'); setTimeout(() => box.classList.remove('sf-shake'), 500);
+                return;
+            }
             submit.disabled = true; submit.textContent = 'Подождите...';
             const r = await authRequest(m, name, pass);
             submit.disabled = false;

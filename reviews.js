@@ -105,7 +105,7 @@ function paintUserProfile() {
                 ${r.listingTitle ? `<div class="rv-on">${e(r.listingTitle)}</div>` : ''}
                 ${r.text ? `<p class="rv-text">${e(r.text)}</p>` : ''}
                 ${r.reply ? `<div class="rv-reply"><b>Ответ хозяина</b><p>${e(r.reply.text)}</p></div>` : (d.isMe ? `<button class="rv-link" data-a="reply" data-id="${e(r.id)}">Ответить</button>` : '')}
-                ${r.mine ? `<button class="rv-link bad" data-a="del" data-id="${e(r.id)}">Удалить мой отзыв</button>` : ''}
+                ${r.mine ? `<button class="rv-link bad" data-a="del" data-id="${e(r.id)}">Удалить мой отзыв</button>` : (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'review', id: r.id, ownerId: (r.author && r.author.id) || '', ownerName: r.author.name, title: r.text, label: 'Пожаловаться на отзыв' }) : '')}
             </div>`).join('') : '<p class="rv-empty">Отзывов пока нет</p>';
         revs = mineBtn + `<div class="rv-list">${list}</div>`;
     }
@@ -114,6 +114,7 @@ function paintUserProfile() {
         <div class="up-top">
             <button class="up-back" data-a="close" aria-label="Назад"><i class="fas fa-arrow-left"></i></button>
             <div class="up-title">Профиль</div>
+            ${d.server && !d.isMe && u.id && typeof SF !== 'undefined' ? '<button class="up-more" data-a="more" aria-label="Пожаловаться или заблокировать"><i class="fas fa-ellipsis"></i></button>' : ''}
         </div>
         <div class="up-scroll">
             <div class="up-head">
@@ -147,6 +148,7 @@ function onUserScreenClick(ev) {
     const b = ev.target.closest('[data-a]'); if (!b) return;
     const a = b.dataset.a;
     if (a === 'close') closeUserProfile();
+    else if (a === 'more') { if (typeof SF !== 'undefined') SF.userMenu(pv.data.user); }
     else if (a === 'tab') { pv.tab = b.dataset.t; paintUserProfile(); }
     else if (a === 'write') { if (!getAccount()) { showToast('Войдите в аккаунт'); return; } openReviewForm(); }
     else if (a === 'reply') openReplyForm(b.dataset.id);
