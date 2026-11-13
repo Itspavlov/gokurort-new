@@ -207,6 +207,241 @@
         });
     };
 
+    // ---------- смена пароля ----------
+    SF.openPassword = function () {
+        if (!me()) return;
+        openSheet('Сменить пароль', `
+            <label class="field"><span>Текущий пароль</span><input id="sfPwOld" type="password" maxlength="72" autocomplete="current-password"></label>
+            <label class="field"><span>Новый пароль</span><input id="sfPwNew" type="password" maxlength="72" autocomplete="new-password" placeholder="Не короче 8 символов"></label>
+            <label class="field"><span>Повторите новый пароль</span><input id="sfPwNew2" type="password" maxlength="72" autocomplete="new-password"></label>
+            <div class="auth-error" id="sfPwErr"></div>
+            <button class="primary-btn wide-btn" id="sfPwGo">Сменить пароль</button>
+            <p class="auth-note" style="margin:10px 2px 0">После смены вы останетесь в аккаунте здесь, а на других устройствах придётся войти заново.</p>`, (el) => {
+            const err = el.querySelector('#sfPwErr'), go = el.querySelector('#sfPwGo');
+            const run = async () => {
+                const o = el.querySelector('#sfPwOld').value, n = el.querySelector('#sfPwNew').value, n2 = el.querySelector('#sfPwNew2').value;
+                err.textContent = '';
+                if (!o || !n) { err.textContent = 'Введите текущий и новый пароль'; return; }
+                if (n.length < 8) { err.textContent = 'Новый пароль: не короче 8 символов'; return; }
+                if (n !== n2) { err.textContent = 'Новые пароли не совпадают'; return; }
+                go.disabled = true; go.textContent = 'Подождите…';
+                const r = await api('POST', '/api/auth/password', { oldPassword: o, newPassword: n });
+                go.disabled = false; go.textContent = 'Сменить пароль';
+                if (!r.d || !r.d.ok) { err.textContent = r.status === 429 ? 'Слишком много попыток. Подождите немного.' : (r.d && r.d.message) || 'Не получилось. Попробуйте ещё раз.'; return; }
+                closeSheet();
+                toast('Пароль изменён');
+            };
+            go.onclick = run;
+            el.querySelector('#sfPwNew2').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') run(); });
+        });
+    };
+
+    // ---------- восстановление доступа: код, почта, «забыли пароль» ----------
+    async function copyText(t) {
+        try { await navigator.clipboard.writeText(t); return true; }
+        catch (err) {
+            try { const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText = 'position:fixed;opacity:0;top:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; }
+            catch (x) { return false; }
+        }
+    }
+    const errText = (r, def) => (r.status === 429 && !(r.d && r.d.message)) ? 'Слишком много попыток. Подождите немного.' : (r.d && r.d.message) || def || 'Не получилось. Попробуйте ещё раз.';
+    const afterLogin = () => {
+        try { if (typeof reconnectSocket === 'function') reconnectSocket(); } catch (x) {}
+        try { if (typeof fetchRemoteAds === 'function') fetchRemoteAds(); } catch (x) {}
+        for (const fn of ['renderProfile', 'renderDialogs', 'renderMyPubs']) { try { if (typeof window[fn] === 'function') window[fn](); } catch (x) {} }
+    };
+
+    // Код показывается один раз: на сервере хранится только его хеш
+    SF.showRecovery = function (code, o) {
+        o = o || {};
+        openSheet('Код восстановления', `
+            <p class="auth-note" style="margin:0 2px 10px">${o.reset ? 'Пароль изменён. Прежний код больше не действует, вот новый.' : 'Если забудете пароль, этот код вернёт доступ к аккаунту. Он показывается один раз: сохраните его в заметках или в менеджере паролей.'}</p>
+            <div class="sf-code" id="sfCode">${e(code)}</div>
+            <div class="sf-code-actions"><button type="button" class="ghost-btn" id="sfCodeCopy"><i class="fas fa-copy"></i> Скопировать</button></div>
+            <label class="pref-row" style="margin-top:8px"><span><b>Я сохранил(а) код</b></span><input type="checkbox" id="sfCodeOk"><i class="pref-sw"></i></label>
+            <button class="primary-btn wide-btn" id="sfCodeDone" disabled>Готово</button>
+            <p class="auth-note" style="margin:10px 2px 0">Никому не показывайте код: по нему можно сменить пароль. Новый код можно создать в профиле, прежний тогда перестанет действовать.</p>`, (el) => {
+            const ok = el.querySelector('#sfCodeOk'), done = el.querySelector('#sfCodeDone'), cp = el.querySelector('#sfCodeCopy');
+            ok.addEventListener('change', () => { done.disabled = !ok.checked; });
+            cp.onclick = async () => { cp.innerHTML = (await copyText(code)) ? '<i class="fas fa-check"></i> Скопировано' : 'Выделите код и скопируйте вручную'; };
+            done.onclick = () => { closeSheet(); if (typeof renderProfile === 'function') { try { renderProfile(); } catch (x) {} } };
+        });
+    };
+
+    // Запрос пароля перед опасным действием; run вернёт текст ошибки или null (тогда сам закроет шторку)
+    function askPassword(title, note, btn, run) {
+        openSheet(title, `
+            <p class="auth-note" style="margin:0 2px 10px">${e(note)}</p>
+            <label class="field"><span>Ваш пароль</span><input id="sfApPw" type="password" maxlength="72" autocomplete="current-password"></label>
+            <div class="auth-error" id="sfApErr"></div>
+            <button class="primary-btn wide-btn" id="sfApGo">${e(btn)}</button>`, (el) => {
+            const pw = el.querySelector('#sfApPw'), go = el.querySelector('#sfApGo'), err = el.querySelector('#sfApErr');
+            const doIt = async () => {
+                if (!pw.value) { err.textContent = 'Введите пароль'; return; }
+                go.disabled = true; err.textContent = '';
+                const msg = await run(pw.value);
+                if (msg) { go.disabled = false; err.textContent = msg; }
+            };
+            go.onclick = doIt;
+            pw.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') doIt(); });
+        });
+    }
+
+    SF.openRecovery = async function () {
+        if (!me()) return;
+        const r = await api('GET', '/api/auth/recovery');
+        if (!r.d || !r.d.ok) { toast(errText(r)); return; }
+        const d = r.d;
+        const mailRow = d.email
+            ? `<div class="pf-row pf-static"><i class="fas fa-envelope"></i><span>Почта<small class="sf-sub">${e(d.email)}</small></span><button type="button" class="ghost-btn" data-rc="unmail">Отвязать</button></div>`
+            : (d.mail
+                ? `<button type="button" class="pf-row" data-rc="mail"><i class="fas fa-envelope"></i><span>Привязать почту<small class="sf-sub">чтобы сбросить пароль письмом</small></span><i class="fas fa-chevron-right pf-go"></i></button>`
+                : `<div class="pf-row pf-static"><i class="fas fa-envelope"></i><span>Почта<small class="sf-sub">привязка скоро появится</small></span></div>`);
+        openSheet('Восстановление доступа', `
+            <p class="auth-note" style="margin:0 2px 10px">Если забудете пароль, вернуть доступ можно по коду восстановления${d.mail ? ' или через почту' : ''}.</p>
+            <div class="pf-menu">
+                <button type="button" class="pf-row" data-rc="code"><i class="fas fa-key"></i><span>Код восстановления<small class="sf-sub">${d.hasCode ? 'есть · создать новый' : 'не создан · создать'}</small></span><i class="fas fa-chevron-right pf-go"></i></button>
+                ${mailRow}
+            </div>`, (el) => {
+            el.addEventListener('click', (ev) => {
+                const b = ev.target.closest('[data-rc]'); if (!b) return;
+                const k = b.dataset.rc;
+                if (k === 'code') askPassword('Новый код восстановления', 'Прежний код перестанет действовать. Новый код будет показан один раз.', 'Создать код', async (pw) => {
+                    const x = await api('POST', '/api/auth/recovery-code', { password: pw });
+                    if (!x.d || !x.d.ok) return errText(x);
+                    SF.showRecovery(x.d.code); return null;
+                });
+                else if (k === 'mail') SF.openEmailAdd();
+                else if (k === 'unmail') askPassword('Отвязать почту', 'После этого сбросить пароль через почту будет нельзя.', 'Отвязать', async (pw) => {
+                    const x = await api('DELETE', '/api/auth/email', { password: pw });
+                    if (!x.d || !x.d.ok) return errText(x);
+                    toast('Почта отвязана'); SF.openRecovery(); return null;
+                });
+            });
+        });
+    };
+
+    SF.openEmailAdd = function () {
+        if (!me()) return;
+        openSheet('Привязать почту', `
+            <div id="sfEm1">
+                <label class="field"><span>Почта</span><input id="sfEmMail" type="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="name@example.com"></label>
+                <label class="field"><span>Ваш пароль</span><input id="sfEmPw" type="password" maxlength="72" autocomplete="current-password"></label>
+                <div class="auth-error" id="sfEmErr"></div>
+                <button class="primary-btn wide-btn" id="sfEmSend">Отправить код</button>
+                <p class="auth-note" style="margin:10px 2px 0">Почту видим только мы: она нужна лишь для сброса пароля и не показывается другим пользователям.</p>
+            </div>
+            <div id="sfEm2" hidden>
+                <p class="auth-note" id="sfEmSent" style="margin:0 2px 10px"></p>
+                <label class="field"><span>Код из письма</span><input id="sfEmCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 цифр"></label>
+                <div class="auth-error" id="sfEmErr2"></div>
+                <button class="primary-btn wide-btn" id="sfEmOk">Подтвердить</button>
+                <p class="auth-note" style="margin:10px 2px 0">Письма нет? Проверьте «Спам». Код действует 15 минут.</p>
+            </div>`, (el) => {
+            const q = (s) => el.querySelector(s);
+            const send = q('#sfEmSend'), ok = q('#sfEmOk');
+            send.onclick = async () => {
+                const mail = q('#sfEmMail').value.trim(), pw = q('#sfEmPw').value, err = q('#sfEmErr');
+                err.textContent = '';
+                if (!mail || !pw) { err.textContent = 'Введите почту и пароль'; return; }
+                send.disabled = true; send.textContent = 'Отправляем…';
+                const r = await api('POST', '/api/auth/email', { email: mail, password: pw });
+                send.disabled = false; send.textContent = 'Отправить код';
+                if (!r.d || !r.d.ok) { err.textContent = errText(r); return; }
+                if (r.d.already) { closeSheet(); toast('Эта почта уже привязана'); return; }
+                q('#sfEm1').hidden = true; q('#sfEm2').hidden = false;
+                q('#sfEmSent').textContent = 'Отправили код на ' + mail + '.';
+                q('#sfEmCode').focus();
+            };
+            const confirm = async () => {
+                const code = q('#sfEmCode').value.trim(), err = q('#sfEmErr2');
+                err.textContent = '';
+                if (code.replace(/\D/g, '').length !== 6) { err.textContent = 'Введите 6 цифр из письма'; return; }
+                ok.disabled = true;
+                const r = await api('POST', '/api/auth/email/confirm', { code });
+                ok.disabled = false;
+                if (!r.d || !r.d.ok) { err.textContent = errText(r); return; }
+                toast('Почта привязана'); SF.openRecovery();
+            };
+            ok.onclick = confirm;
+            q('#sfEmCode').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') confirm(); });
+        });
+    };
+
+    // «Забыли пароль» на экране входа
+    SF.openReset = async function (pref) {
+        const o = await api('GET', '/api/auth/options');
+        const mailOn = !!(o.d && o.d.mail);
+        const mail = LEGAL().email;
+        openSheet('Восстановление пароля', `
+            <label class="field"><span>Имя</span><input id="sfRsName" maxlength="24" autocomplete="username" value="${e(pref || '')}"></label>
+            ${mailOn ? `<div class="auth-tabs"><button type="button" class="auth-tab active" data-rm="recovery">По коду</button><button type="button" class="auth-tab" data-rm="email">По почте</button></div>` : ''}
+            <div id="sfRsMail" hidden>
+                <p class="auth-note" style="margin:0 2px 10px">Пришлём 6-значный код на почту, которую вы привязали к аккаунту.</p>
+                <button type="button" class="ghost-btn wide-btn" id="sfRsSend" style="margin-bottom:12px">Отправить код на почту</button>
+            </div>
+            <label class="field"><span id="sfRsCodeLbl">Код восстановления</span><input id="sfRsCode" maxlength="24" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX"></label>
+            <label class="field"><span>Новый пароль</span><input id="sfRsPw" type="password" maxlength="72" autocomplete="new-password" placeholder="Не короче 8 символов"></label>
+            <label class="field"><span>Повторите новый пароль</span><input id="sfRsPw2" type="password" maxlength="72" autocomplete="new-password"></label>
+            <div class="auth-error" id="sfRsErr"></div>
+            <button class="primary-btn wide-btn" id="sfRsGo">Сменить пароль и войти</button>
+            <p class="auth-note" style="margin:10px 2px 0">Нет ни кода, ни почты? ${mail ? `Напишите в поддержку: <a href="mailto:${e(mail)}">${e(mail)}</a>.` : 'Напишите в поддержку.'} Код восстановления выдаётся при регистрации и обновляется в профиле.</p>`, (el) => {
+            const q = (s) => el.querySelector(s);
+            let method = 'recovery';
+            const paint = () => {
+                el.querySelectorAll('[data-rm]').forEach(t => t.classList.toggle('active', t.dataset.rm === method));
+                q('#sfRsMail').hidden = method !== 'email';
+                q('#sfRsCodeLbl').textContent = method === 'email' ? 'Код из письма' : 'Код восстановления';
+                q('#sfRsCode').placeholder = method === 'email' ? '6 цифр' : 'XXXX-XXXX-XXXX-XXXX';
+                q('#sfRsCode').maxLength = method === 'email' ? 6 : 24;
+                q('#sfRsCode').inputMode = method === 'email' ? 'numeric' : 'text';
+                q('#sfRsErr').textContent = '';
+            };
+            el.querySelectorAll('[data-rm]').forEach(t => t.addEventListener('click', () => { method = t.dataset.rm; paint(); }));
+            paint();
+            const err = q('#sfRsErr');
+            q('#sfRsSend').onclick = async () => {
+                const name = q('#sfRsName').value.trim();
+                err.textContent = '';
+                if (!name) { err.textContent = 'Введите имя'; return; }
+                const b = q('#sfRsSend'); b.disabled = true;
+                const r = await api('POST', '/api/auth/reset', { name });
+                setTimeout(() => { b.disabled = false; }, 30000);
+                if (!r.d || !r.d.ok) { b.disabled = false; err.textContent = errText(r); return; }
+                toast('Если к аккаунту привязана почта, мы отправили код'); q('#sfRsCode').focus();
+            };
+            const go = q('#sfRsGo');
+            const run = async () => {
+                const name = q('#sfRsName').value.trim(), code = q('#sfRsCode').value.trim(), pw = q('#sfRsPw').value, pw2 = q('#sfRsPw2').value;
+                err.textContent = '';
+                if (!name || !code) { err.textContent = 'Введите имя и код'; return; }
+                if (pw.length < 8) { err.textContent = 'Новый пароль: не короче 8 символов'; return; }
+                if (pw !== pw2) { err.textContent = 'Пароли не совпадают'; return; }
+                go.disabled = true; go.textContent = 'Подождите…';
+                const r = await api('POST', '/api/auth/reset/confirm', { name, method, code, password: pw });
+                go.disabled = false; go.textContent = 'Сменить пароль и войти';
+                if (!r.d || !r.d.ok) { err.textContent = errText(r); return; }
+                if (typeof setSession === 'function') setSession(r.d.token, r.d.user);
+                closeSheet(); afterLogin();
+                toast('Пароль изменён. Вы вошли как ' + r.d.user.name);
+                if (r.d.recoveryCode) setTimeout(() => SF.showRecovery(r.d.recoveryCode, { reset: true }), 350);
+            };
+            go.onclick = run;
+            q('#sfRsPw2').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') run(); });
+        });
+    };
+
+    // Тем, у кого нет ни кода, ни почты (старые аккаунты), раз в три дня напоминаем создать код
+    SF.recoveryHint = async function () {
+        if (!me()) return;
+        try { if (Date.now() - Number(localStorage.getItem('yy-rec-hint') || 0) < 3 * 86400000) return; } catch (x) {}
+        const r = await api('GET', '/api/auth/recovery');
+        if (r.d && r.d.ok && !r.d.hasCode && !r.d.email) {
+            try { localStorage.setItem('yy-rec-hint', String(Date.now())); } catch (x) {}
+            toast('Создайте код восстановления: Профиль → Восстановление доступа');
+        }
+    };
+
     // ---------- документы и поддержка ----------
     SF.openSupport = function () {
         const mail = LEGAL().email;
@@ -223,6 +458,8 @@
     window.sfProfileRows = function () {
         const a = me();
         return `
+            ${a ? `<button type="button" class="pf-row" onclick="SF.openPassword()"><i class="fas fa-key"></i><span>Сменить пароль</span><i class="fas fa-chevron-right pf-go"></i></button>` : ''}
+            ${a ? `<button type="button" class="pf-row" onclick="SF.openRecovery()"><i class="fas fa-shield-halved"></i><span>Восстановление доступа</span><i class="fas fa-chevron-right pf-go"></i></button>` : ''}
             ${a ? `<button type="button" class="pf-row" onclick="SF.openBlocked()"><i class="fas fa-ban"></i><span>Заблокированные</span>${SF.users.length ? `<em>${SF.users.length}</em>` : ''}<i class="fas fa-chevron-right pf-go"></i></button>` : ''}
             <button type="button" class="pf-row" onclick="SF.openSupport()"><i class="fas fa-life-ring"></i><span>Поддержка и документы</span><i class="fas fa-chevron-right pf-go"></i></button>`;
     };
@@ -312,6 +549,7 @@
     function start() {
         hook();
         SF.load().then(() => { if (SF.ids.size) refreshFeeds(); });
+        setTimeout(() => SF.recoveryHint(), 6000);
     }
     if (document.readyState === 'complete') start(); else window.addEventListener('load', start);
 })();

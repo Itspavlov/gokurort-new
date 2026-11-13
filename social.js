@@ -57,10 +57,11 @@ function openAuthSheet(onDone, mode = 'login') {
         </div>
         <label class="field"><span>Имя</span><input id="authName" maxlength="24" autocomplete="username" placeholder="Как вас видят другие" value="${e(getAccount() ? '' : (localStorage.getItem('tell-username') || '').startsWith('Гость_') ? '' : (localStorage.getItem('tell-username') || ''))}"></label>
         <label class="field"><span>Пароль</span><input id="authPass" type="password" maxlength="72" autocomplete="current-password" placeholder="Не короче 8 символов"></label>
+        <button type="button" class="sf-link sf-forgot" id="authForgot" hidden>Забыли пароль?</button>
         <label class="sf-consent" id="authConsent" hidden><input type="checkbox" id="authAgree"><span>Я принимаю <a href="terms.html" target="_blank" rel="noopener">пользовательское соглашение</a> и <a href="privacy.html" target="_blank" rel="noopener">политику конфиденциальности</a> и даю согласие на обработку моих данных</span></label>
         <div class="auth-error" id="authError"></div>
         <button class="primary-btn wide-btn" id="authSubmit"></button>
-        <p class="auth-note">Аккаунт нужен для личных сообщений и чтобы никто не писал под вашим именем. Восстановления пароля пока нет — запомните его.</p>`;
+        <p class="auth-note">Аккаунт нужен для личных сообщений и чтобы никто не писал под вашим именем. При регистрации выдадим код, по которому можно восстановить пароль.</p>`;
     openSheet('Аккаунт YuGi YuGi', body, (el) => {
         let m = mode;
         const submit = el.querySelector('#authSubmit');
@@ -70,6 +71,7 @@ function openAuthSheet(onDone, mode = 'login') {
             submit.textContent = m === 'login' ? 'Войти' : 'Создать аккаунт';
             el.querySelector('#authPass').setAttribute('autocomplete', m === 'login' ? 'current-password' : 'new-password');
             el.querySelector('#authConsent').hidden = m !== 'register';
+            el.querySelector('#authForgot').hidden = m !== 'login' || !(window.SF && SF.openReset);
             err.textContent = '';
         };
         el.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => { m = t.dataset.mode; paint(); }));
@@ -90,6 +92,7 @@ function openAuthSheet(onDone, mode = 'login') {
             setSession(r.token, r.user);
             if (m === 'register' && typeof clearRef === 'function') clearRef();     // ссылка друга сработала один раз
             closeSheet();
+            if (m === 'register' && r.recoveryCode && window.SF && SF.showRecovery) setTimeout(() => SF.showRecovery(r.recoveryCode), 350);   // код показываем один раз
             reconnectSocket();
             showToast(m === 'login' ? 'Вы вошли как ' + r.user.name : 'Аккаунт создан. Добро пожаловать, ' + r.user.name + '!');
             fetchRemoteAds();
@@ -98,6 +101,10 @@ function openAuthSheet(onDone, mode = 'login') {
             if (typeof renderMyPubs === 'function') renderMyPubs();
             if (onDone) onDone();
         };
+        el.querySelector('#authForgot').addEventListener('click', () => {
+            const n = el.querySelector('#authName').value.trim();
+            closeSheet(); SF.openReset(n);
+        });
         submit.addEventListener('click', go);
         el.querySelector('#authPass').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
     });

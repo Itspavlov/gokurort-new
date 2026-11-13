@@ -1620,3 +1620,12 @@ a.pf-row { text-decoration: none; color: inherit; }
 .sf-consent a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .sf-shake { animation: sfShake .4s; }
 @keyframes sfShake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+
+/* ===== v80: восстановление доступа ===== */
+.sf-link[hidden] { display: none; }
+.sf-forgot { margin: -4px 0 8px; padding: 6px 2px; color: var(--accent, #2BC4D6); font-weight: 600; }
+.sf-code { margin: 4px 0 10px; padding: 16px 12px; text-align: center; border-radius: 16px; background: var(--glass); border: 1px dashed var(--glass-border); font: 700 clamp(17px, 5.4vw, 22px) ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .06em; word-break: break-all; user-select: all; -webkit-user-select: all; }
+.sf-code-actions { display: flex; justify-content: center; margin-bottom: 4px; }
+.sf-sub { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--text-muted, #8a96a8); }
+.pf-row .ghost-btn { flex: none; padding: 8px 12px; font-size: 13px; }
+#sfCodeOk + .pref-sw, #sfDelOk + .pref-sw { background: rgba(120, 130, 150, .38); }
