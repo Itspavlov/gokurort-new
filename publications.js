@@ -9,7 +9,7 @@ const PUB_CHIPS = [
     ['work', 'Работа', 'fa-briefcase'],
     ['trips', 'Поездки', 'fa-car-side'],
     ['services', 'Развлечения', 'fa-sailboat'],
-    ['dviz', 'Курортный движ', 'fa-champagne-glasses']
+    ['dviz', 'Поиск друзей', 'fa-champagne-glasses']
 ];
 let pubChip = 'housing';
 try { const c = localStorage.getItem('yugi-pubchip'); if (PUB_CHIPS.some(x => x[0] === c)) pubChip = c; } catch (_) {}
@@ -130,9 +130,9 @@ function paintPubs() {
         if (pubReqs('services').length) h += pubHead('Мои запросы', 0) + `<div class="req-mine" id="pubReqs">${pubReqListHTML('services')}</div>`;
     } else {
         const ev = pubDviz();
-        h += pubHead('Мой курортный движ', ev.length);
+        h += pubHead('Мои поиски компании');
         h += ev.length ? `<div class="dv-feed pub-dv" id="pubDv">${ev.map(dvCardHTML).join('')}</div>` : pubEmpty('Зовёте компанию на джипы, прогулку или волейбол? Создайте движ: желающие откликнутся и напишут.');
-        h += '<button type="button" class="primary-btn wide-btn pub-add" data-pub="dviz"><i class="fas fa-plus"></i> Создать движ</button>';
+        h += '<button type="button" class="primary-btn wide-btn pub-add" data-pub="dviz"><i class="fas fa-plus"></i> Создать поиск</button>';
     }
     // не сбрасываем прокрутку при перерисовке
     body.innerHTML = h;

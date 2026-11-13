@@ -159,30 +159,55 @@ function itemTs(el) {
     return m ? Number(m[1]) : 0;
 }
 
-// Запросы встают в ленту по времени, как сообщения: новые внизу
+// В карточных разделах (жильё, работа, поездки, услуги) новые публикации стоят сверху.
+// Один упорядочиватель на всё: карточки и объявления сортируются по времени, свежие — вверх.
+function cardsNewestFirst(box) {
+    box = box || document.getElementById('chatMessages');
+    if (!box || !box.classList.contains('cards')) return;
+    const kids = Array.from(box.children);
+    const keyed = kids.map((el, i) => ({ el, i, ts: el.classList.contains('chat-welcome') ? Number.MAX_SAFE_INTEGER : itemTs(el) }));
+    keyed.sort((a, b) => (b.ts - a.ts) || (a.i - b.i));
+    if (keyed.every((k, i) => k.el === kids[i])) return;
+    if (box._nfObs) box._nfObs.disconnect();
+    const frag = document.createDocumentFragment();
+    keyed.forEach(k => frag.appendChild(k.el));
+    box.appendChild(frag);
+    if (box._nfObs) box._nfObs.observe(box, { childList: true });
+}
+function watchCardsOrder(box) {
+    if (!box || box._nfObs || !window.MutationObserver) return;
+    let raf = 0;
+    box._nfObs = new MutationObserver(() => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => { raf = 0; cardsNewestFirst(box); });
+    });
+    box._nfObs.observe(box, { childList: true });
+    cardsNewestFirst(box);
+}
+
+// Запросы встают в ленту по времени: новые сверху
 function paintRequests() {
     const msgs = document.getElementById('chatMessages');
     if (!msgs) return;
-    const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 120;
     msgs.querySelectorAll('.req-item').forEach(n => n.remove());
     // карточки запросов и (в разделе «Услуги») карточки услуг встают в ленту по времени вместе
     const items = reqList.map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
     if (reqSection() === 'services' && typeof serviceFeed !== 'undefined') {
         serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, tag: sv.tag || 'other', html: serviceFeedHTML(sv) }));
     }
-    items.sort((x, y) => x.ts - y.ts);
+    items.sort((x, y) => y.ts - x.ts);
     let added = 0;
     for (const it of items) {
         const w = document.createElement('div');
         w.className = 'req-item'; w.dataset.ts = it.ts; w.dataset.kind = it.kind;
         if (it.rid) w.dataset.rid = it.rid; else { w.dataset.sid = it.sid; w.dataset.tag = it.tag; w.classList.add('sv-item'); }
         w.innerHTML = it.html;
-        const after = Array.from(msgs.children).find(c => !c.classList.contains('req-item') && itemTs(c) > it.ts);
-        if (after) msgs.insertBefore(w, after); else msgs.appendChild(w);
+        msgs.appendChild(w);
         added++;
     }
+    cardsNewestFirst(msgs);
     updateDockState();
-    if (added && (nearBottom || reqView !== 'all')) msgs.scrollTop = msgs.scrollHeight;
+    if (added) msgs.scrollTop = 0;
 }
 
 // Счётчики на вкладках и подсказка, когда в выбранной вкладке пусто
@@ -238,7 +263,7 @@ function applyReqView() {
     msgs.classList.toggle('view-offer', reqView === 'offer');
     document.querySelectorAll('.seek-tab').forEach(b => { const on = b.dataset.v === reqView; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     updateDockState();
-    msgs.scrollTop = msgs.scrollHeight;
+    msgs.scrollTop = 0;
 }
 
 function setupCards() {
@@ -264,6 +289,7 @@ function setupCards() {
         }
     });
     msgs.addEventListener('click', (ev) => { if (ev.target.closest('.req-card')) onReqCardClick(ev); });
+    watchCardsOrder(msgs);
     applyReqView();
     paintRequests();
     loadRequests();

@@ -1514,3 +1514,12 @@ html.on-home-top #topTint { display: block; }
 :root[data-theme="sky"] .wx-water i { color: #1E8FE0; }
 :root[data-theme="sky"] .logo-accent { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #1B78DD; -webkit-text-fill-color: #1B78DD; }
 :root[data-theme="sky"] .app-logo-text { color: #0B2E55; }
+
+/* v75 — «Движ»: белые карточки-диалоги, отступ от вкладок; «Готовые услуги» — вытянутые карточки по одной в ряд */
+.dv2.cloud .dv-bubble { --dv-cloud: #FFFFFF; --dv-cloud-line: #DCE3EC; --text: #16222E; --text-secondary: #5D6B7B; box-shadow: 0 4px 14px rgba(8, 20, 40, .18); }
+.dv-feed:has(.dv2.cloud), .dv-feed { padding-top: 22px; }
+.dv-tabs { margin-bottom: 10px; }
+.sv-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 22px 22px 110px; }
+.sv-grid .sv-tile { height: 206px; border-radius: 22px; }
+.sv-grid .sv-cell { align-items: center; gap: 8px; }
+.sv-grid .sv-mapbtn { min-width: 150px; padding: 0 20px; }

@@ -770,4 +770,16 @@ English => English
 Ищете жильё? => Looking for housing?
 Показать подсказки снова => Show tips again
 Войдите в аккаунт, чтобы сохранять => Sign in to save
+Развлечения и поиск друзей => Fun & finding friends
+Сейчас ищут => Looking now
+компанию на отдых => a company for fun
+Создать поиск => Create a search
+Ваш поиск => Your search
+Удалить поиск => Delete search
+Опубликовать поиск => Publish search
+О чём поиск => What are you looking for
+Создать поиск с этим развлечением => Create a search with this activity
+Мои поиски компании => My company searches
+Создайте поиск: позовите компанию на джипы, морскую прогулку, волейбол или просто потусить. => Create a search: invite people to a jeep trip, a boat ride, volleyball or just hang out.
+Поиск друзей => Finding friends
 `;

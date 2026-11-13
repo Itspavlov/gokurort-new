@@ -431,7 +431,7 @@ function scrollChatToBottom() {
 
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            messages.scrollTop = messages.scrollHeight;
+            messages.scrollTop = messages.classList.contains('cards') ? 0 : messages.scrollHeight;   // в карточных разделах новое — сверху
         });
     });
 }
@@ -445,6 +445,7 @@ function scrollChatToBottomSmooth() {
         scrollRaf = 0;
         const messages = document.getElementById('chatMessages');
         if (!messages) return;
+        if (messages.classList.contains('cards')) { messages.scrollTop = 0; return; }
         const gap = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
         messages.scrollTo({ top: messages.scrollHeight, behavior: gap < 160 ? 'smooth' : 'auto' });
     });
@@ -567,7 +568,7 @@ function openGroup(groupId, opts) {
         work: { name: 'Работа', icon: 'fas fa-briefcase', ads: [] },
         services: { name: 'Развлечения', icon: 'fas fa-ship', ads: [] },
         trips: { name: 'Поездки', icon: 'fas fa-car', ads: [] },
-        dating: { name: 'Курортный движ', icon: 'fas fa-champagne-glasses', ads: [] },
+        dating: { name: 'Развлечения и поиск друзей', icon: 'fas fa-champagne-glasses', ads: [] },
         online: { name: 'Чат онлайн', icon: 'fas fa-globe', ads: [] }
     };
 

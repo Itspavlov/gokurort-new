@@ -148,7 +148,7 @@ let dvTab = 'dviz', dvSvcCat = '', dvSvcQ = '';
 
 function dvDockHTML() {
     if (dvTab === 'svc') return '<div class="dock-actions svc-dock"><button type="button" class="dv-svc-add" data-sv="new"><i class="fas fa-plus"></i> Разместить услугу</button></div>';
-    return '<div class="dock-actions dv-create-dock"><button type="button" class="dock-btn main" id="dvCreate"><i class="fas fa-plus"></i> Создать движ</button></div>';
+    return '<div class="dock-actions dv-create-dock"><button type="button" class="dock-btn main" id="dvCreate"><i class="fas fa-plus"></i> Создать поиск</button></div>';
 }
 function dvPaneHTML() {
     if (dvTab === 'svc') {
@@ -188,12 +188,12 @@ function openDvizScreen(tab) {
         <div class="chat-header room-head">
             <button class="chat-back-btn" onclick="closeGroup()" aria-label="Назад"><i class="fas fa-arrow-left"></i></button>
             <div class="chat-header-info">
-                <div class="chat-header-title">Курортный движ</div>
+                <div class="chat-header-title">Развлечения и поиск друзей</div>
                 <div class="chat-header-subtitle">найди компанию на отдых</div>
             </div>
         </div>
         <div class="seek-bar dv-tabs"><div class="seek-tabs" role="tablist" aria-label="Раздел">
-            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Движ</span><b>отдыхайте вместе</b></button>
+            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Сейчас ищут</span><b>компанию на отдых</b></button>
             <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="svc"><span>Готовые услуги</span><b>морские прогулки, экскурсии и др.</b></button>
         </div></div>
         <div class="dv-pane" id="dvPane"></div>
@@ -282,7 +282,7 @@ function dvCardHTML(e, i) {
     const pics = e.thumb ? `<div class="dvb-pics"><img src="${dvEsc(e.thumb)}" alt="" loading="lazy">${more ? `<span class="dvb-more">+${more}</span>` : ''}</div>` : '';
     const talk = [cn ? `<i class="far fa-comments"></i>${cn} ${plural(cn, 'обсуждает', 'обсуждают', 'обсуждают')}` : '<i class="far fa-comments"></i>пока без обсуждений',
         joins ? `<i class="fas fa-user-group"></i>${dvEsc(dvPeople(e))} ${e.max ? '' : plural(joins, 'идёт', 'идут', 'идут')}` : ''].filter(Boolean).join('<em></em>');
-    const join = mine ? '<span class="dv2-own"><i class="fas fa-crown"></i> Ваш движ</span>'
+    const join = mine ? '<span class="dv2-own"><i class="fas fa-crown"></i> Ваш поиск</span>'
         : `<button type="button" class="main dv2-join ${e.joined ? 'on' : ''}" data-dv="join">${e.joined ? 'Вы идёте <i class="fas fa-check"></i>' : 'Я с вами'}</button>`;
     // «облачко»: так видно, что это пишут обычные туристы, а не объявление
     return `<div class="dv2 cloud${mine ? ' mine' : ''}" data-id="${dvEsc(e.id)}">
@@ -308,7 +308,7 @@ function paintDviz() {
     const box = document.getElementById('dvFeed');
     if (!box) return;
     box.innerHTML = dvFeed.length ? dvFeed.map(dvCardHTML).join('')
-        : `<div class="dv-empty"><i class="fas fa-champagne-glasses"></i><b>Пока тихо</b><span>Создайте движ: позовите компанию на джипы, морскую прогулку, волейбол или просто потусить.</span></div>`;
+        : `<div class="dv-empty"><i class="fas fa-champagne-glasses"></i><b>Пока тихо</b><span>Создайте поиск: позовите компанию на джипы, морскую прогулку, волейбол или просто потусить.</span></div>`;
 }
 
 function onFeedClick(ev) {
@@ -462,7 +462,7 @@ function openDvizView(id) {
                 const jl = ev.joinList || [];
                 g.innerHTML = jl.length ? `<div class="dv-going-h">Идут (${jl.length}${ev.max ? ' из ' + ev.max : ''})</div><div class="dv-chips">${jl.map(j => `<span class="dv-chip"><i data-avn="${avEsc(j.name)}" style="background:${dmColor(j.name)}">${avInner(j.name)}</i>${dvEsc(j.name)}</span>`).join('')}</div>` : '';
                 el.querySelector('#dvActions').innerHTML = mine
-                    ? '<button type="button" class="ghost-btn wide-btn dv-del" data-dv-del><i class="fas fa-trash"></i> Удалить движ</button>'
+                    ? '<button type="button" class="ghost-btn wide-btn dv-del" data-dv-del><i class="fas fa-trash"></i> Удалить поиск</button>'
                     : `<button type="button" class="primary-btn wide-btn" data-dv-join>${ev.joined ? '<i class="fas fa-check"></i> Вы идёте — отменить' : '<i class="fas fa-hand"></i> Я с вами'}</button>
                        <button type="button" class="ghost-btn wide-btn" data-dv-write style="margin-top:8px"><i class="fas fa-comment-dots"></i> Написать организатору</button>`;
                 const n = el.querySelector('#dvCN'); if (n) n.textContent = ev.comments || 0;
@@ -480,7 +480,7 @@ function openDvizView(id) {
                 if (ev.target.closest('[data-dv-del]')) { dvDelete(e.id); return; }
                 if (ev.target.closest('[data-dv-write]')) {
                     closeSheet();
-                    if (typeof startDm === 'function') startDm(e.ownerName, { id: String(e.id), title: 'Движ: ' + (e.title || '') }, 'Здравствуйте! Про движ «' + (e.title || '') + '». ');
+                    if (typeof startDm === 'function') startDm(e.ownerName, { id: String(e.id), title: 'Поиск: ' + (e.title || '') }, 'Здравствуйте! Про ваш поиск «' + (e.title || '') + '». ');
                     return;
                 }
                 if (ev.target.closest('[data-dv-comm]')) { openDvizComments(e.id); return; }
@@ -512,7 +512,7 @@ function dvRefreshOpen(scrollDown) {
 }
 
 function dvDelete(id) {
-    if (!confirm('Удалить этот движ вместе с комментариями?')) return;
+    if (!confirm('Удалить этот поиск вместе с комментариями?')) return;
     svApi('/api/dviz/' + encodeURIComponent(id), { method: 'DELETE', headers: dvAuthed() }).then(({ d }) => {
         if (d && d.ok) { closeSheet(); closeDvizComments(); showToast('Движ удалён'); loadDviz(); }
         else showToast((d && d.message) || 'Не удалось удалить');
@@ -523,7 +523,7 @@ function dvDelete(id) {
 function onDvizChanged(d) {
     if (document.getElementById('dvFeed')) loadDviz();
     if (d && ((dvOpenId && d.id === dvOpenId) || (dvCommId && d.id === dvCommId))) {
-        if (d.removed) { closeSheet(); closeDvizComments(); showToast('Этот движ удалён'); } else dvRefreshOpen();
+        if (d.removed) { closeSheet(); closeDvizComments(); showToast('Этот поиск удалён'); } else dvRefreshOpen();
     }
 }
 
@@ -536,11 +536,11 @@ function openDvizForm(opts) {
         const e = dvEsc;
         const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const minNow = now.toISOString().slice(0, 16);
-        openSheet('Создать движ', `
+        openSheet('Создать поиск', `
             <p class="auth-note" style="margin:0 4px 12px">Позовите компанию: джипы, морская прогулка, волейбол или просто потусить. Желающие откликнутся и напишут в комментариях.</p>
             <div id="dvAttachBox"></div>
             <div class="dv-ideas" id="dvIdeas">${DV_IDEAS.map(t => `<button type="button">${e(t)}</button>`).join('')}</div>
-            <label class="field"><span>Что за движ</span><input id="dvTitle" maxlength="80" placeholder="Например: Едем на джипах к водопадам" value="${e(opts.title || (attach ? 'Идём: ' + attach.title : ''))}"></label>
+            <label class="field"><span>О чём поиск</span><input id="dvTitle" maxlength="80" placeholder="Например: Едем на джипах к водопадам" value="${e(opts.title || (attach ? 'Идём: ' + attach.title : ''))}"></label>
             <label class="field"><span>Описание</span><textarea id="dvText" rows="4" maxlength="1000" placeholder="Кого ищете, что берут с собой, сколько стоит, как добраться">${e(opts.text || '')}</textarea></label>
             <label class="field"><span>Когда</span><input id="dvWhen" type="datetime-local" min="${minNow}"></label>
             <label class="field"><span>Место встречи</span><input id="dvPlace" maxlength="120" placeholder="Например: у фонтана на набережной"></label>
@@ -555,7 +555,7 @@ function openDvizForm(opts) {
             <div class="photo-grid sv-photo-grid" id="dvPhotos"></div>
             <input type="file" id="dvFile" accept="image/*" multiple hidden>
             <div class="auth-error" id="dvErr"></div>
-            <button class="primary-btn wide-btn" id="dvSave" type="button"><i class="fas fa-champagne-glasses"></i> Опубликовать движ</button>`, (el) => {
+            <button class="primary-btn wide-btn" id="dvSave" type="button"><i class="fas fa-champagne-glasses"></i> Опубликовать поиск</button>`, (el) => {
             const grid = el.querySelector('#dvPhotos'), file = el.querySelector('#dvFile'), err = el.querySelector('#dvErr'), btn = el.querySelector('#dvSave');
             const paintAttach = () => {
                 el.querySelector('#dvAttachBox').innerHTML = attach ? `<div class="dv-attach pinned">
@@ -630,7 +630,7 @@ function openDvizForm(opts) {
             });
             btn.addEventListener('click', async () => {
                 const v = (id) => el.querySelector(id).value.trim();
-                if (!v('#dvTitle')) { err.textContent = 'Напишите, что за движ'; return; }
+                if (!v('#dvTitle')) { err.textContent = 'Напишите, о чём поиск'; return; }
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
