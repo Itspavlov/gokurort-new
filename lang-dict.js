@@ -782,4 +782,15 @@ English => English
 Мои поиски компании => My company searches
 Создайте поиск: позовите компанию на джипы, морскую прогулку, волейбол или просто потусить. => Create a search: invite people to a jeep trip, a boat ride, volleyball or just hang out.
 Поиск друзей => Finding friends
+Что вы предлагаете? => What do you offer?
+Выберите категорию => Choose a category
+Похоже на => Looks like
+По фото похоже на => From the photo, looks like
+Определяю категорию по фото… => Detecting category from the photo…
+Выбрать => Choose
+Слишком длинно: сократите описание => Too long: shorten the description
+Что входит => Included
+Длительность => Duration
+Вместимость => Capacity
+Что взять => What to bring
 `;

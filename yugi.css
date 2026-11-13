@@ -1557,3 +1557,22 @@ html.on-home-top #topTint { display: block; }
 .req-item.sv-item .sv-panel .sv-t-btns button { width: 30px; height: 30px; font-size: 12px; }
 /* убираем тёмную полосу под кнопками «Разместить услугу», «Создать поиск» и в других разделах */
 .cards-dock, .dv-dock, .dv-dock.svc { background: none !important; border: 0 !important; box-shadow: none !important; }
+
+/* v77 — форма развлечения: категории, поля под категорию, подсказка по фото/названию, детали в карточке */
+.sv-cats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.sv-cat { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-height: 62px; padding: 8px 4px; border-radius: 16px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 700 11.5px var(--font); cursor: pointer; }
+.sv-cat i { font-size: 18px; color: var(--sea, #2BC4D6); }
+.sv-cat.on { background: var(--text); color: var(--bg); border-color: transparent; }
+.sv-cat.on i { color: var(--bg); }
+.sv-suggest { display: flex; align-items: center; gap: 9px; margin: -2px 0 12px; padding: 9px 12px; border-radius: 14px; border: 1px dashed var(--glass-border); background: var(--glass); font: 600 13px var(--font); color: var(--text); }
+.sv-suggest[hidden] { display: none; }
+.sv-suggest i { color: var(--sun-2, #FFB35C); }
+.sv-suggest span { flex: 1; min-width: 0; }
+.sv-suggest button { flex: none; height: 30px; padding: 0 14px; border-radius: 15px; border: 0; background: var(--text); color: var(--bg); font: 800 12.5px var(--font); cursor: pointer; }
+.sv-extra { margin: 0 0 4px; }
+.sv-extra-note { margin: 0 2px 12px; font-size: 12.5px; line-height: 1.4; color: var(--text-secondary); }
+.sv-extra-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+.sv-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.sv-facts > div { padding: 8px 11px; border-radius: 14px; background: var(--glass); border: 1px solid var(--glass-border); min-width: 0; }
+.sv-facts small { display: block; font-size: 11px; color: var(--text-secondary); }
+.sv-facts b { display: block; font-size: 13.5px; overflow-wrap: anywhere; }

@@ -129,7 +129,7 @@ function openServiceView(id) {
             ${gal}
             <div class="sv-view-price">${e(svPrice(s))}</div>
             <div class="sv-view-meta"><span class="sv-tag">${e(SV_TAGS[s.tag] || '')}</span>${s.city ? `<span><i class="fas fa-location-dot"></i>${e(s.city)}</span>` : ''}</div>
-            ${s.text ? `<p class="sv-view-text">${e(s.text)}</p>` : ''}
+            ${(() => { const u = svUnpackText(s.text); return (u.facts.length ? `<div class="sv-facts">${u.facts.map(([k, v]) => `<div><small>${e(k)}</small><b>${e(v)}</b></div>`).join('')}</div>` : '') + (u.desc ? `<p class="sv-view-text">${e(u.desc)}</p>` : ''); })()}
             ${s.coords ? `<button type="button" class="ghost-btn wide-btn sv-viewmap" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта${s.place ? ' · ' + e(s.place) : ''}</button>` : ''}
             <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
                 <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
@@ -180,6 +180,117 @@ async function svThumb(first) {
     return '';
 }
 
+// ---------- категории: поля формы под каждую ----------
+const SV_DUR = ['', '30 минут', '1 час', '1,5 часа', '2 часа', '3 часа', 'Полдня', 'Весь день'];
+const SV_FIELDS = {
+    sea: [
+        { k: 'Судно', o: ['', 'Катер', 'Яхта', 'Катамаран', 'Лодка', 'Парусник', 'Теплоход'] },
+        { k: 'Длительность', o: SV_DUR },
+        { k: 'Вместимость', ph: 'до 8 человек' },
+        { k: 'Что входит', ph: 'купание, дельфины, напитки' }],
+    tours: [
+        { k: 'Формат', o: ['', 'Групповая', 'Индивидуальная'] },
+        { k: 'Транспорт', o: ['', 'Автобус', 'Джип', 'Пешком', 'Катер', 'Свой транспорт'] },
+        { k: 'Длительность', o: SV_DUR },
+        { k: 'Размер группы', ph: 'до 12 человек' },
+        { k: 'Что входит', ph: 'трансфер, обед, билеты' }],
+    active: [
+        { k: 'Вид', o: ['', 'Джип-тур', 'Квадроциклы', 'Багги', 'Дайвинг', 'Парашют / параплан', 'Верховая езда', 'Рафтинг', 'SUP / серф', 'Верёвочный парк', 'Другое'] },
+        { k: 'Длительность', o: SV_DUR },
+        { k: 'Мест', ph: 'до 6 человек' },
+        { k: 'Возраст', o: ['', 'Любой', 'от 6 лет', 'от 12 лет', 'от 16 лет', '18+'] },
+        { k: 'Что взять', ph: 'сменная одежда, кепка' }],
+    kids: [
+        { k: 'Возраст', o: ['', '0–3 года', '3–6 лет', '6–12 лет', '12+', 'Любой'] },
+        { k: 'Длительность', o: SV_DUR },
+        { k: 'Группа', ph: 'до 10 детей' },
+        { k: 'Родители', o: ['', 'Можно с родителями', 'Без родителей'] }],
+    show: [
+        { k: 'Когда', ph: 'Каждый вечер в 20:00' },
+        { k: 'Длительность', o: SV_DUR },
+        { k: 'Возраст', o: ['', '0+', '6+', '12+', '16+', '18+'] },
+        { k: 'Что будет', ph: 'живая музыка, шоу-программа' }],
+    food: [
+        { k: 'Формат', o: ['', 'Дегустация', 'Мастер-класс', 'Ужин / банкет', 'Доставка', 'Другое'] },
+        { k: 'Длительность', o: SV_DUR },
+        { k: 'Гостей', ph: 'до 10 человек' },
+        { k: 'Что входит', ph: 'вино, сыр, закуски' }],
+    other: []
+};
+const SV_ALL_LABELS = Array.from(new Set([].concat(...Object.values(SV_FIELDS).map(a => a.map(f => f.k)))));
+const SV_CHIP_SHORT = { sea: 'Море', tours: 'Экскурсии', active: 'Актив', kids: 'Детям', show: 'Шоу', food: 'Гастро', other: 'Другое' };
+
+// Детали карточки хранятся в тексте первыми строками «Название: значение», дальше — свободное описание.
+function svPackText(tag, facts, desc) {
+    const lines = (SV_FIELDS[tag] || []).map(f => facts[f.k] ? `${f.k}: ${String(facts[f.k]).replace(/\s+/g, ' ').trim()}` : '').filter(Boolean);
+    return lines.concat(desc ? ['', desc] : []).join('\n').trim();
+}
+function svUnpackText(text) {
+    const lines = String(text || '').split('\n'), facts = [];
+    let i = 0;
+    for (; i < lines.length; i++) {
+        const m = /^([^:\n]{2,20}): (.+)$/.exec(lines[i]);
+        if (!m || !SV_ALL_LABELS.includes(m[1])) break;
+        facts.push([m[1], m[2]]);
+    }
+    return { facts, desc: lines.slice(i).join('\n').trim() };
+}
+
+// Подсказка категории по названию и описанию
+const SV_KEYS = [
+    ['sea', /катер|яхт|катамаран|лодк|парус|дельфин|морск\w* прогул|прогулк\w* по морю|теплоход|рыбалк/i],
+    ['active', /джип|квадр|багги|дайвинг|парашют|параплан|рафтинг|верхом|лошад|конн|\bсап\b|sup|серф|кайт|гидроцикл|банан|тарзанк|верёвоч|веревоч|канатн|пейнтбол|картинг|эндуро|вело/i],
+    ['kids', /детск|детям|малыш|аниматор|батут|игров\w* комнат|для детей/i],
+    ['show', /шоу|концерт|дискотек|караоке|театр|представлен|стендап|stand-?up|живая музыка|вечеринк/i],
+    ['food', /дегустац|ресторан|кафе|мастер-?класс|шашлык|вино|сыр|кухн|ужин|банкет|гастро|еда/i],
+    ['tours', /экскурс|\bтур\b|водопад|дольмен|маршрут|трансфер|заповедник|винодельн|музей|поход|поездка|горы|в горы/i]
+];
+function svGuessText(str) {
+    const t = String(str || '');
+    for (const [tag, re] of SV_KEYS) if (re.test(t)) return tag;
+    return '';
+}
+
+// Подсказка категории по фото: небольшая нейросеть MobileNet в самом телефоне, грузится только когда добавили первое фото.
+const SV_IMGNET = {
+    sea: ['speedboat', 'catamaran', 'trimaran', 'yawl', 'schooner', 'gondola', 'canoe', 'lifeboat', 'fireboat', 'liner', 'pirate', 'container ship', 'boathouse', 'dock', 'pier', 'breakwater', 'sandbar', 'seashore', 'paddlewheel', 'sea lion', 'grey whale', 'killer whale', 'jellyfish', 'coral reef', 'wreck'],
+    active: ['jeep', 'go-kart', 'golfcart', 'mountain bike', 'moped', 'motor scooter', 'snowmobile', 'parachute', 'scuba diver', 'snorkel', 'sorrel', 'crash helmet', 'paddle', 'racer', 'half track', 'bicycle-built'],
+    tours: ['valley', 'alp', 'cliff', 'promontory', 'volcano', 'lakeside', 'geyser', 'castle', 'monastery', 'church', 'palace', 'triumphal arch', 'obelisk', 'dome', 'mosque', 'lighthouse', 'viaduct', 'suspension bridge', 'fountain', 'minibus', 'school bus', 'trolleybus', 'backpack', 'stone wall'],
+    kids: ['teddy', 'toyshop', 'jigsaw', 'balloon', 'carousel', 'pinwheel', 'bubble', 'crib', 'swing', 'pencil box'],
+    show: ['stage', 'theater curtain', 'spotlight', 'microphone', 'drum', 'acoustic guitar', 'electric guitar', 'grand piano', 'saxophone', 'trombone', 'violin', 'cello', 'accordion', 'maraca', 'cinema', 'loudspeaker', 'maillot', 'bow tie', 'wig'],
+    food: ['pizza', 'plate', 'espresso', 'wine bottle', 'red wine', 'cheeseburger', 'hotdog', 'burrito', 'consomme', 'hot pot', 'trifle', 'ice cream', 'bagel', 'pretzel', 'carbonara', 'restaurant', 'menu', 'soup bowl', 'frying pan', 'wok', 'cocktail shaker', 'beer glass', 'goblet', 'pitcher', 'coffee mug', 'teapot', 'dining table', 'strawberry', 'pomegranate', 'lemon', 'orange', 'grocery store', 'butcher shop', 'bakery', 'confectionery']
+};
+function svTagFromPredictions(preds) {
+    const score = {};
+    for (const p of preds || []) {
+        const name = String(p.className || '').toLowerCase();
+        for (const [tag, words] of Object.entries(SV_IMGNET)) if (words.some(w => name.includes(w))) { score[tag] = (score[tag] || 0) + p.probability; break; }
+    }
+    const top = Object.entries(score).sort((a, b) => b[1] - a[1]);
+    if (!top.length || top[0][1] < 0.12) return '';
+    if (top[1] && top[0][1] < top[1][1] * 1.3) return '';
+    return top[0][0];
+}
+let svMLp = null;
+function svLoadML() {
+    if (svMLp) return svMLp;
+    const add = (src) => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
+    svMLp = add('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js')
+        .then(() => add('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js'))
+        .then(() => window.mobilenet.load({ version: 1, alpha: 0.5 }))
+        .catch((err) => { svMLp = null; throw err; });
+    return svMLp;
+}
+async function svGuessPhoto(dataUrl) {
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000));
+    const run = (async () => {
+        const model = await svLoadML();
+        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+        return svTagFromPredictions(await model.classify(img, 10));
+    })();
+    return Promise.race([run, timeout]);
+}
+
 // ---------- редактор ----------
 function openServiceEditor(edit, after) {
     loginRequired(async () => {
@@ -188,21 +299,26 @@ function openServiceEditor(edit, after) {
             if (!d || !d.ok) { showToast('Не удалось загрузить карточку'); return; }
             edit = d.service;
         }
-        const s = edit || {}, e = escapeHtml;
+        const s = Object.assign({}, edit || {}), e = escapeHtml;
         const photos = (s.photos || []).slice();
+        const un = svUnpackText(s.text);
+        const facts = {}; un.facts.forEach(([k, v]) => { facts[k] = v; });
+        s.text = un.desc;
         openSheet(edit ? 'Изменить развлечение' : 'Новое развлечение', `
-            <p class="auth-note" style="margin:0 4px 12px">Например: «Морская прогулка на катере», «Экскурсия в горы», «Джип-тур». Карточку увидят в вашем профиле хозяина и в разделе «Развлечения».</p>
+            <div class="form-h" style="margin:0 2px 8px">Что вы предлагаете?</div>
+            <div class="sv-cats" id="svCats">${Object.keys(SV_TAGS).map(k => `<button type="button" class="sv-cat ${s.tag === k ? 'on' : ''}" data-tag="${k}"><i class="fas ${SV_ICONS[k]}"></i><span>${SV_CHIP_SHORT[k]}</span></button>`).join('')}</div>
+            <div class="sv-suggest" id="svSuggest" hidden></div>
             <div class="form-h" style="margin:0 2px 8px">Фото · до ${SV_PHOTOS}</div>
             <div class="photo-grid sv-photo-grid" id="svPhotos"></div>
             <input type="file" id="svFile" accept="image/*" multiple hidden>
             <label class="field"><span>Название</span><input id="svTitle" maxlength="80" placeholder="Морская прогулка на катере" value="${e(s.title || '')}"></label>
-            <label class="field"><span>Категория</span><select id="svTag">${Object.entries(SV_TAGS).map(([k, v]) => `<option value="${k}" ${s.tag === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+            <div class="sv-extra" id="svExtra"></div>
             <div class="rq-row"><label class="field"><span>Цена, ₽</span><input id="svPrice" type="number" inputmode="numeric" min="1" value="${s.price || ''}" placeholder="Можно пусто"></label>
             <label class="field"><span>Как считать</span><select id="svUnit">${SV_UNITS.map(u => `<option value="${e(u)}" ${(s.unit || '') === u ? 'selected' : ''}>${u || '—'}</option>`).join('')}</select></label></div>
             <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Архипо-Осиповка, причал"></label>
             <label class="field"><span>Куда подойти</span><input id="svPlace" maxlength="120" value="${e(s.place || '')}" placeholder="Например: причал №3, у синего катера"></label>
             ${mapPickHTML('Точка на карте: причал или место встречи', 'Нажмите на карту, чтобы отметить причал или место, куда подходить. Люди увидят карту под вашей карточкой и смогут проложить маршрут.')}
-            <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="800" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>
+            <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="600" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>
             <div class="auth-error" id="svErr"></div>
             <button class="primary-btn wide-btn" id="svSave" type="button"><i class="fas fa-check"></i> ${edit ? 'Сохранить' : 'Опубликовать'}</button>`, (el) => {
             const grid = el.querySelector('#svPhotos'), file = el.querySelector('#svFile'), err = el.querySelector('#svErr'), btn = el.querySelector('#svSave');
@@ -212,6 +328,47 @@ function openServiceEditor(edit, after) {
             };
             paint();
             const picker = mapPickInit(el, s.coords, (name) => { const pl = el.querySelector('#svPlace'); if (pl && !pl.value.trim()) pl.value = name; });
+            let tag = s.tag || '', userPicked = !!edit, guessSeq = 0;
+            const extra = el.querySelector('#svExtra'), cats = el.querySelector('#svCats'), sug = el.querySelector('#svSuggest');
+            const readFacts = () => { extra.querySelectorAll('[data-f]').forEach(inp => { facts[inp.dataset.f] = inp.value.trim(); }); };
+            const paintExtra = () => {
+                const list = SV_FIELDS[tag] || [];
+                if (!tag) { extra.innerHTML = '<p class="sv-extra-note">Выберите категорию — появятся нужные поля: длительность, вместимость, возраст и другое.</p>'; return; }
+                if (!list.length) { extra.innerHTML = ''; return; }
+                extra.innerHTML = `<div class="form-h" style="margin:2px 2px 8px">${e(SV_TAGS[tag])} · подробности</div><div class="sv-extra-grid">` + list.map(f => {
+                    const val = facts[f.k] || '';
+                    return f.o
+                        ? `<label class="field"><span>${e(f.k)}</span><select data-f="${e(f.k)}">${f.o.map(o => `<option value="${e(o)}" ${val === o ? 'selected' : ''}>${o || '—'}</option>`).join('')}</select></label>`
+                        : `<label class="field"><span>${e(f.k)}</span><input data-f="${e(f.k)}" maxlength="60" value="${e(val)}" placeholder="${e(f.ph || '')}"></label>`;
+                }).join('') + '</div>';
+            };
+            const setTag = (t, picked) => {
+                readFacts();
+                tag = t; if (picked) userPicked = true;
+                cats.querySelectorAll('.sv-cat').forEach(b => b.classList.toggle('on', b.dataset.tag === tag));
+                paintExtra(); showSuggest('');
+            };
+            const showSuggest = (t, why) => {
+                if (!t || t === tag) { sug.hidden = true; sug.innerHTML = ''; return; }
+                sug.hidden = false;
+                sug.innerHTML = `<i class="fas fa-wand-magic-sparkles"></i><span>${why === 'photo' ? 'По фото похоже на' : 'Похоже на'} «${e(SV_TAGS[t])}»</span><button type="button" data-pick="${t}">Выбрать</button>`;
+            };
+            cats.addEventListener('click', (ev) => { const b = ev.target.closest('.sv-cat'); if (b) setTag(b.dataset.tag, true); });
+            sug.addEventListener('click', (ev) => { const b = ev.target.closest('[data-pick]'); if (b) setTag(b.dataset.pick, true); });
+            paintExtra();
+            const textGuess = () => { if (userPicked && tag) return; const g = svGuessText(el.querySelector('#svTitle').value + ' ' + el.querySelector('#svText').value); if (g) showSuggest(g, 'text'); };
+            let tg = 0; const onType = () => { clearTimeout(tg); tg = setTimeout(textGuess, 500); };
+            el.querySelector('#svTitle').addEventListener('input', onType);
+            el.querySelector('#svText').addEventListener('input', onType);
+            const photoGuess = async () => {
+                if (!photos[0] || (userPicked && tag)) return;
+                const seq = ++guessSeq;
+                sug.hidden = false; sug.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Определяю категорию по фото…</span>';
+                let g = '';
+                try { g = await svGuessPhoto(photos[0]); } catch (_) {}
+                if (seq !== guessSeq) return;
+                if (g) showSuggest(g, 'photo'); else { sug.hidden = true; sug.innerHTML = ''; }
+            };
             grid.addEventListener('click', (ev) => {
                 const del = ev.target.closest('[data-del]');
                 if (del) { photos.splice(Number(del.dataset.del), 1); paint(); return; }
@@ -224,14 +381,19 @@ function openServiceEditor(edit, after) {
                     try { photos.push(await svPhoto(f)); } catch (_) { err.textContent = 'Не удалось обработать фото'; }
                 }
                 paint();
+                if (list.length && photos.length === list.length) photoGuess();
             });
             btn.addEventListener('click', async () => {
                 const v = (id) => el.querySelector(id).value.trim();
                 if (!v('#svTitle')) { err.textContent = 'Напишите название'; return; }
+                if (!tag) { err.textContent = 'Выберите категорию'; el.querySelector('#svCats').scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+                readFacts();
+                const fullText = svPackText(tag, facts, v('#svText'));
+                if (fullText.length > 800) { err.textContent = 'Слишком длинно: сократите описание'; return; }
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
-                const body = { id: s.id, title: v('#svTitle'), tag: el.querySelector('#svTag').value, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, text: v('#svText'), photos, thumb };
+                const body = { id: s.id, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, text: fullText, photos, thumb };
                 try {
                     const { status, d } = await svApi('/api/services', { method: 'POST', headers: svAuth(), body: JSON.stringify(body) });
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
