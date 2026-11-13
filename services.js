@@ -45,19 +45,62 @@ function serviceFeedHTML(s) {
     const btns = mine
         ? `<button type="button" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button><button type="button" data-sv="bump" data-id="${e(s.id)}" aria-label="Поднять"><i class="fas fa-arrow-up"></i></button>`
         : `<button type="button" class="main" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i></button>`;
+    const desc = s.text ? `<p class="sv-desc">${e(s.text)}${String(s.text).length >= 140 ? '…' : ''}</p>` : '';
     const mapBtn = s.coords ? `<button type="button" class="sv-mapbtn" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта</button>` : '';
     return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
-        <div class="sv-t-bg">${s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : `<i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>`}</div>
+        <div class="sv-t-bg">${svSlidesHTML(s)}</div>
         <div class="sv-t-top"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
             <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></span>
-            ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i>${s.photoCount}</em>` : ''}</div>
+            ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${s.photoCount}</span></em>` : ''}</div>
         <div class="sv-t-bottom">
             <span class="sv-t-tag"><i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>${e(SV_TAGS[s.tag] || '')}</span>
             <b class="sv-t-title">${e(s.title)}</b>
             ${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : ''}
             <div class="sv-t-foot"><span class="sv-t-price">${e(price)}${s.price && s.unit ? `<small>${e(s.unit)}</small>` : ''}</span><span class="sv-t-btns">${btns}</span></div>
-        </div></div>${mapBtn}</div>`;
+        </div></div>${desc}${mapBtn}</div>`;
 }
+
+// ---------- фото в плитке листаются прямо в ленте ----------
+// Список приносит одну обложку; остальные фото подгружаются при первом касании.
+const svPhotoCache = {};
+function svSlidesHTML(s) {
+    const e = escapeHtml, id = String(s.id);
+    const cached = svPhotoCache[id];
+    const n = cached ? cached.length : Math.max(Number(s.photoCount) || 0, s.thumb ? 1 : 0);
+    if (!n) return `<i class="fas ${SV_ICONS[s.tag] || 'fa-star'} sv-t-ico"></i>`;
+    const slide = (src) => src ? `<div class="sv-slide"><img src="${e(src)}" alt="" loading="lazy"></div>` : '<div class="sv-slide ph"></div>';
+    let html = slide(cached ? cached[0] : s.thumb);
+    for (let i = 1; i < n; i++) html += slide(cached ? cached[i] : '');
+    return `<div class="sv-slides" data-svslides="${e(id)}" data-loaded="${cached || n <= 1 ? 1 : 0}">${html}</div>`;
+}
+function svLoadSlides(box) {
+    if (!box || box.dataset.loaded === '1' || box.dataset.loading === '1') return;
+    const id = box.dataset.svslides;
+    box.dataset.loading = '1';
+    svApi('/api/services/' + encodeURIComponent(id)).then(({ d }) => {
+        const photos = d && d.ok && d.service && Array.isArray(d.service.photos) ? d.service.photos.filter(Boolean) : [];
+        box.dataset.loading = '';
+        if (!photos.length) return;
+        svPhotoCache[id] = photos;
+        document.querySelectorAll(`.sv-slides[data-svslides="${CSS.escape(id)}"]`).forEach(el => {
+            const slides = el.querySelectorAll('.sv-slide');
+            photos.forEach((src, i) => {
+                const sl = slides[i];
+                if (!sl || (i === 0 && sl.querySelector('img'))) return;
+                sl.classList.remove('ph'); sl.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
+            });
+            el.dataset.loaded = '1';
+        });
+    }).catch(() => { box.dataset.loading = ''; });
+}
+document.addEventListener('pointerdown', (ev) => { const b = ev.target.closest && ev.target.closest('.sv-slides'); if (b) svLoadSlides(b); }, true);
+document.addEventListener('scroll', (ev) => {
+    const b = ev.target;
+    if (!b || !b.classList || !b.classList.contains('sv-slides')) return;
+    const i = Math.round(b.scrollLeft / Math.max(1, b.clientWidth)) + 1;
+    const cur = b.closest('.sv-tile') && b.closest('.sv-tile').querySelector('.sv-t-top .cur');
+    if (cur && cur.textContent !== String(i)) cur.textContent = i;
+}, true);
 
 // ---------- загрузка ----------
 function loadMyServices(cb) {
