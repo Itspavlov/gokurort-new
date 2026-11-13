@@ -1524,7 +1524,7 @@ html.on-home-top #topTint { display: block; }
 .sv-grid .sv-cell { align-items: center; gap: 8px; }
 .sv-grid .sv-mapbtn { min-width: 150px; padding: 0 20px; }
 
-/* v76 — «Готовые услуги»: фото на всю плитку и листаются прямо в ленте, описание под плиткой */
+/* v76 — «Готовые услуги»: единая карточка — фото сверху (листается), под ним слитая рамка с названием и ценой */
 .sv-t-bg { display: block; }
 .sv-t-bg .sv-t-ico { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); }
 .sv-slides { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
@@ -1533,6 +1533,27 @@ html.on-home-top #topTint { display: block; }
 .sv-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; user-select: none; }
 .sv-slide.ph { background: linear-gradient(110deg, #17405A 30%, #1F5675 50%, #17405A 70%); background-size: 200% 100%; animation: adShimmer 1.3s linear infinite; }
 .sv-tile .sv-t-top, .sv-tile .sv-t-bottom { pointer-events: none; }
-.sv-tile .sv-t-btns button { pointer-events: auto; }
-.sv-desc { margin: 7px 4px 0; width: 100%; font-size: 12.5px; line-height: 1.38; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; text-align: left; }
-.sv-grid .sv-desc { font-size: 13.5px; -webkit-line-clamp: 3; margin: 8px 6px 0; }
+.sv-cell { border-radius: 22px; background: var(--rq-bg); border: 1px solid var(--rq-border); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); gap: 0; color: var(--text); }
+.sv-cell .sv-tile { border: 0; border-radius: 21px 21px 0 0; box-shadow: none; height: 190px; flex: none; }
+.sv-cell .sv-tile::after { background: linear-gradient(180deg, rgba(8,8,26,.5) 0%, rgba(8,8,26,0) 30%, rgba(8,8,26,0) 70%, rgba(8,8,26,.35) 100%); }
+.sv-cell .sv-t-bottom { padding: 0 10px 9px; }
+.sv-panel { display: flex; align-items: center; gap: 10px; padding: 11px 12px 12px; cursor: pointer; border-top: 1px solid var(--rq-border); }
+.sv-i-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sv-panel .sv-t-title { font-size: 16px; line-height: 1.2; text-shadow: none; color: var(--text); }
+.sv-panel .sv-t-city { display: block; font-size: 12px; color: var(--text-secondary); opacity: 1; }
+.sv-panel .sv-t-price { font-size: 16px; color: var(--text); }
+.sv-panel .sv-t-price small { color: var(--text-secondary); opacity: 1; display: inline; margin-left: 4px; font-size: 12px; }
+.sv-panel .sv-t-btns button { width: 38px; height: 38px; font-size: 14px; color: var(--text); background: var(--glass-strong, rgba(255, 255, 255, .14)); border: 1px solid var(--rq-border); }
+.sv-panel .sv-t-btns button.main { border: 0; background: var(--sun); color: var(--dv-on, #2A1206); }
+.sv-cell .sv-mapbtn { align-self: center; margin: 0 0 12px; min-width: 150px; padding: 0 20px; }
+.sv-grid .sv-cell { align-items: stretch; gap: 0; }
+.sv-grid .sv-tile { height: 200px; border-radius: 21px 21px 0 0; }
+.sv-grid .sv-mapbtn { min-width: 150px; }
+/* двухрядная лента в разделе «Развлечения»: рамка поуже */
+.req-item.sv-item .sv-cell .sv-tile { height: 150px; }
+.req-item.sv-item .sv-panel { padding: 8px 9px 9px; gap: 6px; flex-wrap: wrap; }
+.req-item.sv-item .sv-panel .sv-t-title { font-size: 13.5px; }
+.req-item.sv-item .sv-panel .sv-t-price { font-size: 13.5px; }
+.req-item.sv-item .sv-panel .sv-t-btns button { width: 30px; height: 30px; font-size: 12px; }
+/* убираем тёмную полосу под кнопками «Разместить услугу», «Создать поиск» и в других разделах */
+.cards-dock, .dv-dock, .dv-dock.svc { background: none !important; border: 0 !important; box-shadow: none !important; }

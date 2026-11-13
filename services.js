@@ -45,19 +45,19 @@ function serviceFeedHTML(s) {
     const btns = mine
         ? `<button type="button" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button><button type="button" data-sv="bump" data-id="${e(s.id)}" aria-label="Поднять"><i class="fas fa-arrow-up"></i></button>`
         : `<button type="button" class="main" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i></button>`;
-    const desc = s.text ? `<p class="sv-desc">${e(s.text)}${String(s.text).length >= 140 ? '…' : ''}</p>` : '';
     const mapBtn = s.coords ? `<button type="button" class="sv-mapbtn" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта</button>` : '';
     return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
         <div class="sv-t-bg">${svSlidesHTML(s)}</div>
         <div class="sv-t-top"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
             <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></span>
             ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${s.photoCount}</span></em>` : ''}</div>
-        <div class="sv-t-bottom">
-            <span class="sv-t-tag"><i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>${e(SV_TAGS[s.tag] || '')}</span>
-            <b class="sv-t-title">${e(s.title)}</b>
-            ${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : ''}
-            <div class="sv-t-foot"><span class="sv-t-price">${e(price)}${s.price && s.unit ? `<small>${e(s.unit)}</small>` : ''}</span><span class="sv-t-btns">${btns}</span></div>
-        </div></div>${desc}${mapBtn}</div>`;
+        <div class="sv-t-bottom"><span class="sv-t-tag"><i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>${e(SV_TAGS[s.tag] || '')}</span></div>
+        </div>
+        <div class="sv-panel" data-sv="view" data-id="${e(s.id)}">
+            <div class="sv-i-main"><b class="sv-t-title">${e(s.title)}</b>
+                ${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : ''}
+                <span class="sv-t-price">${e(price)}${s.price && s.unit ? `<small>${e(s.unit)}</small>` : ''}</span></div>
+            <span class="sv-t-btns">${btns}</span></div>${mapBtn}</div>`;
 }
 
 // ---------- фото в плитке листаются прямо в ленте ----------
