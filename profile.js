@@ -38,7 +38,13 @@ function openSheet(title, bodyHTML, onMount) {
                 <div class="sheet-title">${title}</div></div>
             ${bodyHTML}
         </div>`;
-    el.addEventListener('click', (ev) => { if (ev.target === el || ev.target.closest('[data-sheet-close]')) closeSheet(); });
+    // после щипка (два пальца) случайный «клик» по тёмному фону не должен закрывать шторку
+    let multiAt = 0;
+    el.addEventListener('touchstart', (ev) => { if (ev.touches.length > 1) multiAt = Date.now(); }, { capture: true, passive: true });
+    el.addEventListener('click', (ev) => {
+        if (ev.target === el && Date.now() - multiAt < 900) return;
+        if (ev.target === el || ev.target.closest('[data-sheet-close]')) closeSheet();
+    });
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add('open'));
     attachSheetSwipe(el);
@@ -65,8 +71,9 @@ function attachSheetSwipe(el) {
         fromHead = !!e.target.closest('.sheet-grab, .sheet-head');
     }, { passive: true });
     panel.addEventListener('touchmove', (e) => {
-        if (state < 0 || e.touches.length !== 1) return;
+        if (state < 0) return;
         const t = e.touches[0], dx = t.clientX - x0; dy = t.clientY - y0;
+        if (e.touches.length > 1) { if (state === 1) { panel.style.transform = ''; el.style.opacity = ''; } state = -1; return; }   // второй палец: это щипок, не закрытие
         if (state === 0) {
             if (Math.abs(dy) < 8 && Math.abs(dx) < 8) return;
             const vertical = Math.abs(dy) > Math.abs(dx) * 1.2;
@@ -267,6 +274,7 @@ function openAdForm(editId) {
         amenities: new Set(old ? old.amenities : []),
         busy: new Set(old ? old.busy : []),
         coords: old && old.coords ? old.coords.slice() : MAP_DEFAULT.slice(),
+        pinTouched: !!(old && old.coords),
         beach: SEA_POINT.slice(),
         pick: 'home',
         category: old ? adCategory(old) : 'apartment'
@@ -336,9 +344,10 @@ function openAdForm(editId) {
                 <div class="listing-map pick-map" id="pickMap"></div>
                 <div class="pick-bar">
                     <div class="pick-dist" id="pickDist"></div>
+                    <button type="button" class="ghost-btn small" id="fmFind"><i class="fas fa-magnifying-glass-location"></i> По адресу</button>
                     <button type="button" class="ghost-btn small" id="fmLocate"><i class="fas fa-crosshairs"></i> Я здесь</button>
                 </div>
-                <div class="form-hint">Нажмите на карту или перетащите метку жилья. Расстояние до моря и маршрут пешком и на машине посчитаются сами.</div>
+                <div class="form-hint">Нажмите «По адресу» или перетащите метку жилья туда, где дом стоит на самом деле. Расстояние до моря и маршрут пешком и на машине посчитаются сами.</div>
             </div>
 
             <div class="form-block only-rent">
@@ -424,10 +433,26 @@ function wireAdForm(screen) {
         if (ev.target.closest('.photo-add')) file.click();
     };
 
+    // метка по адресу: кнопкой, а новое объявление ещё и само, когда адрес вписан и метку никто не трогал
+    const findByAddr = async (auto) => {
+        const addr = (screen.querySelector('#fmAddr') || {}).value || '';
+        if (auto && (formState.pinTouched || addr.trim().length < 6)) return;
+        const c = await YM.geocode(addr);
+        if (!document.getElementById('pickMap')) return;
+        if (!c) { if (!auto) showToast('Адрес не нашёлся. Поставьте метку на карте вручную.'); return; }
+        if (auto && formState.pinTouched) return;
+        setPickPoint('home', c);
+        if (pickMap) pickMap.fitBounds([c, formState.beach], { padding: 50, maxZoom: 16, animate: true });
+        showToast(auto ? 'Поставили метку по адресу. Проверьте, что дом там.' : 'Метка поставлена по адресу');
+    };
+    screen.querySelector('#fmFind').onclick = () => { formState.pinTouched = false; findByAddr(false); };
+    screen.querySelector('#fmAddr').addEventListener('change', () => findByAddr(true));
+
     screen.querySelector('#fmLocate').onclick = () => {
         if (!navigator.geolocation) { showToast('Геолокация недоступна'); return; }
         navigator.geolocation.getCurrentPosition(
             (pos) => {
+                formState.pinTouched = true;
                 setPickPoint('home', [pos.coords.latitude, pos.coords.longitude]);
                 if (pickMap) pickMap.setView(formState.coords, 16);
             },
@@ -461,9 +486,9 @@ function initPickMap() {
         pickMap = map;
         const pin = (cls, icon) => `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`;
         pickMarkers.home = map.addMarker({ coords: formState.coords, html: pin('pin-home', 'fa-home'), size: [40, 40], draggable: true,
-            onDrag: (c) => { formState.coords = c; updatePickDist(); } });
+            onDrag: (c) => { formState.coords = c; formState.pinTouched = true; updatePickDist(); } });
         pickMarkers.sea = map.addMarker({ coords: SEA_POINT, html: pin('pin-sea', 'fa-umbrella-beach'), size: [40, 40] });
-        map.onClick((c) => setPickPoint('home', c));
+        map.onClick((c) => { formState.pinTouched = true; setPickPoint('home', c); });
         map.fitBounds([formState.coords, formState.beach], { padding: 50, maxZoom: 16, animate: false });
         setTimeout(() => map.invalidate(), 250);
     });

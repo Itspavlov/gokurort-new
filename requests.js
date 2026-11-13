@@ -214,7 +214,7 @@ function seekBarHTML(room) {
     const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${L.subs[v === 'seek' ? 0 : 1]} 0</b></button>`;
     // кнопка «Фильтры» (только жильё) стоит справа от вкладок
     const filt = (typeof isHousingRoom === 'function' && isHousingRoom(room)) ? '<button type="button" class="seek-filter" id="filtBtn" aria-label="Фильтры"><i class="fas fa-sliders"></i><span class="fbadge" hidden>0</span></button>' : '';
-    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('seek', L.tabs[0])}${t('offer', L.tabs[1])}</div>${filt}</div>`;
+    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('offer', L.tabs[1])}${t('seek', L.tabs[0])}</div>${filt}</div>`;
 }
 const dockBtnHTML = (icon, label) => `<i class="fas ${icon}"></i> ${label}`;
 function cardsDockHTML(room) {

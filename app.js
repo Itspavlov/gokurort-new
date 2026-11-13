@@ -191,7 +191,7 @@ function adImg(ad, alt) {
 const html = document.documentElement;
 const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-// Темы: sea — «Морской вечер» (по умолчанию), sand — «Песок», sky — «Небо», dusk — «Закат».
+// Темы: sea — «Морской вечер», sand — «Песок», sky — «Небо» (по умолчанию), dusk — «Закат».
 // Старые «light» и «surf» (Прибой) переносятся на «Песок», «dark» — на «Морской вечер».
 const THEMES = {
     sea:  { name: 'Вечер',  meta: '#060F1C', bg: '#060F1C', accent: '#FF9A5C' },
@@ -221,7 +221,7 @@ function setTheme(theme) {
     if (typeof window.syncTopTint === 'function') window.syncTopTint();
     document.querySelectorAll('.theme-grid button').forEach(b => b.classList.toggle('on', b.dataset.th === theme));
 }
-setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'sea');
+setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'sky');
 
 // ---------- ИМЯ ПОЛЬЗОВАТЕЛЯ ----------
 function getUserName() {
@@ -1059,7 +1059,7 @@ console.log('👤 Ваше имя:', getUserName());
 // Вверху главной лежит фото с голубым небом. iOS красит область под часами в цвет темы, и она резала фото
 // тёмной или белой полосой. Пока открыта главная и страница наверху, красим эту область в цвет неба с фото.
 (function () {
-    const HERO_BLUE = '#007cd4';
+    const heroBlue = () => (getComputedStyle(document.documentElement).getPropertyValue('--hero-top') || '#007cd4').trim();
     let state = '';
     function sync() {
         const ts = document.getElementById('tab-search'), gs = document.getElementById('group-screen');
@@ -1069,7 +1069,7 @@ console.log('👤 Ваше имя:', getUserName());
         if (next === state) return;
         state = next;
         document.documentElement.classList.toggle('on-home-top', top);
-        if (metaTheme) metaTheme.setAttribute('content', top ? HERO_BLUE : THEMES[getTheme()].meta);
+        if (metaTheme) metaTheme.setAttribute('content', top ? heroBlue() : THEMES[getTheme()].meta);
     }
     window.syncTopTint = function () { state = '\0'; sync(); };
     const mo = new MutationObserver(sync);

@@ -215,5 +215,15 @@ const YM = (() => {
         }).then((h) => h && guard(el, h, o));
     }
 
-    return { open };
+    // Поиск точки по адресу («Колхозная 7» → координаты). Ищем рядом с посёлком; нет Яндекса или адрес не найден — null.
+    function geocode(query) {
+        const q = String(query || '').trim();
+        if (q.length < 3) return Promise.resolve(null);
+        return load().then((ym) => ym.geocode(/Архипо|Осипов/i.test(q) ? q : 'Архипо-Осиповка, ' + q,
+            { results: 1, boundedBy: [[44.30, 38.40], [44.45, 38.65]], strictBounds: true }))
+            .then((r) => { const o = r && r.geoObjects && r.geoObjects.get(0); return o ? o.geometry.getCoordinates() : null; })
+            .catch(() => null);
+    }
+
+    return { open, geocode };
 })();

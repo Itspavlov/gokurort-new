@@ -1401,9 +1401,7 @@ body.has-support { padding-top:calc(env(safe-area-inset-top,0px) + 32px); }
 /* v62: без задержки на тап (iOS ждал двойного касания), шапка без анимаций */
 button, a, [onclick], .dock-btn, .chat-back-btn, .group-card { touch-action: manipulation; }
 
-/* v63: блеск и покачивание значков на кнопках «Хочу снять / Сдать» отключены (проверка плавности) */
-.dock-btn::after { display: none; animation: none; }
-.dock-btn.seek i, .dock-btn.main i { animation: none; }
+/* v63 отменён: блеск «монеты» и покачивание значков на нижних кнопках вернулись */
 
 /* v64: переключатель языка в профиле */
 .pf-row.lang-card { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 14px 14px; }
@@ -1493,3 +1491,30 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 /* v73: пока открыта главная и она наверху, область под строкой состояния голубая, как небо на фото */
 #topTint { display: none; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); z-index: 1; background: #007cd4; pointer-events: none; }
 html.on-home-top #topTint { display: block; }
+
+/* ===== v74: тема «Небо» — светлый, единый вид как на макете ===== */
+:root { --hero-top: #007cd4; }
+:root[data-theme="sky"] { --hero-top: #008bed; }
+#topTint { background: var(--hero-top); }
+#tab-search::before { background: var(--hero-top); }
+.hero-scene { background: var(--hero-top); }
+
+/* фото плиток: холодный голубой оттенок и больше света, чтобы закатные снимки сошлись с небом */
+:root[data-theme="sky"] .group-photo { filter: sepia(.06) hue-rotate(168deg) saturate(.9) brightness(1.12); }
+:root[data-theme="sky"] .group-card::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(190, 228, 255, .34), rgba(110, 185, 250, .26)); }
+:root[data-theme="sky"] .group-card::after { background: linear-gradient(90deg, rgba(8, 44, 80, .26) 0%, rgba(8, 44, 80, 0) 60%), linear-gradient(180deg, rgba(8, 44, 80, 0) 48%, rgba(8, 44, 80, .36) 100%); }
+:root[data-theme="sky"] .group-card.wide::after { background: linear-gradient(90deg, rgba(8, 44, 80, .4) 0%, rgba(8, 44, 80, 0) 62%), linear-gradient(180deg, rgba(8, 44, 80, 0) 40%, rgba(8, 44, 80, .42) 100%); }
+
+/* шапка на главной: дневное фото без тёмной вуали, тёмно-синий заголовок на светлом небе */
+:root[data-theme="sky"] .hero-photo { filter: saturate(1.05) brightness(1.1); }
+:root[data-theme="sky"] .hero-scene::after { background: radial-gradient(ellipse 95% 46% at 22% 80%, rgba(255, 255, 255, .62) 0%, rgba(255, 255, 255, 0) 100%), linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 32%); }
+/* на дневном фото: тёмно-синий заголовок и подпись, светлые матовые плашки вместо тёмных */
+:root[data-theme="sky"] .hero-title, :root[data-theme="sky"] .hero-scene:has(.hero-stage) ~ .hero-title { color: #0B2E55; text-shadow: 0 1px 12px rgba(255, 255, 255, .6); }
+:root[data-theme="sky"] .hero-title em { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #1B78DD; -webkit-text-fill-color: #1B78DD; text-shadow: 0 1px 12px rgba(255, 255, 255, .6); }
+:root[data-theme="sky"] .hero-tag, :root[data-theme="sky"] .hero-photo ~ .hero-tag { color: #0F3A66; font-weight: 700; text-shadow: 0 1px 10px rgba(255, 255, 255, .75), 0 0 2px rgba(255, 255, 255, .6); }
+:root[data-theme="sky"] .hero-place, :root[data-theme="sky"] .wx { background: rgba(255, 255, 255, .62); border-color: rgba(255, 255, 255, .85); color: #0B2E55; box-shadow: 0 2px 10px rgba(30, 110, 190, .18); }
+:root[data-theme="sky"] .hero-place span, :root[data-theme="sky"] .wx span, :root[data-theme="sky"] .wx b { color: #0B2E55; }
+:root[data-theme="sky"] .hero-place i { color: #E8801E; }
+:root[data-theme="sky"] .wx-water i { color: #1E8FE0; }
+:root[data-theme="sky"] .logo-accent { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #1B78DD; -webkit-text-fill-color: #1B78DD; }
+:root[data-theme="sky"] .app-logo-text { color: #0B2E55; }
