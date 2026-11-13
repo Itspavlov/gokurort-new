@@ -1499,11 +1499,7 @@ html.on-home-top #topTint { display: block; }
 #tab-search::before { background: var(--hero-top); }
 .hero-scene { background: var(--hero-top); }
 
-/* фото плиток: холодный голубой оттенок и больше света, чтобы закатные снимки сошлись с небом */
-:root[data-theme="sky"] .group-photo { filter: sepia(.06) hue-rotate(168deg) saturate(.9) brightness(1.12); }
-:root[data-theme="sky"] .group-card::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(190, 228, 255, .34), rgba(110, 185, 250, .26)); }
-:root[data-theme="sky"] .group-card::after { background: linear-gradient(90deg, rgba(8, 44, 80, .26) 0%, rgba(8, 44, 80, 0) 60%), linear-gradient(180deg, rgba(8, 44, 80, 0) 48%, rgba(8, 44, 80, .36) 100%); }
-:root[data-theme="sky"] .group-card.wide::after { background: linear-gradient(90deg, rgba(8, 44, 80, .4) 0%, rgba(8, 44, 80, 0) 62%), linear-gradient(180deg, rgba(8, 44, 80, 0) 40%, rgba(8, 44, 80, .42) 100%); }
+/* фото плиток в «Небе» остаются как были (голубая подкраска убрана) */
 
 /* шапка на главной: дневное фото без тёмной вуали, тёмно-синий заголовок на светлом небе */
 :root[data-theme="sky"] .hero-photo { filter: saturate(1.05) brightness(1.1); }
