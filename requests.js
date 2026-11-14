@@ -4,6 +4,7 @@
 // здесь только показ таймера и счётчика.
 // ============================================
 let reqList = [];
+let reqListSec = '';                 // раздел, которому принадлежит reqList
 let reqLoadSeq = 0;                  // номер последнего запроса списка: старые ответы отбрасываются
 let reqLastSec = '';                // раздел, в котором выбрана вкладка
 let reqView = 'offer';               // seek | offer: вкладки сверху, «все» убрано
@@ -67,18 +68,22 @@ const setCooldown = (sec) => { reqCooldownUntil = Date.now() + Math.max(0, sec) 
 function loadRequests(cb) {
     const room = typeof currentRoom === 'string' ? currentRoom : '';
     const cat = (typeof housingCatByRoom === 'function' && room.startsWith('housing-') && housingCatByRoom(room)) ? housingCatByRoom(room).id : '';
-    const url = `${SERVER_URL}/api/requests?status=active&section=${reqSection()}${cat ? '&category=' + cat : ''}`;
-    const h = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
     const sec = reqSection(), seq = ++reqLoadSeq;
-    fetch(url, { headers: h }).then(r => r.json()).then(d => {
-        if (!d || !d.ok) return;
-        // ответ опоздал: пока он шёл, человек перешёл в другой раздел. Чужой список не показываем
-        if (seq !== reqLoadSeq || reqSection() !== sec || (typeof currentRoom === 'string' && currentRoom !== room)) return;
-        reqList = d.requests || [];
-        if (getToken() && typeof d.cooldown === 'number') setCooldown(d.cooldown);
-        paintRequests();
-        cb && cb();
-    }).catch(() => {});
+    const url = `${SERVER_URL}/api/requests?status=active&section=${sec}${cat ? '&category=' + cat : ''}`;
+    // если сервер ответил ошибкой или связь дрогнула, пробуем ещё до трёх раз: лента не должна оставаться пустой
+    const attempt = (n) => {
+        const h = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
+        fetch(url, { headers: h }).then(r => r.json()).then(d => {
+            if (!d || !d.ok) throw new Error('bad');
+            // ответ опоздал: пока он шёл, человек перешёл в другой раздел. Чужой список не показываем
+            if (seq !== reqLoadSeq || reqSection() !== sec || (typeof currentRoom === 'string' && currentRoom !== room)) return;
+            reqList = d.requests || []; reqListSec = sec;
+            if (getToken() && typeof d.cooldown === 'number') setCooldown(d.cooldown);
+            paintRequests();
+            cb && cb();
+        }).catch(() => { if (n < 3 && seq === reqLoadSeq) setTimeout(() => { if (seq === reqLoadSeq) attempt(n + 1); }, 700 * n); });
+    };
+    attempt(1);
 }
 
 
@@ -233,7 +238,7 @@ function paintRequests() {
     if (!msgs) return;
     msgs.querySelectorAll('.req-item').forEach(n => n.remove());
     // карточки запросов и (в разделе «Услуги») карточки услуг встают в ленту по времени вместе
-    const items = reqList.map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
+    const items = (reqListSec === reqSection() ? reqList : []).map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
     if (reqSection() === 'services' && typeof serviceFeed !== 'undefined') {
         serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, tag: sv.tag || 'other', html: serviceFeedHTML(sv) }));
     }
