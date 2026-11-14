@@ -4,6 +4,7 @@
 // здесь только показ таймера и счётчика.
 // ============================================
 let reqList = [];
+let reqLoadSeq = 0;                  // номер последнего запроса списка: старые ответы отбрасываются
 let reqLastSec = '';                // раздел, в котором выбрана вкладка
 let reqView = 'offer';               // seek | offer: вкладки сверху, «все» убрано
 let reqCooldownUntil = 0;
@@ -68,8 +69,11 @@ function loadRequests(cb) {
     const cat = (typeof housingCatByRoom === 'function' && room.startsWith('housing-') && housingCatByRoom(room)) ? housingCatByRoom(room).id : '';
     const url = `${SERVER_URL}/api/requests?status=active&section=${reqSection()}${cat ? '&category=' + cat : ''}`;
     const h = getToken() ? { Authorization: 'Bearer ' + getToken() } : {};
+    const sec = reqSection(), seq = ++reqLoadSeq;
     fetch(url, { headers: h }).then(r => r.json()).then(d => {
         if (!d || !d.ok) return;
+        // ответ опоздал: пока он шёл, человек перешёл в другой раздел. Чужой список не показываем
+        if (seq !== reqLoadSeq || reqSection() !== sec || (typeof currentRoom === 'string' && currentRoom !== room)) return;
         reqList = d.requests || [];
         if (getToken() && typeof d.cooldown === 'number') setCooldown(d.cooldown);
         paintRequests();
