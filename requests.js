@@ -4,6 +4,7 @@
 // здесь только показ таймера и счётчика.
 // ============================================
 let reqList = [];
+let reqLastSec = '';                // раздел, в котором выбрана вкладка
 let reqView = 'offer';               // seek | offer: вкладки сверху, «все» убрано
 let reqCooldownUntil = 0;
 let reqTicker = 0;
@@ -273,6 +274,10 @@ function updateDockState() {
 function seekBarHTML(room) {
     if (room === 'services') { reqView = 'offer'; return ''; }      // в «Развлечениях» нет вкладок «ищут / предлагают»: только услуги
     const L = secLabels(SEC[room] ? room : 'housing');
+    // вкладка («ищут» / «предлагают») помнится только внутри одного раздела; в другом разделе всегда открываются предложения
+    const secKey = (typeof isHousingRoom === 'function' && isHousingRoom(room)) ? 'housing' : room;
+    if (secKey !== reqLastSec) reqView = 'offer';
+    reqLastSec = secKey;
     if (reqView !== 'seek') reqView = 'offer';
     const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${L.subs[v === 'seek' ? 0 : 1]} 0</b></button>`;
     // кнопка «Фильтры» (только жильё) стоит справа от вкладок
@@ -790,3 +795,10 @@ function openNoMatchSheet() {
     openSheet('Запрос опубликован', `<p class="opt-empty" style="padding:6px 4px 14px">Подходящего жилья в базе пока нет. Хозяева видят ваш запрос и могут предложить варианты: они появятся в карточке запроса, в кнопке «Варианты».</p>
         <button class="primary-btn wide-btn" id="nmOk">Понятно</button>`, (el) => { el.querySelector('#nmOk').onclick = closeSheet; });
 }
+
+// при выходе из раздела вкладка сбрасывается: следующий раздел откроется на «предлагают»
+(function resetReqViewOnClose() {
+    if (typeof closeGroup !== 'function') return;
+    const orig = closeGroup;
+    closeGroup = function () { reqLastSec = ''; return orig.apply(this, arguments); };
+})();
