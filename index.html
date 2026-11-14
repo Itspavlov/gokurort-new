@@ -4,13 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script>
-    // диагностика отрисовки: ?lite=bf,fl,bs,mx,bl,mk,im выключает отдельные эффекты (lite=0 — вернуть всё)
+    // лёгкий режим отрисовки. Вручную: ?lite=bf,fl,bs,mx,bl,mk,im выключает отдельные эффекты, ?lite=0 возвращает всё и отключает автовыбор,
+    // ?lite=auto возвращает автовыбор. Автоматически: на слабых телефонах (до 4 ядер, до 4 ГБ памяти или включена экономия трафика)
+    // выключается размытие под нижней панелью и всплывающими окнами: оно самое дорогое для слабой видеокарты.
     (function () {
         try {
             var m = location.search.match(/[?&]lite=([\w,]*)/);
-            if (m) localStorage.setItem('yy-lite', m[1] === '0' ? '' : m[1]);
+            if (m) {
+                localStorage.setItem('yy-lite', (m[1] === '0' || m[1] === 'auto') ? '' : m[1]);
+                localStorage.setItem('yy-auto-lite', m[1] === '0' ? '0' : '');
+            }
             var v = localStorage.getItem('yy-lite') || '';
             v.split(',').forEach(function (k) { if (/^(bf|fl|bs|mx|bl|mk|im)$/.test(k)) document.documentElement.classList.add('lite-' + k); });
+            if (!v && localStorage.getItem('yy-auto-lite') !== '0') {
+                var n = navigator, weak = (n.hardwareConcurrency && n.hardwareConcurrency <= 4) || (n.deviceMemory && n.deviceMemory <= 4) || (n.connection && n.connection.saveData);
+                if (weak) document.documentElement.classList.add('lite-bf', 'lite-auto');
+            }
         } catch (e) {}
     })();
     </script>
@@ -41,7 +50,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css?v=2d">
     <link rel="stylesheet" href="features.css?v=3">
-    <link rel="stylesheet" href="yugi.css?v=97">
+    <link rel="stylesheet" href="yugi.css?v=98">
 </head>
 <body>
 <div id="topTint" aria-hidden="true"></div>

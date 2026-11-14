@@ -1703,3 +1703,9 @@ a.pf-row { text-decoration: none; color: inherit; }
 .rq-art-it.on { border-color: #2BC4D6; box-shadow: 0 0 0 3px rgba(43, 196, 214, .25); }
 .rq-art-it:active { transform: scale(.94); }
 @media (prefers-reduced-motion: reduce) { .rq-art-lib { animation: none; } }
+
+/* ===== v84: без размытия панели получают плотный фон (лёгкий режим для слабых телефонов) ===== */
+html.lite-bf .bottom-nav-inner { background: var(--bar) !important; }
+html.lite-bf .toast { background: var(--bar) !important; }
+html.lite-bf .vr-overlay { background: rgba(14, 22, 38, .78) !important; }
+html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
