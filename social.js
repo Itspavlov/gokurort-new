@@ -165,25 +165,21 @@ function handleServerHello(info) {
         showToast('Сессия истекла. Войдите снова.');
         if (typeof renderProfile === 'function') renderProfile();
     } else if (local) {
-        // статус «проверенный хозяин» выдаёт сервер — берём оттуда
+        // статусы проверки (жильё, поездки, развлечения) выдаёт сервер — берём оттуда
         const v = !!(info.user && info.user.verified);
-        if (!!local.verified !== v) {
-            try { localStorage.setItem('tell-account', JSON.stringify({ ...local, verified: v })); } catch (e) {}
-            if (v) showToast('Вы — проверенный хозяин. Можно размещать жильё!');
+        const vs = (info.user && info.user.verifs) || { housing: v, trips: false, services: false };
+        if (!!local.verified !== v || JSON.stringify(local.verifs || {}) !== JSON.stringify(vs)) {
+            try { localStorage.setItem('tell-account', JSON.stringify({ ...local, verified: v, verifs: vs })); } catch (e) {}
+            if (v && !local.verified) showToast('Вы — проверенный хозяин. Рядом с вашими объявлениями появился значок «Проверен»');
             if (typeof renderProfile === 'function') renderProfile();
+            if (typeof refreshHousingAds === 'function') try { refreshHousingAds(); } catch (e) {}
         }
-        if (v) migrateLocalAds();
+        migrateLocalAds();
     }
 }
 
-// Размещать жильё могут только проверенные хозяева
-function ensureVerifiedHost(cb) {
-    ensureLogin(() => {
-        const a = getAccount();
-        if (a && a.verified) { cb(); return; }
-        openVerifySheet();
-    });
-}
+// Размещать жильё может любой вошедший; проверка нужна только для значка «Проверен»
+function ensureVerifiedHost(cb) { ensureLogin(cb); }
 
 function openVerifySheet() {
     openSheet('Только для проверенных хозяев', `
@@ -292,6 +288,7 @@ function openDmChat(conv, prefill, messages) {
                 <div class="chat-header-subtitle" id="chatStatus">${e(conv.adTitle || 'личный чат')}</div>
             </div>
         </div>
+        ${conv.hostUnverified ? '<div class="unver-note dm-warn" role="alert"><i class="fas fa-triangle-exclamation"></i><span>Этот арендодатель не проверен. Будьте бдительны</span></div>' : ''}
         <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome">
                 <div class="chat-welcome-icon"><i class="fas fa-lock"></i></div>
@@ -1450,7 +1447,7 @@ async function deleteRemoteAd(id) {
 let migratingAds = false;
 async function migrateLocalAds() {
     const acc = getAccount();
-    if (migratingAds || !acc || !acc.verified) return;
+    if (migratingAds || !acc) return;
     const local = getMyAds();
     if (!local.length) return;
     migratingAds = true;

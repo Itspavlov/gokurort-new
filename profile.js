@@ -113,6 +113,27 @@ function closeSheet() {
 // ============================================
 // ВКЛАДКА «ПРОФИЛЬ»
 // ============================================
+// ---------- ВЕРИФИКАЦИЯ: три вида проверки и статус каждого ----------
+const VERIF_KINDS = [
+    ['housing', 'fa-house', 'Жильё', 'Арендодатели'],
+    ['trips', 'fa-car-side', 'Поездки', 'Водители'],
+    ['services', 'fa-sailboat', 'Развлечения', 'Готовые услуги']
+];
+function verifyCardHTML(acc) {
+    const vs = acc.verifs || { housing: !!acc.verified, trips: false, services: false };
+    const rows = VERIF_KINDS.map(([k, ic, name, sub]) => {
+        const ok = !!vs[k];
+        return `<div class="vf-row${ok ? ' ok' : ''}"><i class="fas ${ic} vf-ic"></i><span class="vf-name"><b>${name}</b><small>${sub}</small></span>${ok ? '<span class="vf-st ok"><i class="fas fa-check"></i>Пройдена</span>' : '<span class="vf-st">Не пройдена</span>'}</div>`;
+    }).join('');
+    return `<div class="pf-row pf-static vf-card">
+        <div class="tc-h"><i class="fas fa-shield-halved"></i><span>Верификация</span></div>
+        <p class="vf-text"><span class="vbadge ok"><i class="fas fa-check"></i>Проверен</span> Проверенным пользователям доверяют больше: с ними охотнее заключают сделки, а значок «Проверен» виден на ваших карточках и объявлениях.</p>
+        <p class="vf-privacy"><i class="fas fa-lock"></i>Данные, которые вы передаёте для проверки, мы никому не передаём и нигде не публикуем.</p>
+        <div class="vf-list">${rows}</div>
+        <p class="vf-soon">Как пройти проверку, расскажем здесь же: способ скоро появится.</p>
+    </div>`;
+}
+
 function renderProfile() {
     const root = document.getElementById('profileRoot');
     if (!root) return;
@@ -138,6 +159,7 @@ function renderProfile() {
         ${acc ? '' : `<div class="pf-login"><span>Войдите, чтобы писать хозяевам и занять своё имя</span><button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти</button></div>`}
 
         <div class="pf-menu">
+            ${acc ? verifyCardHTML(acc) : ''}
             <button type="button" class="pf-row" id="rowStats" onclick="openStats()" hidden><i class="fas fa-chart-simple"></i><span>Статистика</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowSubs" onclick="openSearchSubs()"><i class="fas fa-bell"></i><span>Подписки на поиск</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowFriends" onclick="openFriends()"><i class="fas fa-user-group"></i><span>Мои друзья</span><em id="rowFriendsCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>
@@ -268,10 +290,10 @@ let pickMarkers = {};
 let formCal = null;
 
 function openAdForm(editId) {
-    // Новые объявления — только от проверенных хозяев
+    // Размещать может любой вошедший; проверка нужна только для значка «Проверен»
     if (!editId) {
         const acc = typeof getAccount === 'function' ? getAccount() : null;
-        if (!acc || !acc.verified) { ensureVerifiedHost(() => openAdForm(editId)); return; }
+        if (!acc) { ensureLogin(() => openAdForm(editId)); return; }
     }
     const old = editId ? myAdsAll().find(a => String(a.id) === String(editId)) : null;
     if (old && old.partial) { fetchFullAd(old.id, (ok) => { if (ok) openAdForm(editId); }); return; }

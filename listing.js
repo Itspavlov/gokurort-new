@@ -274,7 +274,7 @@ function openListing(adId) {
             <div class="listing-body">
                 <div class="listing-price-row">
                     <div class="listing-price">${e(ad.price)}</div>
-                    ${ad.isVerified ? '<span class="verified-chip"><i class="fas fa-circle-check"></i> Проверено</span>' : ''}
+                    ${adIsVerified(ad) ? '<span class="vbadge ok big"><i class="fas fa-check"></i>Проверен</span>' : '<span class="vbadge no big">Не проверен</span>'}
                 </div>
                 <h1 class="listing-title">${e(ad.title)}</h1>
                 <div class="listing-loc"><i class="fas fa-map-marker-alt"></i>${e(ad.location)}</div>
@@ -288,6 +288,7 @@ function openListing(adId) {
                         <div class="owner-sub">${[sinceLine, owner.response].filter(Boolean).map(e).join(' · ')}</div>
                     </div>
                 </section>
+                ${!mineAd && !adIsVerified(ad) ? `<div class="unver-note"><i class="fas fa-triangle-exclamation"></i><span>Этот ${rent ? 'арендодатель' : 'продавец'} не проверен. Будьте бдительны</span></div>` : ''}
                 ${owner.about ? `<p class="owner-about">${e(owner.about)}</p>` : ''}
 
                 <section class="l-section">

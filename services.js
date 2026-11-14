@@ -480,7 +480,7 @@ const _openAdFormSv = openAdForm;
 openAdForm = function (editId) {
     if (editId) return _openAdFormSv.apply(this, arguments);
     const acc = typeof getAccount === 'function' ? getAccount() : null;
-    if (!acc || !acc.verified) return _openAdFormSv.apply(this, arguments);        // проверка хозяина — как раньше
+    if (!acc) return _openAdFormSv.apply(this, arguments);
     const mine = myAdsAll().filter(a => a.mine && isRemoteAdId(a.id));
     if (!mine.length) return _openAdFormSv.apply(this, arguments);
     const rows = mine.slice(0, 6).map(a => chooserRow(a.image || (a.photos && a.photos[0]) || '', a.title, a.price || '',

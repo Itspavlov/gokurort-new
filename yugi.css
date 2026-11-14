@@ -1749,3 +1749,63 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 @media (prefers-reduced-motion: reduce) { .dv-svc-add::after { animation: none; } }
 :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .45); }
 :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .own-del:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .5); }
+
+/* ===== v86: бейдж проверки в углу, полоска хозяина на карточке жилья, реакции под объявлением убраны ===== */
+.ad-badges { position: absolute; top: 10px; left: 10px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
+.vbadge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 10px; font: 800 10.5px/1 var(--font); color: #fff; border: 1px solid rgba(255, 255, 255, .35); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); }
+.vbadge i { font-size: 9px; }
+.vbadge.ok { background: #1FAE63; }
+.vbadge.no { background: #E5484D; }
+.vbadge.urgent { background: #FF7A59; }
+.chat-message-ad .ad-badge, .ad-card .ad-badge { display: none; }
+.ad-card .ad-badges { top: 7px; left: 7px; }
+.ad-owner { display: flex; align-items: center; gap: 8px; margin-top: 7px; padding: 6px 8px; border-radius: 14px; background: rgba(255, 255, 255, .08); border: 1px solid var(--glass-border); }
+.ad-ow-av { flex: none; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: linear-gradient(145deg, #1F4E6B, #0D2A3F); color: #fff; font: 800 13px var(--font); border: 1.5px solid rgba(255, 255, 255, .45); }
+.ad-ow-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-ow-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ad-ow-info b { font: 800 11.5px/1.2 var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-ow-info b i { color: #FFB84D; font-size: 10px; margin-right: 3px; }
+.ad-ow-info small { font: 600 10.5px/1.2 var(--font); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-ow-mark { flex: none; width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center; color: #fff; font-size: 11px; }
+.ad-ow-mark.ok { background: #1FAE63; }
+.ad-ow-mark.no { background: #E5484D; }
+.ad-owner.unver { border-color: rgba(229, 72, 77, .4); }
+#chatMessages.cards:has(.chat-message-ad) .ad-owner { margin-top: 6px; padding: 5px 6px; gap: 6px; border-radius: 12px; }
+#chatMessages.cards:has(.chat-message-ad) .ad-ow-av { width: 26px; height: 26px; font-size: 12px; }
+#chatMessages.cards:has(.chat-message-ad) .ad-ow-info b { font-size: 10.5px; }
+#chatMessages.cards:has(.chat-message-ad) .ad-ow-info small { font-size: 9.5px; }
+#chatMessages.cards:has(.chat-message-ad) .ad-ow-mark { width: 17px; height: 17px; border-radius: 6px; font-size: 9px; }
+#chatMessages.cards:has(.chat-message-ad) .ad-badges { top: 7px; left: 7px; }
+.chat-message-ad .chat-reactions { display: none; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .ad-owner { background: rgba(255, 255, 255, .55); }
+
+.vbadge.big { height: 24px; padding: 0 10px; font-size: 12px; border-radius: 12px; }
+.vbadge.big i { font-size: 10px; }
+.listing-price-row .vbadge { flex: none; }
+.unver-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; padding: 11px 13px; border-radius: 14px; background: rgba(229, 72, 77, .12); border: 1px solid rgba(229, 72, 77, .45); color: var(--text); font: 700 13.5px/1.35 var(--font); }
+.unver-note i { flex: none; color: #FF6B6F; margin-top: 2px; }
+.unver-note.dm-warn { margin: 0; border-radius: 0; border-width: 0 0 1px; flex: none; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .unver-note i { color: #C9252C; }
+
+/* верификация в профиле */
+.vf-card { display: block; }
+.vf-card .tc-h { margin-bottom: 8px; }
+.vf-text { margin: 0 0 8px; font: 600 13px/1.5 var(--font); color: var(--text-secondary); }
+.vf-text .vbadge { vertical-align: 1px; margin-right: 4px; }
+.vf-privacy { margin: 0 0 12px; display: flex; gap: 8px; align-items: flex-start; font: 600 12px/1.4 var(--font); color: var(--text-secondary); }
+.vf-privacy i { color: var(--sea, #2BC4D6); margin-top: 2px; }
+.vf-list { display: flex; flex-direction: column; gap: 6px; }
+.vf-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 14px; background: rgba(255, 255, 255, .07); border: 1px solid var(--glass-border); }
+.vf-row.ok { border-color: rgba(31, 174, 99, .55); background: rgba(31, 174, 99, .1); }
+.vf-ic { flex: none; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, .1); font-size: 14px; color: var(--sea, #2BC4D6); }
+.vf-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.vf-name b { font: 800 14px/1.2 var(--font); color: var(--text); }
+.vf-name small { font: 600 11.5px/1.2 var(--font); color: var(--text-secondary); }
+.vf-st { flex: none; display: inline-flex; align-items: center; gap: 5px; font: 800 12px var(--font); color: var(--text-secondary); }
+.vf-st.ok { color: #fff; background: #1FAE63; height: 24px; padding: 0 10px; border-radius: 12px; }
+.vf-st.ok i { font-size: 10px; }
+.vf-soon { margin: 10px 0 0; font: 600 12px/1.4 var(--font); color: var(--text-secondary); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .vf-row { background: rgba(255, 255, 255, .6); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .vf-row.ok { background: rgba(31, 174, 99, .12); }
+.ad-ow-info .rv-s { display: none; }
+@media (max-width: 420px) { .ad-ow-info .rv-f { display: none; } .ad-ow-info .rv-s { display: inline; } }
