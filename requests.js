@@ -110,8 +110,18 @@ function carGalleryHTML(r) {
     if (!ph.length) return '';
     const e = escapeHtml;
     return `<div class="rq-gal${ph.length > 1 ? ' multi' : ''}"><div class="rq-gal-track">${ph.map((id, i) =>
-        `<img src="${e(carUrl(id))}" alt="Фото автомобиля ${i + 1}" data-ph="${i}" loading="${i ? 'lazy' : 'eager'}" decoding="async" draggable="false" onerror="this.style.visibility='hidden'">`).join('')}</div>`
+        `<img src="${e(carUrl(id))}" alt="Фото автомобиля ${i + 1}" data-ph="${i}" loading="${i ? 'lazy' : 'eager'}" decoding="async" draggable="false" onload="this.classList.add('ld')" onerror="this.style.visibility='hidden'">`).join('')}</div>`
         + (ph.length > 1 ? `<div class="rq-gal-dots" aria-hidden="true">${ph.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</div>` : '') + '</div>';
+}
+// Фото авто показываются на карточке шириной ~200 пикселей, поэтому хранить их в полном размере незачем:
+// до 960 пикселей по длинной стороне и ≈ 110–160 КБ вместо 300+ КБ. Грузятся втрое быстрее, а на экране разницы не видно.
+async function carPhotoShrink(file) {
+    const raw = await svReadFile(file);
+    for (const [side, q] of [[960, 0.72], [800, 0.66], [640, 0.6], [520, 0.55]]) {
+        const out = await svShrink(raw, side, q);
+        if (out.length <= 210000) return out;
+    }
+    throw new Error('big');
 }
 function openCarPhotos(r, i) {
     const ph = (r.photos || []).filter(id => MEDIA_ID_RE.test(String(id)));
@@ -143,12 +153,12 @@ function cardHTML(r) {
         : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
     const gal = carGalleryHTML(r);
     return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${gal ? ' rq-ph' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>
         <div class="rq-title">${e(r.title || '')}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
         ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
-        ${actions ? `<div class="req-actions">${actions}</div>` : ''}${gal}</div>`;
+        ${actions ? `<div class="req-actions">${actions}</div>` : ''}${gal ? st.replace('<em class="', '<em class="rq-kind-low ') + gal : ''}</div>`;
 }
 
 function reqCardHTML(r, opts = {}) {
@@ -171,7 +181,7 @@ function reqCardHTML(r, opts = {}) {
         ? (r.status === 'active' ? found + grp + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` + grp + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.text || ('Запрос на ' + noun), icon: true }) : '') : '');
     return `<div class="req-card rq2${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>
         <div class="rq-title">${r.mine ? 'Ваш запрос' : 'Запрос'} на ${noun}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
@@ -242,11 +252,12 @@ function updateDockState() {
     const msgs = document.getElementById('chatMessages');
     if (!msgs) return;
     const seeks = msgs.querySelectorAll('.req-item[data-kind="seek"]').length;
-    const offers = msgs.querySelectorAll('.req-item[data-kind="offer"], .chat-message-ad').length;
+    const offers = msgs.querySelectorAll('.req-item[data-kind="offer"], .chat-message-ad:not(.ad-skel)').length;
     const set = (v, txt, n) => { const b = document.querySelector(`.seek-tab[data-v="${v}"] b`); if (b) b.textContent = txt + ' ' + n; };
     const SB = secLabels().subs; set('seek', SB[0], seeks); set('offer', SB[1], offers);
     const empty = document.getElementById('reqEmpty');
     if (!empty) return;
+    if (msgs.querySelector('.ad-skel')) { empty.hidden = true; return; }   // идёт загрузка жилья: сообщение «пока пусто» не нужно
     const shown = reqView === 'seek' ? seeks : reqView === 'offer' ? offers : seeks + offers;
     empty.hidden = shown > 0;
     if (!shown) {
@@ -340,7 +351,7 @@ function cardsTour(force) {
     const L = secLabels(sec);
     // в «Работе» первой пульсирует вкладка «Вакансии», а в подсказке показан пример карточки
     const first = sec === 'work'
-        ? { sel: '.seek-tab[data-v="offer"]', pulse: true, img: 'images/tip-work.jpg?v=1', imgAlt: 'Пример карточки вакансии',
+        ? { sel: '.seek-tab[data-v="offer"]', pulse: true, img: 'images/tip-work.jpg?v=2', imgAlt: 'Пример карточки вакансии',
             title: L.tabs[1], text: 'Так выглядит вакансия: работодатели размещают их здесь, а вы пишете в личные сообщения. Кто ищет работу, смотрит вкладку «' + L.tabs[0] + '».' }
         : { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' };
     if (first.img) { try { new Image().src = first.img; } catch (_) {} }
@@ -535,7 +546,7 @@ function openCardSheet(kind, edit, prefill) {
                     for (const f of list) {
                         uploading++; paintCars(); btn.disabled = true; err.textContent = '';
                         try {
-                            const data = await svPhoto(f);
+                            const data = await carPhotoShrink(f);
                             const id = await uploadCarPhoto(dataUrlToBlob(data));
                             cars.push({ id, src: data });
                         } catch (x) { err.textContent = x && x.message && x.message !== 'big' ? x.message : 'Не удалось обработать фото'; }

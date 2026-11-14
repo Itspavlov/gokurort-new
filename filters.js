@@ -54,7 +54,7 @@ function applyAdFilters() {
     const box = document.getElementById('chatMessages');
     if (!box || !isHousingRoom(currentRoom)) return;
     let shown = 0, total = 0;
-    box.querySelectorAll('.chat-message-ad').forEach(el => {
+    box.querySelectorAll('.chat-message-ad:not(.ad-skel)').forEach(el => {
         const ad = findAd(el.dataset.adId);
         const ok = !ad || adPasses(ad);
         el.classList.toggle('ad-off', !ok);

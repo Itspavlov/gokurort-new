@@ -1235,6 +1235,28 @@ function normalizeRemoteAd(a) {
     return a;
 }
 
+let remoteAdsReady = false;                       // первая загрузка объявлений с сервера завершилась
+const AD_SKEL_N = 6;
+function adSkelHTML() {
+    let h = '';
+    for (let i = 0; i < AD_SKEL_N; i++) h += `<div class="chat-message-ad ad-skel" aria-hidden="true" data-ts="${Date.now() - i}"><div class="chat-bubble-wrap"><div class="chat-bubble"><div class="chat-ad-image sk"></div><div class="ad-info"><i class="sk sk-p"></i><i class="sk sk-t"></i><i class="sk sk-l"></i></div></div></div></div>`;
+    return h;
+}
+function showAdSkeleton(box) {
+    if (box.querySelector('.ad-skel')) return;
+    box.insertAdjacentHTML('beforeend', adSkelHTML());
+    box.setAttribute('aria-busy', 'true');
+    // сервер не ответил — через 8 секунд убираем заглушки, чтобы не висели вечно
+    setTimeout(() => { if (!remoteAdsReady) { remoteAdsReady = true; if (typeof refreshHousingAds === 'function') refreshHousingAds(); } }, 8000);
+}
+function hideAdSkeleton(box) {
+    const sk = box.querySelectorAll('.ad-skel');
+    if (!sk.length) return false;
+    sk.forEach(n => n.remove());
+    box.removeAttribute('aria-busy');
+    return true;
+}
+
 async function fetchRemoteAds() {
     try {
         const res = await fetch(`${SERVER_URL}/api/listings`);
@@ -1246,11 +1268,16 @@ async function fetchRemoteAds() {
             // если полная версия уже загружена и не менялась — не теряем её
             return normalizeRemoteAd(prev && !prev.partial && prev.updated === l.updated ? prev : l);
         });
+        remoteAdsReady = true;
         renderFeatured();
         refreshHousingAds();
         const prof = document.getElementById('profileRoot');
         if (prof && prof.offsetParent !== null) renderProfile();
-    } catch (e) { /* сервер недоступен — остаются демо и локальные объявления */ }
+    } catch (e) {
+        /* сервер недоступен — остаются демо и локальные объявления */
+        remoteAdsReady = true;
+        if (typeof refreshHousingAds === 'function') refreshHousingAds();
+    }
 }
 
 async function fetchFullAd(id, cb) {
@@ -1282,20 +1309,25 @@ function placeRemoteAds() {
     const box = document.getElementById('chatMessages');
     if (!box || !isHousingRoom(currentRoom)) return;
     const nearTop = box.scrollTop < 160;
+    // ещё не получили список с сервера — показываем скелетон вместо пустой ленты
+    if (!remoteAdsReady && !remoteAds.length) { showAdSkeleton(box); return; }
+    const hadSkel = hideAdSkeleton(box);
     box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
     const sorted = adsForRoom(currentRoom)([...remoteAds]).sort((a, b) => (a.updated || a.created || 0) - (b.updated || b.created || 0));   // поднятые встают ниже, ближе к свежим
-    let added = false;
+    let added = 0;
     for (const ad of sorted) {
         const tpl = document.createElement('template');
         tpl.innerHTML = renderHousingMessage(ad).trim();
         const el = tpl.content.firstElementChild;
         if (!el) continue;
         const ts = Number(ad.updated || ad.created) || 0;
+        if (hadSkel && added <= 5) { el.classList.add('ad-in'); el.style.setProperty('--d', (added * 45) + 'ms'); }
         box.appendChild(el);
-        added = true;
+        added = (added || 0) + 1;
     }
     if (typeof cardsNewestFirst === 'function') cardsNewestFirst(box);
     if (added && nearTop) box.scrollTop = 0;
+    if (hadSkel && typeof updateDockState === 'function') updateDockState();
 }
 
 // История перерисовывается после загрузки — возвращаем объявления на место

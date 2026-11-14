@@ -1631,18 +1631,24 @@ a.pf-row { text-decoration: none; color: inherit; }
 #sfCodeOk + .pref-sw, #sfDelOk + .pref-sw { background: rgba(120, 130, 150, .38); }
 
 /* ===== v81: фото автомобиля на карточке поездки, пульсация и пример в подсказке ===== */
-.req-card.rq-ph { position: relative; overflow: hidden; }
-.rq-gal { position: absolute; right: 0; bottom: 0; z-index: 1; width: 52%; height: 106px; border-bottom-right-radius: inherit;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40%), linear-gradient(to bottom, transparent 0, #000 36%);
-    -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent 0, #000 40%), linear-gradient(to bottom, transparent 0, #000 36%); mask-composite: intersect; }
-.rq-gal-track { display: flex; height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x pan-y; }
+.req-card.rq-ph { position: relative; overflow: hidden; min-height: 156px; }
+/* v82: фото автомобиля в правом верхнем углу, «Предлагает» внизу справа */
+.rq-gal { position: absolute; right: 0; top: 0; z-index: 1; width: 52%; height: 110px; border-top-right-radius: inherit; overflow: hidden; background: rgba(128, 140, 160, .16);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 42%), linear-gradient(to top, transparent 0, #000 30%);
+    -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent 0, #000 42%), linear-gradient(to top, transparent 0, #000 30%); mask-composite: intersect; }
+.rq-gal::before { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .35) 50%, transparent 80%); animation: skSweep 1.2s ease-in-out infinite; }
+.rq-gal-track { position: relative; display: flex; height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x pan-y; }
 .rq-gal-track::-webkit-scrollbar { display: none; }
-.rq-gal-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; object-position: center 62%; scroll-snap-align: start; scroll-snap-stop: always; cursor: zoom-in; -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none; }
-.rq-gal-dots { position: absolute; right: 12px; bottom: 7px; display: flex; gap: 5px; pointer-events: none; }
+.rq-gal-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; scroll-snap-align: start; scroll-snap-stop: always; cursor: zoom-in; opacity: 0; transition: opacity .35s ease; -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none; }
+.rq-gal-track img.ld { opacity: 1; }
+.rq-gal-dots { position: absolute; right: 12px; top: 9px; display: flex; gap: 5px; pointer-events: none; }
 .rq-gal-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .6); box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); transition: background .2s, transform .2s; }
 .rq-gal-dots i.on { background: #fff; transform: scale(1.25); }
-.req-card.rq-ph .req-actions { position: relative; z-index: 2; flex-wrap: wrap; align-content: flex-end; align-items: flex-end; max-width: calc(54% - 4px); min-height: 84px; }
+/* текст в верхней части не заезжает под фото */
+.req-card.rq-ph .rq-top, .req-card.rq-ph .rq-title { max-width: 56%; }
+.req-card.rq-ph .req-actions { position: relative; z-index: 2; flex-wrap: wrap; align-items: flex-end; max-width: calc(100% - 118px); }
 .req-card.rq-ph .req-actions button { padding: 0 10px; }
+.req-card.rq-ph .rq-kind-low { position: absolute; right: 14px; bottom: 14px; z-index: 2; margin: 0; }
 @media (max-width: 340px) { .rq-gal { width: 50%; } }
 .rq-photo-grid { margin-top: 6px; }
 .rq-photo-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted, #8a96a8); }
@@ -1655,3 +1661,19 @@ a.pf-row { text-decoration: none; color: inherit; }
 }
 .tip-img { display: block; width: 100%; aspect-ratio: 640 / 477; max-height: min(230px, 30vh); object-fit: cover; object-position: top; margin: 0 0 10px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); pointer-events: none; -webkit-user-drag: none; }
 @media (prefers-reduced-motion: reduce) { .tip-spot.pulse { animation: none; } }
+
+/* ===== v82: скелетон при загрузке жилья и плавное появление карточек ===== */
+@keyframes skSweep { to { transform: translateX(100%); } }
+@keyframes skIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ad-skel { pointer-events: none; animation: skIn .28s ease both; }
+.ad-skel .chat-bubble { border: 1px solid var(--glass-border); }
+.ad-skel .sk { display: block; position: relative; overflow: hidden; background: rgba(128, 140, 160, .18); }
+.ad-skel .sk::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .35) 50%, transparent 80%); animation: skSweep 1.2s ease-in-out infinite; }
+.ad-skel .chat-ad-image.sk { height: auto; aspect-ratio: 1 / .84; }
+.ad-skel .ad-info { gap: 7px; padding: 10px 10px 12px; }
+.ad-skel .sk-p, .ad-skel .sk-t, .ad-skel .sk-l { height: 11px; border-radius: 6px; }
+.ad-skel .sk-p { width: 44%; height: 14px; }
+.ad-skel .sk-t { width: 88%; }
+.ad-skel .sk-l { width: 62%; }
+.chat-message-ad.ad-in { animation: skIn .32s ease both; animation-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) { .ad-skel, .chat-message-ad.ad-in { animation: none; } .ad-skel .sk::after, .rq-gal::before { animation: none; } }
