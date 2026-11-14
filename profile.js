@@ -119,20 +119,31 @@ const VERIF_KINDS = [
     ['trips', 'fa-car-side', 'Поездки', 'Водители'],
     ['services', 'fa-sailboat', 'Развлечения', 'Готовые услуги']
 ];
-function verifyCardHTML(acc) {
-    const vs = acc.verifs || { housing: !!acc.verified, trips: false, services: false };
+function verifyState(acc) {
+    return (acc && acc.verifs) || { housing: !!(acc && acc.verified), trips: false, services: false };
+}
+// строка в профиле: нажатие открывает отдельное окно с описанием и тремя видами проверки
+function verifyRowHTML(acc) {
+    const vs = verifyState(acc), n = VERIF_KINDS.filter(k => vs[k[0]]).length;
+    return `<button type="button" class="pf-row" id="rowVerif" onclick="openVerify()"><i class="fas fa-shield-halved"></i><span>Верификация</span><em class="vf-count${n ? ' ok' : ''}">${n} из ${VERIF_KINDS.length}</em><i class="fas fa-chevron-right pf-go"></i></button>`;
+}
+function openVerify() {
+    const acc = typeof getAccount === 'function' ? getAccount() : null;
+    if (!acc) { showToast('Войдите в аккаунт'); return; }
+    const vs = verifyState(acc);
     const rows = VERIF_KINDS.map(([k, ic, name, sub]) => {
         const ok = !!vs[k];
         return `<div class="vf-row${ok ? ' ok' : ''}"><i class="fas ${ic} vf-ic"></i><span class="vf-name"><b>${name}</b><small>${sub}</small></span>${ok ? '<span class="vf-st ok"><i class="fas fa-check"></i>Пройдена</span>' : '<span class="vf-st">Не пройдена</span>'}</div>`;
     }).join('');
-    return `<div class="pf-row pf-static vf-card">
-        <div class="tc-h"><i class="fas fa-shield-halved"></i><span>Верификация</span></div>
-        <p class="vf-text"><span class="vbadge ok"><i class="fas fa-check"></i>Проверен</span> Проверенным пользователям доверяют больше: с ними охотнее заключают сделки, а значок «Проверен» виден на ваших карточках и объявлениях.</p>
-        <p class="vf-privacy"><i class="fas fa-lock"></i>Данные, которые вы передаёте для проверки, мы никому не передаём и нигде не публикуем.</p>
-        <div class="vf-list">${rows}</div>
-        <p class="vf-soon">Как пройти проверку, расскажем здесь же: способ скоро появится.</p>
-    </div>`;
+    openSheet('Верификация', `
+        <div class="vf-body">
+            <p class="vf-text"><span class="vbadge ok"><i class="fas fa-check"></i>Проверен</span> Проверенным пользователям доверяют больше: с ними охотнее заключают сделки, а значок «Проверен» виден на ваших карточках и объявлениях.</p>
+            <p class="vf-privacy"><i class="fas fa-lock"></i>Данные, которые вы передаёте для проверки, мы никому не передаём и нигде не публикуем.</p>
+            <div class="vf-list">${rows}</div>
+            <p class="vf-soon">Как пройти проверку, расскажем здесь же: способ скоро появится.</p>
+        </div>`);
 }
+window.openVerify = openVerify;
 
 function renderProfile() {
     const root = document.getElementById('profileRoot');
@@ -159,7 +170,7 @@ function renderProfile() {
         ${acc ? '' : `<div class="pf-login"><span>Войдите, чтобы писать хозяевам и занять своё имя</span><button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти</button></div>`}
 
         <div class="pf-menu">
-            ${acc ? verifyCardHTML(acc) : ''}
+            ${acc ? verifyRowHTML(acc) : ''}
             <button type="button" class="pf-row" id="rowStats" onclick="openStats()" hidden><i class="fas fa-chart-simple"></i><span>Статистика</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowSubs" onclick="openSearchSubs()"><i class="fas fa-bell"></i><span>Подписки на поиск</span><i class="fas fa-chevron-right pf-go"></i></button>
             <button type="button" class="pf-row" id="rowFriends" onclick="openFriends()"><i class="fas fa-user-group"></i><span>Мои друзья</span><em id="rowFriendsCount" hidden></em><i class="fas fa-chevron-right pf-go"></i></button>

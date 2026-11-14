@@ -1818,3 +1818,8 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .ad-owner.none i { color: var(--text-muted, #8a96a8); }
 .ad-owner.none span { font-weight: 600; }
 :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .ad-owner { background: none; }
+
+/* ===== v88: «Верификация» — строка в профиле и отдельное окно ===== */
+.vf-body { padding: 2px 2px 8px; }
+.vf-count { font-style: normal; font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 99px; background: rgba(255, 255, 255, .14); color: var(--text-secondary); }
+.vf-count.ok { background: #1FAE63; color: #fff; }

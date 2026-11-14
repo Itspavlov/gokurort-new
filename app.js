@@ -795,7 +795,7 @@ function renderHousingMessage(ad) {
                     <div class="chat-ad-image">
                         ${sl.html}
                         ${adBadgesHTML(ad)}
-                        ${remote ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
+                        ${remote && !ad.mine ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
                         ${sl.n ? `<span class="ph-count"><i class="fas fa-camera"></i><span><b class="cur">1</b>/${sl.n}</span></span>` : ''}
                     </div>
                     <div class="ad-info">
@@ -969,16 +969,6 @@ function showToast(message) {
 function renderFeatured() {
     const list = document.getElementById('featuredList');
     const all = getAllAds();
-
-    const count = document.getElementById('housingCount');
-    if (count) {
-        const n = all.length;
-        const last = n % 10, two = n % 100;
-        const word = (two >= 11 && two <= 14) ? 'объявлений'
-            : last === 1 ? 'объявление'
-            : (last >= 2 && last <= 4) ? 'объявления' : 'объявлений';
-        count.textContent = n + ' ' + word;
-    }
 
     if (!list) return;
 

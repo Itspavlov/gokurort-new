@@ -50,7 +50,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css?v=2d">
     <link rel="stylesheet" href="features.css?v=3">
-    <link rel="stylesheet" href="yugi.css?v=104">
+    <link rel="stylesheet" href="yugi.css?v=105">
 </head>
 <body>
 <div id="topTint" aria-hidden="true"></div>
@@ -136,9 +136,15 @@
                 <div class="group-card gc-housing" onclick="openGroup('housing')">
                     <img class="group-photo" src="images/housing.jpg?v=4" alt="" onerror="this.style.display='none'">
                     <div class="group-icon"><i class="fas fa-home"></i></div>
-                    <div class="group-count" id="housingCount">6 объявлений</div>
                     <div class="group-title">Жильё</div>
                     <div class="group-desc">Аренда и продажа у моря</div>
+                </div>
+
+                <div class="group-card gc-services" onclick="openGroup('dating')">
+                    <img class="group-photo" src="images/dating.jpg?v=5" alt="" onerror="this.style.display='none'">
+                    <div class="group-icon"><i class="fas fa-champagne-glasses"></i></div>
+                    <div class="group-title">Развлечения и поиск друзей</div>
+                    <div class="group-desc">Компания и услуги</div>
                 </div>
 
                 <div class="group-card gc-work" onclick="openGroup('work')">
@@ -153,13 +159,6 @@
                     <div class="group-icon"><i class="fas fa-car"></i></div>
                     <div class="group-title">Поездки</div>
                     <div class="group-desc">Попутчики, трансфер</div>
-                </div>
-
-                <div class="group-card gc-services" onclick="openGroup('dating')">
-                    <img class="group-photo" src="images/dating.jpg?v=5" alt="" onerror="this.style.display='none'">
-                    <div class="group-icon"><i class="fas fa-champagne-glasses"></i></div>
-                    <div class="group-title">Развлечения и поиск друзей</div>
-                    <div class="group-desc">Компания и услуги</div>
                 </div>
             </div>
 
@@ -230,10 +229,10 @@
 
 <!-- Логика приложения -->
 <script src="rooms.js?v=10"></script>
-<script src="app.js?v=35"></script>
+<script src="app.js?v=36"></script>
 <script src="listing.js?v=11"></script>
 <script src="route.js?v=2"></script>
-<script src="profile.js?v=23"></script>
+<script src="profile.js?v=24"></script>
     <script src="social.js?v=20"></script>
     <script src="avatars.js?v=1"></script>
     <script src="notify.js?v=2"></script>
