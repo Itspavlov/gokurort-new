@@ -162,8 +162,9 @@ function cardHTML(r) {
         ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>`
         : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
     const gal = carGalleryHTML(r);
-    return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${gal ? ' rq-ph' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>
+    const art = r.section === 'work' && r.kind === 'offer' && typeof artCardHTML === 'function' ? artCardHTML(r.art) : '';   // иллюстрация вакансии из библиотеки
+    return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${gal ? ' rq-ph' : ''}${art ? ' rq-has-art' : ''}" data-rid="${e(r.id)}">
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>${art}
         <div class="rq-title">${e(r.title || '')}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
@@ -516,6 +517,7 @@ function openCardSheet(kind, edit, prefill) {
         if (!sec) return;
         kind = kind === 'offer' ? 'offer' : 'seek';
         const carOn = section === 'trips' && kind === 'offer';
+        const artOn = section === 'work' && kind === 'offer' && typeof artPickerHTML === 'function';
         const cfg = sec[kind], e = escapeHtml, v0 = r || (prefill ? { ...prefill, dateFrom: prefill.dateFrom && prefill.dateFrom >= todayISO() ? prefill.dateFrom : '' } : {});
         openSheet(r ? 'Изменить карточку' : cfg.head, `
             <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
@@ -524,6 +526,7 @@ function openCardSheet(kind, edit, prefill) {
             ${sec.date ? `<div class="rq-row"><label class="field"><span>${sec.date}</span><input id="cdDate" type="date" min="${todayISO()}" value="${e(v0.dateFrom || '')}"></label>
             <label class="field"><span>${sec.seats}</span><input id="cdSeats" type="number" inputmode="numeric" min="1" max="30" value="${v0.guests || ''}"></label></div>` : ''}
             <label class="field"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}"></label>
+            ${artOn ? artPickerHTML() : ''}
             ${carOn ? `<div class="field"><span>Фото автомобиля (до 3, необязательно)</span><div class="photo-grid sv-photo-grid rq-photo-grid" id="cdPhotos"></div><input type="file" id="cdFile" accept="image/*" multiple hidden><small class="rq-photo-hint">Первое фото видно на карточке, остальные листаются пальцем.</small></div>` : ''}
             <label class="field"><span>Подробности</span><textarea id="cdText" maxlength="300" rows="3">${e(v0.text || '')}</textarea></label>
             <div class="auth-error" id="cdErr"></div>
@@ -538,6 +541,8 @@ function openCardSheet(kind, edit, prefill) {
             const t = setInterval(() => { if (!document.body.contains(btn)) { clearInterval(t); return; } label(); }, 500);
             // фото автомобиля: сжимаем на телефоне и загружаем сразу, в карточку уходят только номера файлов
             const carSrc = r || prefill;      // при «Опубликовать снова» фото прежней карточки подтягиваются
+            let art = artOn ? ((r || prefill || {}).art || '') : '';
+            if (artOn) artPickerInit(el, art, (v) => { art = v; });
             const cars = carOn && carSrc && Array.isArray(carSrc.photos) ? carSrc.photos.filter(id => MEDIA_ID_RE.test(String(id))).slice(0, 3).map(id => ({ id, src: carUrl(id) })) : [];
             let uploading = 0;
             const grid = el.querySelector('#cdPhotos'), file = el.querySelector('#cdFile');
@@ -576,6 +581,7 @@ function openCardSheet(kind, edit, prefill) {
                 btn.disabled = true;
                 const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), text: v('#cdText') };
                 if (carOn) body.photos = cars.map(c => c.id);
+                if (artOn) body.art = art;
                 const url = r ? `${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}` : `${SERVER_URL}/api/requests`;
                 fetch(url, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify(body) }).then(async (x) => {
                     let d = null; try { d = await x.json(); } catch (_) {}

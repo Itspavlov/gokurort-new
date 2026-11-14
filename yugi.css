@@ -1677,3 +1677,29 @@ a.pf-row { text-decoration: none; color: inherit; }
 .ad-skel .sk-l { width: 62%; }
 .chat-message-ad.ad-in { animation: skIn .32s ease both; animation-delay: var(--d, 0ms); }
 @media (prefers-reduced-motion: reduce) { .ad-skel, .chat-message-ad.ad-in { animation: none; } .ad-skel .sk::after, .rq-gal::before { animation: none; } }
+
+/* ===== v83: иллюстрации вакансий ===== */
+.rq-art { float: right; width: 112px; height: 104px; margin: 8px 0 4px 10px; display: flex; align-items: center; justify-content: center; shape-outside: margin-box; }
+.rq-art img { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: 18px; box-shadow: 0 6px 14px rgba(8, 24, 48, .22); -webkit-user-drag: none; user-select: none; pointer-events: none; }
+.req-card.rq-has-art .req-actions { clear: both; }
+.req-card.rq-has-art .rq-title { margin-top: 8px; }
+@media (max-width: 340px) { .rq-art { width: 92px; height: 86px; } }
+.rq-art-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.rq-art-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: 56px; border-radius: 16px; border: 1px dashed var(--glass-border); background: var(--glass); color: var(--text); font: 700 14px var(--font); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.rq-art-open > i { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--glass-strong, rgba(255, 255, 255, .12)); font-size: 18px; color: var(--text-secondary); }
+.rq-art-open img { flex: none; width: 52px; height: 44px; object-fit: contain; border-radius: 10px; }
+.rq-art-open span { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.rq-art-open small { font: 500 12px var(--font); color: var(--text-muted, #8a96a8); }
+.rq-art-clear { flex: none; height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-secondary); font: 600 13px var(--font); cursor: pointer; }
+.rq-art-clear[hidden], .rq-art-lib[hidden] { display: none; }
+.rq-art-lib { margin-top: 8px; border-radius: 16px; background: var(--glass); border: 1px solid var(--glass-border); overflow: hidden; animation: skIn .22s ease both; }
+.rq-art-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 8px 8px 6px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.rq-art-tabs::-webkit-scrollbar { display: none; }
+.rq-art-tabs button { flex: none; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-secondary); font: 700 12.5px var(--font); cursor: pointer; white-space: nowrap; }
+.rq-art-tabs button.on { background: var(--text); color: var(--bg); border-color: transparent; }
+.rq-art-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; max-height: 232px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 8px 10px; -webkit-overflow-scrolling: touch; }
+.rq-art-it { aspect-ratio: 1 / 1; padding: 3px; border-radius: 14px; border: 2px solid transparent; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.rq-art-it img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 12px; background: rgba(128, 140, 160, .14); }
+.rq-art-it.on { border-color: #2BC4D6; box-shadow: 0 0 0 3px rgba(43, 196, 214, .25); }
+.rq-art-it:active { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) { .rq-art-lib { animation: none; } }
