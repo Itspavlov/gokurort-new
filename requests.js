@@ -102,6 +102,32 @@ function reqAvatarHTML(r) {
 }
 
 // ---------- карточки ----------
+const MEDIA_ID_RE = /^vm_[0-9a-f]{32}$/;
+const carUrl = (id) => SERVER_URL + '/api/media/' + id;
+// фото автомобиля: до 3 снимков, листаются пальцем прямо на карточке; нажатие открывает на весь экран
+function carGalleryHTML(r) {
+    const ph = (Array.isArray(r.photos) ? r.photos : []).filter(id => MEDIA_ID_RE.test(String(id))).slice(0, 3);
+    if (!ph.length) return '';
+    const e = escapeHtml;
+    return `<div class="rq-gal${ph.length > 1 ? ' multi' : ''}"><div class="rq-gal-track">${ph.map((id, i) =>
+        `<img src="${e(carUrl(id))}" alt="Фото автомобиля ${i + 1}" data-ph="${i}" loading="${i ? 'lazy' : 'eager'}" decoding="async" draggable="false" onerror="this.style.visibility='hidden'">`).join('')}</div>`
+        + (ph.length > 1 ? `<div class="rq-gal-dots" aria-hidden="true">${ph.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</div>` : '') + '</div>';
+}
+function openCarPhotos(r, i) {
+    const ph = (r.photos || []).filter(id => MEDIA_ID_RE.test(String(id)));
+    if (!ph.length || typeof openLightbox !== 'function') return;
+    listingPhotos = ph.map(carUrl);
+    openLightbox(Math.min(Math.max(0, i), ph.length - 1));
+}
+// точки под фото переключаются вместе с прокруткой (событие scroll не всплывает, поэтому ловим на этапе погружения)
+document.addEventListener('scroll', (ev) => {
+    const tr = ev.target;
+    if (!tr || !tr.classList || !tr.classList.contains('rq-gal-track')) return;
+    const dots = tr.parentNode.querySelectorAll('.rq-gal-dots i');
+    const k = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth));
+    dots.forEach((d, j) => d.classList.toggle('on', j === k));
+}, { capture: true, passive: true });
+
 function cardHTML(r) {
     const e = escapeHtml, sec = SEC[r.section];
     const seek = r.kind !== 'offer';
@@ -115,13 +141,14 @@ function cardHTML(r) {
     const actions = r.status !== 'active' ? '' : (r.mine
         ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>`
         : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
-    return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
+    const gal = carGalleryHTML(r);
+    return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${gal ? ' rq-ph' : ''}" data-rid="${e(r.id)}">
         <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
         <div class="rq-title">${e(r.title || '')}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
         ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
-        ${actions ? `<div class="req-actions">${actions}</div>` : ''}</div>`;
+        ${actions ? `<div class="req-actions">${actions}</div>` : ''}${gal}</div>`;
 }
 
 function reqCardHTML(r, opts = {}) {
@@ -311,10 +338,16 @@ function cardsTour(force) {
     const sec = reqSection(), t = CARD_TIPS[sec];
     if (!t) return;
     const L = secLabels(sec);
+    // в «Работе» первой пульсирует вкладка «Вакансии», а в подсказке показан пример карточки
+    const first = sec === 'work'
+        ? { sel: '.seek-tab[data-v="offer"]', pulse: true, img: 'images/tip-work.jpg?v=1', imgAlt: 'Пример карточки вакансии',
+            title: L.tabs[1], text: 'Так выглядит вакансия: работодатели размещают их здесь, а вы пишете в личные сообщения. Кто ищет работу, смотрит вкладку «' + L.tabs[0] + '».' }
+        : { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' };
+    if (first.img) { try { new Image().src = first.img; } catch (_) {} }
     runTour('cards-' + sec, sec === 'services' ? [
         { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
     ] : [
-        { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' },
+        first,
         { sel: '#dockSeek', title: 'Кнопка «' + L.btns[0] + '»', text: t.seek },
         { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: t.offer }
     ], force);
@@ -325,6 +358,12 @@ openGroup = function () { const r = _openGroupForReq.apply(this, arguments); set
 
 // ---------- действия на карточке ----------
 function onReqCardClick(ev) {
+    const pic = ev.target.closest('.req-card .rq-gal img');
+    if (pic) {
+        const c = pic.closest('.req-card'), rr = c && (reqList.find(x => x.id === c.dataset.rid) || myReqs.find(x => x.id === c.dataset.rid));
+        if (rr) openCarPhotos(rr, Number(pic.dataset.ph) || 0);
+        return;
+    }
     const tx = ev.target.closest('.req-card .req-text');
     if (tx) { tx.classList.toggle('open'); return; }
     const btn = ev.target.closest('button[data-act]');
@@ -425,6 +464,24 @@ function openRequestSheet(edit) {
 }
 
 
+// фото автомобиля уходит на сервер отдельным файлом (как фото в личных сообщениях), в карточке хранится только его номер
+function dataUrlToBlob(d) {
+    const m = /^data:([^;]+);base64,(.*)$/.exec(d), bin = atob(m[2]), a = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    return new Blob([a], { type: m[1] });
+}
+async function uploadCarPhoto(blob) {
+    if (!getToken()) throw new Error('Войдите в аккаунт');
+    let up, d = null;
+    try { up = await fetch(`${SERVER_URL}/api/media/video?kind=photo`, { method: 'POST', headers: { 'Content-Type': 'image/jpeg', Authorization: 'Bearer ' + getToken() }, body: blob }); }
+    catch (_) { throw new Error('Нет связи с сервером'); }
+    try { d = await up.json(); } catch (_) {}
+    if (!up.ok || !d || !d.ok || !MEDIA_ID_RE.test(String(d.id))) {
+        throw new Error(up.status === 413 ? 'Фото слишком большое' : up.status === 429 ? 'Слишком много загрузок. Подождите немного.' : up.status === 401 ? 'Сессия истекла. Войдите снова.' : 'Не удалось загрузить фото');
+    }
+    return d.id;
+}
+
 // ---------- форма карточки «Ищу / Предлагаю» для работы, поездок и вещей ----------
 function openCardSheet(kind, edit, prefill) {
     loginRequired(() => {
@@ -433,6 +490,7 @@ function openCardSheet(kind, edit, prefill) {
         const sec = SEC[section];
         if (!sec) return;
         kind = kind === 'offer' ? 'offer' : 'seek';
+        const carOn = section === 'trips' && kind === 'offer';
         const cfg = sec[kind], e = escapeHtml, v0 = r || (prefill ? { ...prefill, dateFrom: prefill.dateFrom && prefill.dateFrom >= todayISO() ? prefill.dateFrom : '' } : {});
         openSheet(r ? 'Изменить карточку' : cfg.head, `
             <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
@@ -441,6 +499,7 @@ function openCardSheet(kind, edit, prefill) {
             ${sec.date ? `<div class="rq-row"><label class="field"><span>${sec.date}</span><input id="cdDate" type="date" min="${todayISO()}" value="${e(v0.dateFrom || '')}"></label>
             <label class="field"><span>${sec.seats}</span><input id="cdSeats" type="number" inputmode="numeric" min="1" max="30" value="${v0.guests || ''}"></label></div>` : ''}
             <label class="field"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}"></label>
+            ${carOn ? `<div class="field"><span>Фото автомобиля (до 3, необязательно)</span><div class="photo-grid sv-photo-grid rq-photo-grid" id="cdPhotos"></div><input type="file" id="cdFile" accept="image/*" multiple hidden><small class="rq-photo-hint">Первое фото видно на карточке, остальные листаются пальцем.</small></div>` : ''}
             <label class="field"><span>Подробности</span><textarea id="cdText" maxlength="300" rows="3">${e(v0.text || '')}</textarea></label>
             <div class="auth-error" id="cdErr"></div>
             <button class="primary-btn wide-btn" id="cdSend"></button>`, (el) => {
@@ -452,12 +511,46 @@ function openCardSheet(kind, edit, prefill) {
             };
             label();
             const t = setInterval(() => { if (!document.body.contains(btn)) { clearInterval(t); return; } label(); }, 500);
+            // фото автомобиля: сжимаем на телефоне и загружаем сразу, в карточку уходят только номера файлов
+            const carSrc = r || prefill;      // при «Опубликовать снова» фото прежней карточки подтягиваются
+            const cars = carOn && carSrc && Array.isArray(carSrc.photos) ? carSrc.photos.filter(id => MEDIA_ID_RE.test(String(id))).slice(0, 3).map(id => ({ id, src: carUrl(id) })) : [];
+            let uploading = 0;
+            const grid = el.querySelector('#cdPhotos'), file = el.querySelector('#cdFile');
+            const paintCars = () => {
+                if (!grid) return;
+                grid.innerHTML = cars.map((c, i) => `<div class="photo-tile ${i === 0 ? 'cover' : ''}"><img src="${e(c.src)}" alt=""><button type="button" data-del="${i}" aria-label="Убрать фото"><i class="fas fa-xmark"></i></button></div>`).join('')
+                    + (uploading ? '<div class="photo-tile rq-up"><i class="fas fa-spinner fa-spin"></i></div>' : '')
+                    + (cars.length + uploading < 3 ? '<button type="button" class="photo-add"><i class="fas fa-camera"></i><span>Добавить</span></button>' : '');
+            };
+            if (grid) {
+                paintCars();
+                grid.addEventListener('click', (ev) => {
+                    const del = ev.target.closest('[data-del]');
+                    if (del) { cars.splice(Number(del.dataset.del), 1); paintCars(); return; }
+                    if (ev.target.closest('.photo-add')) file.click();
+                });
+                file.addEventListener('change', async () => {
+                    const list = Array.from(file.files || []).slice(0, 3 - cars.length - uploading);
+                    file.value = '';
+                    for (const f of list) {
+                        uploading++; paintCars(); btn.disabled = true; err.textContent = '';
+                        try {
+                            const data = await svPhoto(f);
+                            const id = await uploadCarPhoto(dataUrlToBlob(data));
+                            cars.push({ id, src: data });
+                        } catch (x) { err.textContent = x && x.message && x.message !== 'big' ? x.message : 'Не удалось обработать фото'; }
+                        uploading--; paintCars(); label();
+                    }
+                });
+            }
             btn.addEventListener('click', () => {
                 const v = (id) => { const n = el.querySelector(id); return n ? n.value.trim() : ''; };
+                if (uploading) { err.textContent = 'Подождите, фото загружается'; return; }
                 if (!v('#cdTitle')) { err.textContent = 'Напишите заголовок'; return; }
                 err.textContent = '';
                 btn.disabled = true;
                 const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), text: v('#cdText') };
+                if (carOn) body.photos = cars.map(c => c.id);
                 const url = r ? `${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}` : `${SERVER_URL}/api/requests`;
                 fetch(url, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify(body) }).then(async (x) => {
                     let d = null; try { d = await x.json(); } catch (_) {}

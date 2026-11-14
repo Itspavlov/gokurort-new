@@ -1629,3 +1629,29 @@ a.pf-row { text-decoration: none; color: inherit; }
 .sf-sub { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--text-muted, #8a96a8); }
 .pf-row .ghost-btn { flex: none; padding: 8px 12px; font-size: 13px; }
 #sfCodeOk + .pref-sw, #sfDelOk + .pref-sw { background: rgba(120, 130, 150, .38); }
+
+/* ===== v81: фото автомобиля на карточке поездки, пульсация и пример в подсказке ===== */
+.req-card.rq-ph { position: relative; overflow: hidden; }
+.rq-gal { position: absolute; right: 0; bottom: 0; z-index: 1; width: 52%; height: 106px; border-bottom-right-radius: inherit;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 40%), linear-gradient(to bottom, transparent 0, #000 36%);
+    -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent 0, #000 40%), linear-gradient(to bottom, transparent 0, #000 36%); mask-composite: intersect; }
+.rq-gal-track { display: flex; height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x pan-y; }
+.rq-gal-track::-webkit-scrollbar { display: none; }
+.rq-gal-track img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; object-position: center 62%; scroll-snap-align: start; scroll-snap-stop: always; cursor: zoom-in; -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none; }
+.rq-gal-dots { position: absolute; right: 12px; bottom: 7px; display: flex; gap: 5px; pointer-events: none; }
+.rq-gal-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .6); box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); transition: background .2s, transform .2s; }
+.rq-gal-dots i.on { background: #fff; transform: scale(1.25); }
+.req-card.rq-ph .req-actions { position: relative; z-index: 2; flex-wrap: wrap; align-content: flex-end; align-items: flex-end; max-width: calc(54% - 4px); min-height: 84px; }
+.req-card.rq-ph .req-actions button { padding: 0 10px; }
+@media (max-width: 340px) { .rq-gal { width: 50%; } }
+.rq-photo-grid { margin-top: 6px; }
+.rq-photo-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted, #8a96a8); }
+.photo-tile.rq-up { display: grid; place-items: center; color: var(--text-secondary); background: var(--glass); }
+.tip-spot.pulse { animation: tipPulse 1.5s ease-out infinite; }
+@keyframes tipPulse {
+    0% { box-shadow: 0 0 0 2px rgba(255, 179, 92, .95), 0 0 0 0 rgba(255, 179, 92, .65), 0 0 0 9999px rgba(3, 8, 18, .42); }
+    70% { box-shadow: 0 0 0 2px rgba(255, 179, 92, .95), 0 0 0 14px rgba(255, 179, 92, 0), 0 0 0 9999px rgba(3, 8, 18, .42); }
+    100% { box-shadow: 0 0 0 2px rgba(255, 179, 92, .95), 0 0 0 0 rgba(255, 179, 92, 0), 0 0 0 9999px rgba(3, 8, 18, .42); }
+}
+.tip-img { display: block; width: 100%; aspect-ratio: 640 / 477; max-height: min(230px, 30vh); object-fit: cover; object-position: top; margin: 0 0 10px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); pointer-events: none; -webkit-user-drag: none; }
+@media (prefers-reduced-motion: reduce) { .tip-spot.pulse { animation: none; } }

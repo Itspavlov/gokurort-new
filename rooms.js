@@ -124,7 +124,7 @@ function showTip(step, onNext, onClose) {
     if (!anchor.getClientRects().length) return 'hidden';     // экран уже закрыт (зашли и быстро вышли): подсказку не показываем
     tipAnchor = anchor;
     tipSpot = document.createElement('div');
-    tipSpot.className = 'tip-spot';
+    tipSpot.className = 'tip-spot' + (step.pulse ? ' pulse' : '');
     document.body.appendChild(tipSpot);
     tipEl = document.createElement('div');
     tipEl.className = 'tip';
@@ -137,6 +137,12 @@ function showTip(step, onNext, onClose) {
     close.onclick = () => { closeTip(); if (onClose) onClose(); };
     const t = document.createElement('div'); t.className = 'tip-title'; t.textContent = step.title || '';
     const p = document.createElement('div'); p.className = 'tip-text'; p.textContent = step.text || '';
+    // картинка-пример (скриншот карточки): место под неё резервируется заранее, чтобы подсказка не прыгала
+    let pic = null;
+    if (step.img) {
+        pic = document.createElement('img'); pic.className = 'tip-img'; pic.src = step.img; pic.alt = step.imgAlt || ''; pic.decoding = 'async'; pic.draggable = false;
+        pic.onload = () => { if (tipEl) placeTip(); };
+    }
     const foot = document.createElement('div'); foot.className = 'tip-foot';
     if (step.total > 1) { const c = document.createElement('span'); c.className = 'tip-count'; c.textContent = step.index + ' из ' + step.total; foot.appendChild(c); }
     if (step.action) {
@@ -147,7 +153,7 @@ function showTip(step, onNext, onClose) {
     const n = document.createElement('button'); n.type = 'button'; n.className = 'tip-btn'; n.textContent = step.next || 'Понятно';
     n.onclick = () => { if (onNext) onNext(); else closeTip(); };
     foot.appendChild(n);
-    tipEl.append(close, t, p, foot);
+    if (pic) tipEl.append(close, t, pic, p, foot); else tipEl.append(close, t, p, foot);
     document.body.appendChild(tipEl);
 
     const sc = anchor.closest('.chat-messages');
