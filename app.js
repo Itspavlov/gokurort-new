@@ -766,28 +766,27 @@ function adBadgesHTML(ad) {
     const ok = adIsVerified(ad);
     return `<div class="ad-badges">${ok ? '<span class="vbadge ok"><i class="fas fa-check"></i>Проверен</span>' : '<span class="vbadge no">Не проверен</span>'}${ad.isUrgent ? '<span class="vbadge urgent">Срочно</span>' : ''}</div>`;
 }
-function ownerRepWord(rating, n) {
-    if (!n) return 'Пока без отзывов';
-    if (rating >= 4.8) return 'Отличная репутация';
-    if (rating >= 4.5) return 'Надёжный арендодатель';
-    if (rating >= 4) return 'Хорошие отзывы';
-    return 'Есть замечания';
+// На карточке показываем только посёлок, без улицы и дома
+function adTownOnly(loc) {
+    const parts = String(loc || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (parts.some(x => /архипо|осипов/i.test(x))) return 'Архипо-Осиповка';
+    const street = /^(ул\.?|улица|пер\.?|переулок|пр\.?|проспект|пр-кт|наб\.?|набережная|шоссе|проезд|бульвар|б-р|тупик|дом|д\.)(\s|$)|\d/i;
+    const town = parts.find(x => !street.test(x));
+    return town || 'Архипо-Осиповка';
 }
 function adOwnerStripHTML(ad) {
     const ow = (typeof getOwner === 'function' ? getOwner(ad) : ad.owner) || {};
-    const ok = adIsVerified(ad);
     const n = Number(ow.reviews) || 0, r = Number(ow.rating) || 0;
-    const word = n ? ownerRepWord(r, n) : (ok ? 'Проверенный хозяин' : 'Хозяин не проверен');
-    const head = n ? `<i class="fas fa-star"></i>${r.toFixed(1).replace('.', ',')} · ${n}<span class="rv-f"> ${typeof ratingWord === 'function' ? ratingWord(n) : 'отзывов'}</span><span class="rv-s"> отз.</span>` : 'Пока без отзывов';
-    const av = ow.avatar ? `<img src="${escapeHtml(ow.avatar)}" alt="" loading="lazy" onerror="this.remove()">` : escapeHtml(((ow.name || '?')[0] || '?').toUpperCase());
-    return `<div class="ad-owner${ok ? '' : ' unver'}"><span class="ad-ow-av">${av}</span><span class="ad-ow-info"><b>${head}</b><small>${escapeHtml(word)}</small></span><span class="ad-ow-mark ${ok ? 'ok' : 'no'}" aria-label="${ok ? 'Проверенный хозяин' : 'Хозяин не проверен'}"><i class="fas ${ok ? 'fa-check' : 'fa-exclamation'}"></i></span></div>`;
+    const word = typeof ratingWord === 'function' ? ratingWord(n) : 'отзывов';
+    return n
+        ? `<div class="ad-owner"><i class="fas fa-star"></i><b>${r.toFixed(1).replace('.', ',')}</b><span>${n} ${word}</span></div>`
+        : `<div class="ad-owner none"><i class="fas fa-star"></i><span>Пока без отзывов</span></div>`;
 }
 
 function renderHousingMessage(ad) {
     const id = escapeHtml(String(ad.id));
     const remote = typeof isRemoteAdId === 'function' && isRemoteAdId(ad.id);
     const sl = adSlidesHTML(ad);
-    const sea = (typeof distMeters === 'function' && ad.coords && ad.beach) ? fmtDist(distMeters(ad.coords, ad.beach)) : '';
     const fav = remote && typeof favIds !== 'undefined' && favIds.has(ad.id);
     return `
         <div class="chat-message chat-message-ad" data-id="ad_${id}" data-ad-id="${id}"${(ad.updated || ad.created) ? ` data-ts="${Number(ad.updated || ad.created)}"` : ''} onclick="openListing('${id}')">
@@ -798,17 +797,14 @@ function renderHousingMessage(ad) {
                         ${adBadgesHTML(ad)}
                         ${remote ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
                         ${sl.n ? `<span class="ph-count"><i class="fas fa-camera"></i><span><b class="cur">1</b>/${sl.n}</span></span>` : ''}
-                        ${sea ? `<span class="sea-dist"><i class="fas fa-umbrella-beach"></i>${escapeHtml(sea)}<small> до моря</small></span>` : ''}
                     </div>
                     <div class="ad-info">
                         <div class="ad-row1"><div class="chat-ad-price">${escapeHtml(ad.price)}</div></div>
                         <div class="chat-ad-title" data-ugc>${escapeHtml(ad.title)}</div>
-                        <div class="chat-ad-location" data-ugc><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
-                        ${adAmenBadges(ad, 3)}
+                        <div class="chat-ad-location" data-ugc><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(adTownOnly(ad.location))}</span></div>
                         ${adOwnerStripHTML(ad)}
                     </div>
                 </div>
-                ${typeof adMapBtnHTML === 'function' ? adMapBtnHTML(ad) : ''}
             </div>
         </div>
     `;
@@ -1003,8 +999,7 @@ function renderFeatured() {
             <div class="ad-card-body">
                 <div class="ad-card-price">${escapeHtml(ad.price)}${typeof ratingBadge === 'function' ? ratingBadge(ad) : ''}</div>
                 <div class="ad-card-title">${escapeHtml(ad.title)}</div>
-                <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(ad.location)}</span></div>
-                ${typeof adMapBtnHTML === 'function' ? adMapBtnHTML(ad) : ''}
+                <div class="ad-card-loc"><i class="fas fa-map-marker-alt"></i><span>${escapeHtml(adTownOnly(ad.location))}</span></div>
             </div>
         </div>
     `).join('');

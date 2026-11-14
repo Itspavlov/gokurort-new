@@ -1809,3 +1809,12 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .vf-row.ok { background: rgba(31, 174, 99, .12); }
 .ad-ow-info .rv-s { display: none; }
 @media (max-width: 420px) { .ad-ow-info .rv-f { display: none; } .ad-ow-info .rv-s { display: inline; } }
+
+/* ===== v87: на карточке жилья нет значков удобств, расстояния до моря и кнопки «Карта»; отзывы — просто звезда и слово ===== */
+.ad-owner, #chatMessages.cards:has(.chat-message-ad) .ad-owner { display: flex; justify-content: flex-start; align-items: center; gap: 5px; margin-top: 6px; padding: 0; border: 0; background: none; border-radius: 0; font: 700 12px/1.2 var(--font); color: var(--text); }
+.ad-owner i { color: #F5B301; font-size: 11px; }
+.ad-owner b { font-weight: 800; }
+.ad-owner span { color: var(--text-secondary); font-weight: 600; }
+.ad-owner.none i { color: var(--text-muted, #8a96a8); }
+.ad-owner.none span { font-weight: 600; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .ad-owner { background: none; }
