@@ -191,6 +191,7 @@ function openListing(adId) {
     listingSel = { start: null, end: null };
 
     const owner = getOwner(ad);
+    const mineAd = !!(ad.mine || String(ad.id).startsWith('my-') || owner.id === 'me');   // своё объявление: без «Позвонить/Написать», с «Удалить»
     const rent = ad.type !== 'sale';
     const photos = (ad.photos && ad.photos.length ? ad.photos : [ad.image]).filter(Boolean);
     listingPhotos = photos;
@@ -316,14 +317,33 @@ function openListing(adId) {
                 </section>` : ''}
 
                 ${othersBlock}
+                ${mineAd ? `<div class="own-end"><button type="button" class="own-del" id="ownDel"><i class="fas fa-trash"></i><span>Удалить объявление</span></button></div>` : ''}
             </div>
         </div>
 
-        <div class="listing-actions">
+        ${mineAd ? '' : `<div class="listing-actions">
             ${callBtn}
             <button class="act-write" onclick="openDM('${ad.id}')"><i class="fas fa-comment-dots"></i><span id="actWriteText">Написать</span></button>
-        </div>
+        </div>`}
     `;
+    screen.classList.toggle('listing-own', mineAd);
+    const ownDel = document.getElementById('ownDel');
+    if (ownDel) ownDel.onclick = () => {
+        if (!ownDel.classList.contains('sure')) {      // первое нажатие просит подтвердить
+            ownDel.classList.add('sure'); ownDel.querySelector('span').textContent = 'Точно удалить? Нажмите ещё раз';
+            setTimeout(() => { if (ownDel.isConnected) { ownDel.classList.remove('sure'); ownDel.querySelector('span').textContent = 'Удалить объявление'; } }, 3500);
+            return;
+        }
+        ownDel.disabled = true;
+        const id = ad.id;
+        if (isRemoteAdId(id)) { deleteRemoteAd(id).then(() => { if (!findAd(id)) closeListing(); else ownDel.disabled = false; }); return; }
+        saveMyAds(getMyAds().filter(a => String(a.id) !== String(id)));
+        document.querySelectorAll('.chat-message-ad').forEach(el => { if (el.dataset.adId === String(id)) el.remove(); });
+        if (typeof renderProfile === 'function') renderProfile();
+        if (typeof renderFeatured === 'function') renderFeatured();
+        showToast('Объявление удалено');
+        closeListing();
+    };
 
     screen.style.display = 'flex';
     document.body.style.overflow = 'hidden';

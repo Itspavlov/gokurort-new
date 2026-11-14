@@ -39,7 +39,7 @@ openListing = function (adId) {
         const gal = document.querySelector('#listing-screen .listing-gallery');
         if (!ad || String(ad.id) !== String(adId) || !gal || gal.querySelector('.gallery-fav')) return;
         pushRecent(ad);
-        if (String(ad.id).startsWith('my-')) return;       // локальные черновики в избранное не добавляем
+        if (String(ad.id).startsWith('my-') || ad.mine) return;       // локальные черновики и свои объявления в избранное не добавляем
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'gallery-fav';
         gal.appendChild(b);

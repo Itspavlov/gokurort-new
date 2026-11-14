@@ -158,8 +158,9 @@ function cardHTML(r) {
         r.budget ? `<span><i class="fas fa-ruble-sign"></i>${seek && r.section !== 'work' ? 'до ' : ''}${Number(r.budget).toLocaleString('ru-RU')} ₽</span>` : ''
     ].join('');
     const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : `<em class="req-kind ${seek ? 'seek' : 'offer'}">${seek ? 'Ищет' : 'Предлагает'}</em>`;
-    const actions = r.status !== 'active' ? '' : (r.mine
-        ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>`
+    const delBtn = `<button type="button" class="req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
+    const actions = r.status !== 'active' ? (r.mine ? delBtn : '') : (r.mine
+        ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` + delBtn
         : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
     const gal = carGalleryHTML(r);
     const art = r.section === 'work' && r.kind === 'offer' && typeof artCardHTML === 'function' ? artCardHTML(r.art) : '';   // иллюстрация вакансии из библиотеки
@@ -368,9 +369,12 @@ function cardsTour(force) {
     const first = sec === 'work'
         ? { sel: '.seek-tab[data-v="offer"]', pulse: true, img: 'images/tip-work.jpg?v=2', imgAlt: 'Пример карточки вакансии',
             title: L.tabs[1], text: 'Так выглядит вакансия: работодатели размещают их здесь, а вы пишете в личные сообщения. Кто ищет работу, смотрит вкладку «' + L.tabs[0] + '».' }
+        : sec === 'trips'
+        ? { sel: '.seek-tab[data-v="offer"]', pulse: true, img: 'images/tip-trips.jpg?v=1', imgAlt: 'Пример карточки водителя',
+            title: L.tabs[1], text: 'Так выглядит предложение водителя: фото машины, маршрут, цена и кнопка «Написать». Водители размещают поездки и трансферы здесь. Нужна поездка? Смотрите вкладку «' + L.tabs[0] + '».' }
         : { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' };
     if (first.img) { try { new Image().src = first.img; } catch (_) {} }
-    runTour('cards-' + sec, sec === 'services' ? [
+    runTour('cards-' + sec + (sec === 'trips' ? '2' : ''), sec === 'services' ? [
         { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
     ] : [
         first,
@@ -418,6 +422,19 @@ function onReqCardClick(ev) {
             showToast(on ? 'Сообщим, когда появится подходящее жильё' : 'Уведомления по этому запросу выключены');
             loadRequests(refreshMyRequests);
         }).catch(() => showToast('Нет связи с сервером'));
+    }
+    else if (act === 'delete') {
+        if (!btn.classList.contains('sure')) {          // первое нажатие просит подтвердить
+            btn.classList.add('sure'); btn.querySelector('span').textContent = 'Точно удалить?';
+            setTimeout(() => { if (btn.isConnected) { btn.classList.remove('sure'); btn.querySelector('span').textContent = 'Удалить'; } }, 3000);
+            return;
+        }
+        btn.disabled = true;
+        fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}`, { method: 'DELETE', headers: reqAuthHeaders() }).then(x => x.json()).then(d => {
+            if (!d.ok) { btn.disabled = false; showToast(d.message || 'Не удалось удалить'); return; }
+            reqList = reqList.filter(x => x.id !== r.id); myReqs = myReqs.filter(x => x.id !== r.id);
+            showToast('Удалено'); paintRequests(); loadRequests(refreshMyRequests);
+        }).catch(() => { btn.disabled = false; showToast('Нет связи с сервером'); });
     }
     else if (act === 'found' || act === 'closed') {
         fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}/status`, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify({ status: act }) })

@@ -39,10 +39,19 @@ function openSheet(title, bodyHTML, onMount) {
             ${bodyHTML}
         </div>`;
     // после щипка (два пальца) случайный «клик» по тёмному фону не должен закрывать шторку
-    let multiAt = 0;
-    el.addEventListener('touchstart', (ev) => { if (ev.touches.length > 1) multiAt = Date.now(); }, { capture: true, passive: true });
+    // Тёмный фон закрывает шторку только если и нажатие началось на нём: касания по карте, щипок и «призрачный» клик
+    // сразу после открытия (палец ещё над кнопкой «Карта») шторку закрывать не должны.
+    let multiAt = 0, downOnBack = false, mapAt = 0;
+    const openedAt = Date.now();
+    const onMap = (t) => !!(t && t.closest && t.closest('.dv-map, .listing-map, .admap-map, [data-noswipe]'));
+    const touchMark = (ev) => { if (ev.touches && ev.touches.length > 1) multiAt = Date.now(); if (onMap(ev.target)) mapAt = Date.now(); downOnBack = ev.target === el; };
+    el.addEventListener('touchstart', touchMark, { capture: true, passive: true });
+    el.addEventListener('touchend', (ev) => { if (onMap(ev.target)) mapAt = Date.now(); }, { capture: true, passive: true });
+    el.addEventListener('mousedown', (ev) => { downOnBack = ev.target === el; if (onMap(ev.target)) mapAt = Date.now(); }, true);
     el.addEventListener('click', (ev) => {
-        if (ev.target === el && Date.now() - multiAt < 900) return;
+        if (ev.target === el) {
+            if (Date.now() - multiAt < 900 || Date.now() - mapAt < 1500 || Date.now() - openedAt < 450 || !downOnBack) return;
+        }
         if (ev.target === el || ev.target.closest('[data-sheet-close]')) closeSheet();
     });
     document.body.appendChild(el);

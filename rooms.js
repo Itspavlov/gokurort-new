@@ -153,7 +153,7 @@ function showTip(step, onNext, onClose) {
     const n = document.createElement('button'); n.type = 'button'; n.className = 'tip-btn'; n.textContent = step.next || 'Понятно';
     n.onclick = () => { if (onNext) onNext(); else closeTip(); };
     foot.appendChild(n);
-    if (pic) tipEl.append(close, t, pic, p, foot); else tipEl.append(close, t, p, foot);
+    if (pic) { const wrap = document.createElement('div'); wrap.className = 'tip-pic'; wrap.appendChild(pic); tipEl.append(close, t, wrap, p, foot); } else tipEl.append(close, t, p, foot);
     document.body.appendChild(tipEl);
 
     const sc = anchor.closest('.chat-messages');

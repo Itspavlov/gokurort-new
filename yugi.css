@@ -1709,3 +1709,43 @@ html.lite-bf .bottom-nav-inner { background: var(--bar) !important; }
 html.lite-bf .toast { background: var(--bar) !important; }
 html.lite-bf .vr-overlay { background: rgba(14, 22, 38, .78) !important; }
 html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
+
+/* ===== v85: выпуклая картинка в подсказке, «Удалить» на своих карточках и объявлениях, компактные чипсы, кнопка «Разместить услугу» ===== */
+.tip-pic { position: relative; margin: 2px 2px 14px; border-radius: 16px; transform: perspective(800px) rotateX(5deg); transform-origin: 50% 100%; animation: tipFloat 3.8s ease-in-out infinite;
+    box-shadow: 0 16px 22px -10px rgba(0, 0, 0, .6), 0 2px 0 rgba(255, 255, 255, .22), 0 0 0 1px rgba(255, 255, 255, .2); }
+.tip-pic .tip-img { margin: 0; border: 0; border-radius: 16px; max-height: min(230px, 30vh); }
+.tip-pic::after { content: ''; position: absolute; inset: 0; border-radius: 16px; pointer-events: none;
+    background: linear-gradient(158deg, rgba(255, 255, 255, .36) 0%, rgba(255, 255, 255, .08) 24%, rgba(255, 255, 255, 0) 46%, rgba(0, 0, 0, 0) 68%, rgba(0, 0, 0, .3) 100%);
+    box-shadow: inset 0 2px 3px rgba(255, 255, 255, .4), inset 0 -7px 12px rgba(0, 0, 0, .38), inset 7px 0 10px -7px rgba(255, 255, 255, .25); }
+@keyframes tipFloat { 0%, 100% { transform: perspective(800px) rotateX(5deg) translateY(0); } 50% { transform: perspective(800px) rotateX(5deg) translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .tip-pic { animation: none; } }
+
+.req-card.rq2 .req-actions button.req-del-btn { display: inline-flex; align-items: center; gap: 6px; color: #FF9B9B; background: rgba(255, 90, 90, .1); border-color: rgba(255, 110, 110, .45); }
+.req-card.rq2 .req-actions button.req-del-btn.sure { position: relative; z-index: 3; background: #E5484D; border-color: transparent; color: #fff; }
+.req-card.rq-ph .req-actions button.req-del-btn:not(.sure) span { display: none; }
+.req-card.rq-ph .req-actions button.req-del-btn:not(.sure) { padding: 0 11px; }
+:root[data-theme="sand"] .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C0262D; background: rgba(229, 72, 77, .1); }
+
+.own-end { margin: 26px 0 6px; }
+.own-del { width: 100%; height: 50px; border-radius: 999px; border: 1px solid rgba(255, 110, 110, .5); background: rgba(255, 90, 90, .1); color: #FF8E8E; font: 800 15px var(--font); display: inline-flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.own-del:active { transform: scale(.98); }
+.own-del.sure { background: #E5484D; border-color: transparent; color: #fff; }
+.own-del:disabled { opacity: .6; }
+.listing-own .listing-scroll { padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+
+.pub-chips .cat-chip, .pub-chips .cat-chip:last-child { height: 32px; gap: 6px; padding: 0 11px; font-size: 12.5px; }
+.pub-chips .cat-chip i { font-size: 12px; }
+.pub-chips .cat-chip b, .pub-chips .cat-chip.on b { min-width: 17px; height: 17px; padding: 0 5px; margin: 0 -3px 0 0; border-radius: 9px; font-size: 11px; line-height: 17px; }
+.pub-chips { gap: 6px; padding-top: 6px; padding-bottom: 12px; }
+
+.dv-svc-add { position: relative; overflow: hidden; isolation: isolate; height: 52px; width: 100%; max-width: 340px; padding: 0 26px; border-radius: 26px; justify-content: center; gap: 10px;
+    background: var(--sun); color: #3A1406; border: 1px solid rgba(255, 255, 255, .5); font: 800 16px var(--font);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), inset 0 -3px 6px rgba(160, 50, 20, .25), 0 8px 22px rgba(255, 122, 89, .45); }
+.dv-svc-add i { font-size: 14px; }
+.dv-svc-add::after { content: ''; position: absolute; z-index: 1; top: -40%; bottom: -40%; left: -70%; width: 34%; transform: skewX(-22deg); pointer-events: none;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .85) 50%, rgba(255, 255, 255, 0) 100%); animation: coinGlint 3.6s ease-in-out infinite; }
+.dv-svc-add:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) { .dv-svc-add::after { animation: none; } }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .45); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .own-del:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .5); }
