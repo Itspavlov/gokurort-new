@@ -15,7 +15,21 @@ function getAccount() {
     } catch (e) { return null; }
 }
 
+// Данные одного человека на этом устройстве: имя, профиль, диалоги, свои объявления, блок-лист.
+// При выходе и при входе под другим аккаунтом их нужно стереть, иначе новый аккаунт увидит чужие данные.
+const USER_LOCAL_KEYS = ['tell-username', 'tell-profile', 'tell-my-ads', 'tell-dialogs', 'tell-pending-join', 'yy-ref', 'yy-blocks'];
+function wipeUserLocal() {
+    for (const k of USER_LOCAL_KEYS) { try { localStorage.removeItem(k); } catch (e) {} }
+    try { if (window.SF && Array.isArray(SF.users)) SF.users.length = 0; } catch (e) {}
+}
+
 function setSession(token, user) {
+    try {
+        // вошёл другой человек, чем в прошлый раз на этом устройстве (например, прошлая сессия истекла): чужие данные не наследуем
+        const prev = localStorage.getItem('tell-uid');
+        if (prev && user && prev !== String(user.id)) wipeUserLocal();
+        if (user && user.id) localStorage.setItem('tell-uid', String(user.id));
+    } catch (e) {}
     try {
         localStorage.setItem('tell-token', token);
         localStorage.setItem('tell-account', JSON.stringify(user));
@@ -118,6 +132,8 @@ function ensureLogin(cb) {
 async function doLogout() {
     const token = getToken();
     clearSession();
+    wipeUserLocal();
+    try { localStorage.removeItem('tell-uid'); } catch (e) {}
     try { fetch(`${SERVER_URL}/api/auth/logout`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } }); } catch (e) {}
     reconnectSocket();
     showToast('Вы вышли из аккаунта');
