@@ -1863,12 +1863,16 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .listing-body .featured-list-inner .ad-card-body { padding: 8px 10px; }
 
 /* карточка жилья внутри группы — такая же мини-карточка, как в ленте */
-.group-ad.ga-card { padding: 0; width: 220px; max-width: 100%; overflow: hidden; border-radius: 16px; background: var(--glass, rgba(0,0,0,.16)); }
+.group-ad.ga-card { display: block; margin: 0 0 4px; padding: 0; width: 230px; max-width: 100%; overflow: hidden; border-radius: var(--r-lg, 22px); background: var(--glass); border: 0; box-shadow: var(--glass-hi), 0 6px 14px rgba(0, 6, 20, .28); cursor: pointer; transition: transform .25s var(--spring, ease); -webkit-tap-highlight-color: transparent; }
+.group-ad.ga-card:active { transform: scale(.97); }
+.chat-message.gm-has-ad .chat-bubble-wrap { max-width: none; }
+.chat-message-mine.gm-has-ad .chat-bubble-wrap { align-items: flex-end; }
+.chat-message.gm-has-ad .chat-bubble { margin-top: 4px; }
 .group-ad.ga-card .ad-card-img { position: relative; height: 128px; border-radius: 0; }
 .group-ad.ga-card .ad-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .group-ad.ga-card .ad-badges { top: 7px; left: 7px; }
 .group-ad.ga-card .ga-body { padding: 8px 11px 10px; }
-.group-ad.ga-card .group-ad-price { margin: 0 0 1px; font-size: 15px; }
+.group-ad.ga-card .group-ad-price { margin: 0 0 2px; font-size: 16px; font-weight: 800; color: var(--text); }
 .group-ad.ga-card .group-ad-title { margin: 0 0 3px; font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .group-ad.ga-card .group-ad-loc { margin: 0; font-size: 12px; }
 .group-ad.ga-card .ga-ph { height: 128px; display: grid; place-items: center; background: rgba(128, 140, 160, .2); color: var(--text-secondary); font-size: 26px; }
@@ -1887,5 +1891,4 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .chat-header .grp-head-av[hidden] { display: none; }
 .chat-header .grp-head-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .dialog-avatar.group-avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .group-ad.ga-card .group-ad-price { color: var(--accent); }
 .group-ad.ga-card .group-ad-title { color: var(--text); }

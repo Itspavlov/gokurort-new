@@ -172,6 +172,23 @@ function dvSetTab(tab) {
     scr.querySelector('#dvDock').classList.toggle('svc', dvTab === 'svc');
     if (dvTab === 'svc') { dvBindSvc(); dvPaintSvc(); dvLoadSvc(); }
     else { const f = scr.querySelector('#dvFeed'); f.addEventListener('click', onFeedClick); if (dvFeed.length) paintDviz(); loadDviz(); }
+    setTimeout(() => dvTour(false), 900);
+}
+
+// Подсказки раздела «Развлечения» (как в «Работе» и «Поездках»): для каждой вкладки свои, один раз; по «?» — снова
+function dvTour(force) {
+    if (!document.getElementById('dvPane')) return;
+    if (dvTab === 'svc') {
+        runTour('dv-svc1', [
+            { sel: '.dv-tab[data-dvt="svc"]', pulse: true, title: 'Готовые услуги', text: 'Здесь организаторы размещают морские прогулки, экскурсии, джип-туры и другие развлечения: фото, цена и кнопка «Написать». Листайте карточки, выбирайте категорию сверху. Ищете компанию на отдых? Смотрите вкладку «Сейчас ищут».' },
+            { sel: '.dv-svc-add', title: 'Кнопка «Разместить услугу»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
+        ], force);
+    } else {
+        runTour('dv-dviz1', [
+            { sel: '.dv-tab[data-dvt="dviz"]', pulse: true, title: 'Сейчас ищут', text: 'Здесь люди ищут компанию на отдых: прогулку, вечер, поездку. Откликайтесь на карточки и знакомьтесь.' },
+            { sel: '#dvCreate', title: 'Кнопка «Создать поиск»', text: 'Расскажите, чем хотите заняться и когда: ваша карточка появится в ленте, а желающие напишут вам.' }
+        ], force);
+    }
 }
 function openDvizScreen(tab) {
     if (typeof socket !== 'undefined' && socket && currentRoom) socket.emit('leave-room', currentRoom);
@@ -191,10 +208,11 @@ function openDvizScreen(tab) {
                 <div class="chat-header-title">Развлечения и поиск друзей</div>
                 <div class="chat-header-subtitle">найди компанию на отдых</div>
             </div>
+            <button type="button" class="chat-header-btn chat-help-btn" onclick="dvTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>
         </div>
         <div class="seek-bar dv-tabs"><div class="seek-tabs" role="tablist" aria-label="Раздел">
-            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Сейчас ищут</span><b>компанию на отдых</b></button>
             <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="svc"><span>Готовые услуги</span><b>морские прогулки, экскурсии и др.</b></button>
+            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Сейчас ищут</span><b>компанию на отдых</b></button>
         </div></div>
         <div class="dv-pane" id="dvPane"></div>
         <div class="cards-dock dv-dock" id="dvDock"></div>`;

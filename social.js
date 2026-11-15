@@ -436,15 +436,19 @@ function renderGroupMessage(m) {
     const id = escapeHtml(String(m.id));
     const nm = (m.from && m.from.name) || '?';
     const reply = renderReplyHTML(m);
-    const ad = m.ad ? groupAdHTML(m.ad) : '';
+    const ad = m.ad ? groupAdHTML(m.ad) : '';          // карточка жилья — отдельно, без «пузыря» диалога
     const rq = m.req ? groupReqHTML(m.req) : '';
     const text = m.text ? `<div>${escapeHtml(m.text)}</div>` : '';
     const chips = `<div class="chat-reactions" data-for="${id}">${renderReactionChips(m)}</div>`;
     const time = formatTime(m.time);
+    const inner = reply + rq + text;
+    const cls = mine ? 'chat-bubble chat-bubble-mine' : 'chat-bubble';
+    const bubble = inner ? `<div class="${cls}">${inner}</div>` : '';
+    const body = (ad ? ad : '') + bubble;
     if (mine) {
-        return `<div class="chat-message chat-message-mine" data-id="${id}"><div class="chat-bubble-wrap"><div class="chat-bubble chat-bubble-mine">${reply}${ad}${rq}${text}</div>${chips}<div class="chat-time-mine">${time}</div></div></div>`;
+        return `<div class="chat-message chat-message-mine${ad ? ' gm-has-ad' : ''}" data-id="${id}"><div class="chat-bubble-wrap">${body}${chips}<div class="chat-time-mine">${time}</div></div></div>`;
     }
-    return `<div class="chat-message" data-id="${id}"><div class="chat-avatar" data-avn="${avEsc(nm)}" style="background:${dmColor(nm)}">${avInner(nm)}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div><div class="chat-bubble">${reply}${ad}${rq}${text}</div>${chips}</div></div>`;
+    return `<div class="chat-message${ad ? ' gm-has-ad' : ''}" data-id="${id}"><div class="chat-avatar" data-avn="${avEsc(nm)}" style="background:${dmColor(nm)}">${avInner(nm)}</div><div class="chat-bubble-wrap"><div class="chat-bubble-header"><span class="chat-user-name">${escapeHtml(nm)}</span><span class="chat-time">${time}</span></div>${body}${chips}</div></div>`;
 }
 
 function openGroupChat(group, messages) {
@@ -1092,7 +1096,7 @@ function openMsgMenu(msgEl) {
     haptic(12);
 
     // сообщение «приподнимается»: поверх затемнения рисуем его копию с подсветкой
-    const bub = msgEl.querySelector('.chat-bubble');
+    const bub = msgEl.querySelector('.chat-bubble, .group-ad');
     const lift = bub && t.kind !== 'ad';
     msgEl.classList.add(lift ? 'pressed' : 'pressed-ad');
 
@@ -1185,7 +1189,7 @@ function attachChatGestures() {
         resetSwipe(false);
         if (ev.target.closest('.react-chip, .reply-quote, .ad-slides')) return;   // по фото листаем, а не отвечаем
         const msgEl = ev.target.closest('.chat-message[data-id]');
-        if (!msgEl || !ev.target.closest('.chat-bubble')) return;
+        if (!msgEl || !ev.target.closest('.chat-bubble, .group-ad')) return;
         startX = ev.clientX; startY = ev.clientY;
         swipeEl = msgEl;
         // обычный тап по тексту/подписи открывает меню; по фото, ссылкам, голосовым и карточкам объявлений — свои действия
@@ -1243,7 +1247,7 @@ function attachChatGestures() {
     box.addEventListener('pointerleave', cancel);
     box.addEventListener('contextmenu', (ev) => {
         const msgEl = ev.target.closest('.chat-message[data-id]');
-        if (msgEl && ev.target.closest('.chat-bubble')) { ev.preventDefault(); cancel(); held = true; openMsgMenu(msgEl); }
+        if (msgEl && ev.target.closest('.chat-bubble, .group-ad')) { ev.preventDefault(); cancel(); held = true; openMsgMenu(msgEl); }
     });
 
     // Клики ловим в фазе перехвата: так удержание/свайп/реакция не открывают объявление

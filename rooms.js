@@ -88,7 +88,38 @@ function resetTips() {
 }
 
 let tipWatch = null;
+// Анимация-демонстрация свайпа: карточка сама сдвигается влево, появляется кружок «в группу» и загорается
+let demoTimer = null, demoEl = null, demoTimeouts = [];
+function stopTipDemo() {
+    if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
+    demoTimeouts.forEach(clearTimeout); demoTimeouts = [];
+    if (demoEl) {
+        const el = demoEl; demoEl = null;
+        el.style.transition = 'transform .2s ease-out'; el.style.transform = '';
+        const h = el.querySelector(':scope > .swipe-hint'); if (h) h.remove();
+        setTimeout(() => { el.style.transition = ''; }, 260);
+    }
+}
+function startSwipeDemo(el) {
+    stopTipDemo();
+    demoEl = el;
+    const hint = document.createElement('div');
+    hint.className = 'swipe-hint'; hint.innerHTML = '<i class="fas fa-user-group"></i>';
+    el.appendChild(hint);
+    const later = (fn, ms) => demoTimeouts.push(setTimeout(fn, ms));
+    const cycle = () => {
+        if (demoEl !== el) return;
+        el.style.transition = 'transform .6s cubic-bezier(.3,.7,.2,1)'; el.style.transform = 'translateX(-84px)';
+        later(() => hint.classList.add('ready'), 450);
+        later(() => { el.style.transition = 'transform .4s ease-out'; el.style.transform = ''; hint.classList.remove('ready'); }, 1700);
+    };
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.style.transform = 'translateX(-60px)'; hint.classList.add('ready'); return; }
+    later(cycle, 500);
+    demoTimer = setInterval(cycle, 3000);
+}
+
 function closeTip() {
+    stopTipDemo();
     if (tipWatch) { clearInterval(tipWatch); tipWatch = null; }
     if (tipEl) { tipEl.remove(); tipEl = null; }
     if (tipSpot) { tipSpot.remove(); tipSpot = null; }
@@ -160,6 +191,7 @@ function showTip(step, onNext, onClose) {
     if (sc && anchor.classList.contains('chat-message')) anchor.scrollIntoView({ block: 'center' });
     window.addEventListener('resize', placeTip);
     placeTip();
+    if (step.demo === 'swipe') startSwipeDemo(anchor);
     requestAnimationFrame(() => { if (tipEl) tipEl.classList.add('in'); });
     // человек вышел с экрана, к которому относится подсказка: убираем её, а не оставляем висеть поверх главной
     tipWatch = setInterval(() => { if (!tipAnchor || !document.body.contains(tipAnchor) || !tipAnchor.getClientRects().length) closeTip(); }, 250);
@@ -186,10 +218,11 @@ function runTour(id, steps, force) {
 
 // ---------- подсказки чата жилья (для всех) ----------
 function housingTour(force) {
-    runTour('housing2', [
+    runTour('housing3', [
         { sel: '#catChips', title: 'Выберите тип жилья', text: 'У каждого типа своя лента: только квартиры, только дома и так далее. Нажмите на выбранный тип ещё раз, чтобы увидеть всё жильё. Цифра — сколько объявлений.' },
         { sel: '.seek-tabs', title: 'Запросы и готовые предложения', text: 'Сверху выберите, что смотреть: запросы тех, кто хочет снять («Запросы»), или объявления хозяев («Готовые предложения»).' },
-        { sel: '.chat-message-ad', title: 'Это объявление', text: 'Нажмите на карточку: откроются фото, карта и свободные даты. Сердечко на фото добавляет в избранное, цифра с камерой — число фото, зонтик — расстояние до моря. Ниже значки удобств: Wi-Fi, парковка, бассейн.' },
+        { sel: '.chat-message-ad', title: 'Это объявление', text: 'Нажмите на карточку: откроются фото, описание, карта и свободные даты. Сердечко на фото добавляет в избранное, цифра с камерой — число фото. Плашка в углу показывает, проверен ли хозяин.' },
+        { sel: '.chat-message-ad', demo: 'swipe', title: 'Свайп — в вашу группу', text: 'Потяните объявление влево: оно сразу попадёт в вашу группу, и друзья смогут посмотреть жильё и выбрать вместе. Так же можно нажать и подержать карточку.' },
         { sel: '#dockSeek', title: 'Кнопка «Хочу снять»', text: 'Ищете жильё? Укажите город, даты, гостей и бюджет: ваша карточка появится в ленте, хозяева увидят её и предложат варианты, а мы пришлём уведомление, когда что-то найдётся. Переписки в разделе нет, договариваться можно в личных сообщениях.' },
         { sel: '#dockOffer', title: 'Кнопка «Сдать жильё»', text: 'Сдаёте или продаёте жильё? Опубликуйте объявление. Если оно уже было, можно поднять его наверх списка или создать новое.' },
         { sel: '.chat-help-btn', title: 'Вы хозяин?', text: 'Размещайте жильё во вкладке «Мои публикации»: при публикации вы выбираете тип, и объявление попадает в нужный чат. Подсказки всегда под этой кнопкой.',
