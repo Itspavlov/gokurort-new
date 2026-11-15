@@ -390,18 +390,53 @@ function groupReqHTML(q) {
         ${q.text ? `<p class="gr-text">${e(q.text)}</p>` : ''}${offerBtn}</div>`;
 }
 
+// Мини-карточка жилья в группе: такая же, как в ленте (фото, цена, название, посёлок, плашка проверки)
+function groupAdHTML(a) {
+    const e = escapeHtml, id = String(a.id);
+    const full = typeof findAd === 'function' ? findAd(id) : null;
+    const src = full || a;
+    const town = typeof adTownOnly === 'function' ? adTownOnly(src.location) : (src.location || '');
+    const pic = full && full.image ? adImg(full) : '<div class="ga-ph"><i class="fas fa-house-chimney"></i></div>';
+    const badges = full && typeof adBadgesHTML === 'function' ? adBadgesHTML(full) : '';
+    return `<div class="group-ad ga-card" data-ad="${e(id)}"${full ? '' : ' data-nofull="1"'}>
+            <div class="ad-card-img">${pic}${badges}</div>
+            <div class="ga-body">
+                ${src.price ? `<div class="group-ad-price">${e(src.price)}</div>` : ''}
+                <div class="group-ad-title">${e(src.title)}</div>
+                ${town ? `<div class="group-ad-loc"><i class="fas fa-map-marker-alt"></i> ${e(town)}</div>` : ''}
+            </div>
+        </div>`;
+}
+
+// Объявления, которых ещё нет в памяти (список с сервера не успел прийти): подгружаем и перерисовываем карточки
+const groupAdTried = new Set();
+function hydrateGroupAds() {
+    if (!currentGroup) return;
+    document.querySelectorAll('.group-ad.ga-card[data-nofull]').forEach((el) => {
+        const id = el.dataset.ad;
+        if (typeof findAd === 'function' && findAd(id)) { repaintGroupAd(el); return; }
+        if (groupAdTried.has(id) || typeof isRemoteAdId !== 'function' || !isRemoteAdId(id)) return;
+        groupAdTried.add(id);
+        fetch(`${SERVER_URL}/api/listings/${encodeURIComponent(id)}`).then(r => r.json()).then((d) => {
+            if (!d || !d.ok) return;
+            const full = normalizeRemoteAd(d.listing);
+            if (!remoteAds.some(x => x.id === full.id)) remoteAds.push(full);
+            document.querySelectorAll('.group-ad.ga-card[data-nofull]').forEach(x => { if (x.dataset.ad === id) repaintGroupAd(x); });
+        }).catch(() => {});
+    });
+}
+function repaintGroupAd(el) {
+    const m = currentGroup && currentGroup.messages.find(x => x.ad && String(x.ad.id) === el.dataset.ad);
+    if (m) el.outerHTML = groupAdHTML(m.ad);
+}
+
 function renderGroupMessage(m) {
     const me = getAccount();
     const mine = me && m.from && m.from.id === me.id;
     const id = escapeHtml(String(m.id));
     const nm = (m.from && m.from.name) || '?';
     const reply = renderReplyHTML(m);
-    const ad = m.ad ? `<div class="group-ad" data-ad="${escapeHtml(String(m.ad.id))}">
-            <div class="group-ad-title"><i class="fas fa-house-chimney"></i> ${escapeHtml(m.ad.title)}</div>
-            ${m.ad.price ? `<div class="group-ad-price">${escapeHtml(m.ad.price)}</div>` : ''}
-            ${m.ad.location ? `<div class="group-ad-loc"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(m.ad.location)}</div>` : ''}
-            <div class="group-ad-open">Открыть объявление <i class="fas fa-chevron-right"></i></div>
-        </div>` : '';
+    const ad = m.ad ? groupAdHTML(m.ad) : '';
     const rq = m.req ? groupReqHTML(m.req) : '';
     const text = m.text ? `<div>${escapeHtml(m.text)}</div>` : '';
     const chips = `<div class="chat-reactions" data-for="${id}">${renderReactionChips(m)}</div>`;
@@ -416,7 +451,7 @@ function openGroupChat(group, messages) {
     if (socket && currentRoom) socket.emit('leave-room', currentRoom);
     currentRoom = null; currentDm = null;
     clearReply(); closeMsgMenu();
-    currentGroup = { id: group.id, name: group.name, code: group.code, isOwner: group.isOwner, members: group.members || [], messages: messages || [] };
+    currentGroup = { id: group.id, name: group.name, photo: group.photo || '', code: group.code, isOwner: group.isOwner, members: group.members || [], messages: messages || [] };
 
     tabContents.forEach(section => section.style.display = 'none');
     let screen = document.getElementById('group-screen');
@@ -430,6 +465,7 @@ function openGroupChat(group, messages) {
     screen.innerHTML = `
         <div class="chat-header">
             <button class="chat-back-btn" onclick="closeGroupChat()"><i class="fas fa-arrow-left"></i></button>
+            <div class="chat-avatar group-avatar grp-head-av${group.photo ? ' has-photo' : ''}" id="grpHeadAv" onclick="openGroupMenu()"${group.photo ? '' : ' hidden'}>${groupAvInner(group)}</div>
             <div class="chat-header-info" onclick="openGroupMenu()" style="cursor:pointer">
                 <div class="chat-header-title">${e(group.name)}</div>
                 <div class="chat-header-subtitle" id="chatStatus">${currentGroup.members.length} ${memberWord(currentGroup.members.length)}</div>
@@ -453,6 +489,14 @@ function openGroupChat(group, messages) {
     setTimeout(() => scrollChatToBottom(), 150);
 }
 
+function paintGroupHeadAv() {
+    const av = document.getElementById('grpHeadAv');
+    if (!av || !currentGroup) return;
+    av.hidden = !currentGroup.photo;
+    av.classList.toggle('has-photo', !!currentGroup.photo);
+    av.innerHTML = groupAvInner(currentGroup);
+}
+
 function memberWord(n) {
     const m10 = n % 10, m100 = n % 100;
     if (m10 === 1 && m100 !== 11) return 'участник';
@@ -465,6 +509,7 @@ function paintGroup() {
     if (!box || !currentGroup) return;
     box.querySelectorAll('.chat-message').forEach(el => el.remove());
     box.insertAdjacentHTML('beforeend', currentGroup.messages.map(renderGroupMessage).join(''));
+    hydrateGroupAds();
     scrollChatToBottom();
 }
 
@@ -510,6 +555,8 @@ function refreshCurrentGroup(cb) {
         if (!res.ok || !currentGroup || currentGroup.id !== gid) return;
         currentGroup.members = res.group.members;
         currentGroup.isOwner = res.group.isOwner;
+        currentGroup.photo = res.group.photo || '';
+        paintGroupHeadAv();
         const st = document.getElementById('chatStatus');
         if (st) st.textContent = currentGroup.members.length + ' ' + memberWord(currentGroup.members.length);
         if (cb) cb();
@@ -517,19 +564,51 @@ function refreshCurrentGroup(cb) {
 }
 
 // ---------- создание группы и приглашение ----------
+function groupAvInner(g) { return g && g.photo ? `<img src="${g.photo}" alt="">` : '<i class="fas fa-users"></i>'; }
+function groupPickIcon(g) { return g && g.photo ? `<img class="gp-av" src="${g.photo}" alt="">` : '<i class="fas fa-users"></i>'; }
+
+// Круглая кнопка «Фото группы»: выбирает картинку, сжимает до 256 px; значение хранится в state.photo
+function groupPhotoPickerHTML(photo) {
+    return `<div class="grp-photo-pick">
+            <button type="button" class="grp-photo-btn${photo ? ' has' : ''}" id="grpPhotoBtn" aria-label="Фото группы">${photo ? `<img src="${photo}" alt="">` : '<i class="fas fa-camera"></i>'}</button>
+            <div class="grp-photo-txt">Фото группы<br>необязательно<button type="button" id="grpPhotoDrop"${photo ? '' : ' hidden'}>Убрать фото</button></div>
+            <input type="file" id="grpPhotoFile" accept="image/*" hidden>
+        </div>`;
+}
+function bindGroupPhotoPicker(el, state, onChange) {
+    const btn = el.querySelector('#grpPhotoBtn'), file = el.querySelector('#grpPhotoFile'), drop = el.querySelector('#grpPhotoDrop');
+    const paint = () => {
+        btn.classList.toggle('has', !!state.photo);
+        btn.innerHTML = state.photo ? `<img src="${state.photo}" alt="">` : '<i class="fas fa-camera"></i>';
+        drop.hidden = !state.photo;
+        if (onChange) onChange();
+    };
+    btn.addEventListener('click', () => file.click());
+    drop.addEventListener('click', () => { state.photo = ''; file.value = ''; paint(); });
+    file.addEventListener('change', async () => {
+        const f = file.files && file.files[0];
+        if (!f) return;
+        try { state.photo = await fileToDataURL(f, 256, 0.78); paint(); }
+        catch (ex) { showToast('Не удалось открыть фото'); }
+    });
+}
+
 function openCreateGroupSheet(afterCreate) {
     loginRequired(() => {
+        const st = { photo: '' };
         openSheet('Новая группа', `
             <p class="auth-note" style="margin:0 4px 14px">Добавьте тех, с кем планируете отдыхать, и выбирайте жильё и развлечения вместе.</p>
+            ${groupPhotoPickerHTML('')}
             <label class="field"><span>Название группы</span><input id="grpName" maxlength="40" placeholder="Например: Отпуск с друзьями"></label>
             <div class="auth-error" id="grpErr"></div>
             <button class="primary-btn wide-btn" id="grpCreate"><i class="fas fa-user-plus"></i> Создать и пригласить</button>`, (el) => {
+            bindGroupPhotoPicker(el, st);
             const go = () => {
                 const name = el.querySelector('#grpName').value.trim();
                 const err = el.querySelector('#grpErr');
                 if (name.length < 2) { err.textContent = 'Название: от 2 символов'; return; }
                 const btn = el.querySelector('#grpCreate'); btn.disabled = true;
-                socketAsk('group-create', { name }, (res) => {
+                socketAsk('group-create', { name, photo: st.photo || undefined }, (res) => {
                     btn.disabled = false;
                     if (!res.ok) { err.textContent = res.message || 'Не удалось создать'; return; }
                     closeSheet();
@@ -539,7 +618,6 @@ function openCreateGroupSheet(afterCreate) {
             };
             el.querySelector('#grpCreate').addEventListener('click', go);
             el.querySelector('#grpName').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
-            setTimeout(() => el.querySelector('#grpName').focus(), 300);
         });
     });
 }
@@ -594,9 +672,22 @@ function openGroupMenu() {
     const g = currentGroup, e = escapeHtml;
     const rows = g.members.map(m => `<div class="member-row"><div class="chat-avatar" data-avn="${avEsc(m.name)}" style="background:${dmColor(m.name)}">${avInner(m.name)}</div><span>${e(m.name)}</span>${m.owner ? '<em>создатель</em>' : ''}</div>`).join('');
     openSheet(e(g.name), `
+        ${g.isOwner ? groupPhotoPickerHTML(g.photo) : ''}
         <div class="members">${rows}</div>
         <button class="primary-btn wide-btn" id="gmInvite"><i class="fas fa-user-plus"></i> Пригласить</button>
         <button class="ghost-btn wide-btn" id="gmLeave" style="margin-top:10px"><i class="fas fa-right-from-bracket"></i> Выйти из группы</button>`, (el) => {
+        if (g.isOwner) {
+            const st = { photo: g.photo || '' };
+            bindGroupPhotoPicker(el, st, () => {
+                socketAsk('group-photo', { groupId: g.id, photo: st.photo }, (res) => {
+                    if (!res.ok) { showToast(res.message || 'Не удалось сменить фото'); return; }
+                    g.photo = res.photo || '';
+                    paintGroupHeadAv();
+                    refreshGroupsCache();
+                    showToast(g.photo ? 'Фото группы обновлено' : 'Фото убрано');
+                });
+            });
+        }
         el.querySelector('#gmInvite').addEventListener('click', () => {
             closeSheet();
             openInviteSheet({ id: g.id, name: g.name, code: g.code, members: g.members }, () => { refreshCurrentGroup(); });
@@ -641,7 +732,7 @@ function addAdToGroup(adId) {
         } else if (list.length === 1) {
             send(list[0]);
         } else {
-            openSheet('В какую группу добавить?', list.map(g => `<button class="group-pick" data-id="${escapeHtml(g.id)}"><i class="fas fa-users"></i><span>${escapeHtml(g.name)}</span><em>${g.members} ${memberWord(g.members)}</em></button>`).join(''), (el) => {
+            openSheet('В какую группу добавить?', list.map(g => `<button class="group-pick" data-id="${escapeHtml(g.id)}">${groupPickIcon(g)}<span>${escapeHtml(g.name)}</span><em>${g.members} ${memberWord(g.members)}</em></button>`).join(''), (el) => {
                 el.querySelectorAll('.group-pick').forEach(b => b.addEventListener('click', () => {
                     const g = list.find(x => x.id === b.dataset.id);
                     if (g) send(g);
@@ -660,7 +751,7 @@ function addReqToGroup(rid) {
             closeSheet();
             showToast('Запрос отправлен в группу «' + g.name + '»');
         });
-        const rows = list.map(g => `<button class="group-pick" data-id="${escapeHtml(g.id)}"><i class="fas fa-users"></i><span>${escapeHtml(g.name)}</span><em>${g.members} ${memberWord(g.members)}</em></button>`).join('');
+        const rows = list.map(g => `<button class="group-pick" data-id="${escapeHtml(g.id)}">${groupPickIcon(g)}<span>${escapeHtml(g.name)}</span><em>${g.members} ${memberWord(g.members)}</em></button>`).join('');
         openSheet('Отправить запрос в группу', `
             <p class="auth-note" style="margin:0 4px 12px">${list.length ? 'Выберите группу: участники увидят запрос и смогут предложить своё жильё.' : 'Создайте группу и добавьте знакомых с жильём: они увидят запрос и смогут предложить свой вариант.'}</p>
             ${rows}<button class="group-pick new" id="reqGrpNew"><i class="fas fa-user-plus"></i><span>Новая группа</span></button>`, (el) => {
@@ -709,7 +800,7 @@ function renderDialogs() {
                 const dms = dr.ok ? dr.convs : [];
                 const groupRows = groups.map(g => `
                     <div class="dialog-row" onclick="openGroupById('${escapeHtml(g.id)}')">
-                        <div class="chat-avatar dialog-avatar group-avatar"><i class="fas fa-users"></i></div>
+                        <div class="chat-avatar dialog-avatar group-avatar${g.photo ? ' has-photo' : ''}">${groupAvInner(g)}</div>
                         <div class="dialog-info">
                             <div class="dialog-name">${escapeHtml(g.name)}</div>
                             <div class="dialog-ad">${escapeHtml(g.last ? (g.last.from ? g.last.from + ': ' : '') + g.last.text : g.members + ' ' + memberWord(g.members))}</div>
@@ -908,7 +999,7 @@ function onSocialEvent(ev, d) {
             if (!currentGroup.messages.some(m => m.id === d.id)) {
                 currentGroup.messages.push(d);
                 const box = document.getElementById('chatMessages');
-                if (box) { box.insertAdjacentHTML('beforeend', renderGroupMessage(d)); scrollChatToBottomSmooth(); }
+                if (box) { box.insertAdjacentHTML('beforeend', renderGroupMessage(d)); hydrateGroupAds(); scrollChatToBottomSmooth(); }
             }
         } else {
             const dlg = document.getElementById('dialogsRoot');
@@ -924,6 +1015,12 @@ function onSocialEvent(ev, d) {
             }
         }
     } else if (ev === 'group-members') {
+        if (d.photo !== undefined) {
+            if (currentGroup && currentGroup.id === d.groupId) { currentGroup.photo = d.photo || ''; paintGroupHeadAv(); }
+            refreshGroupsCache();
+            const dl = document.getElementById('dialogsRoot');
+            if (dl && dl.offsetParent !== null) renderDialogs();
+        }
         if (currentGroup && currentGroup.id === d.groupId) {
             refreshCurrentGroup();
             if (d.added) showToast(d.added.name + ' теперь в группе');
@@ -1284,6 +1381,7 @@ async function fetchRemoteAds() {
         remoteAdsReady = true;
         renderFeatured();
         refreshHousingAds();
+        if (typeof hydrateGroupAds === 'function') hydrateGroupAds();
         const prof = document.getElementById('profileRoot');
         if (prof && prof.offsetParent !== null) renderProfile();
     } catch (e) {

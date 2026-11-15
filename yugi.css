@@ -1755,7 +1755,7 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .vbadge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 10px; font: 800 10.5px/1 var(--font); color: #fff; border: 1px solid rgba(255, 255, 255, .35); box-shadow: 0 2px 6px rgba(0, 0, 0, .25); }
 .vbadge i { font-size: 9px; }
 .vbadge.ok { background: #1FAE63; }
-.vbadge.no { background: #E5484D; }
+.vbadge.no { background: #F28A1E; }
 .vbadge.urgent { background: #FF7A59; }
 .chat-message-ad .ad-badge, .ad-card .ad-badge { display: none; }
 .ad-card .ad-badges { top: 7px; left: 7px; }
@@ -1768,8 +1768,8 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .ad-ow-info small { font: 600 10.5px/1.2 var(--font); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ad-ow-mark { flex: none; width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center; color: #fff; font-size: 11px; }
 .ad-ow-mark.ok { background: #1FAE63; }
-.ad-ow-mark.no { background: #E5484D; }
-.ad-owner.unver { border-color: rgba(229, 72, 77, .4); }
+.ad-ow-mark.no { background: #F28A1E; }
+.ad-owner.unver { border-color: rgba(242, 138, 30, .5); }
 #chatMessages.cards:has(.chat-message-ad) .ad-owner { margin-top: 6px; padding: 5px 6px; gap: 6px; border-radius: 12px; }
 #chatMessages.cards:has(.chat-message-ad) .ad-ow-av { width: 26px; height: 26px; font-size: 12px; }
 #chatMessages.cards:has(.chat-message-ad) .ad-ow-info b { font-size: 10.5px; }
@@ -1782,10 +1782,10 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .vbadge.big { height: 24px; padding: 0 10px; font-size: 12px; border-radius: 12px; }
 .vbadge.big i { font-size: 10px; }
 .listing-price-row .vbadge { flex: none; }
-.unver-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; padding: 11px 13px; border-radius: 14px; background: rgba(229, 72, 77, .12); border: 1px solid rgba(229, 72, 77, .45); color: var(--text); font: 700 13.5px/1.35 var(--font); }
-.unver-note i { flex: none; color: #FF6B6F; margin-top: 2px; }
+.unver-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; padding: 11px 13px; border-radius: 14px; background: rgba(242, 138, 30, .14); border: 1px solid rgba(242, 138, 30, .5); color: var(--text); font: 700 13.5px/1.35 var(--font); }
+.unver-note i { flex: none; color: #FFA23E; margin-top: 2px; }
 .unver-note.dm-warn { margin: 0; border-radius: 0; border-width: 0 0 1px; flex: none; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .unver-note i { color: #C9252C; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .unver-note i { color: #C25E00; }
 
 /* верификация в профиле */
 .vf-card { display: block; }
@@ -1823,3 +1823,69 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .vf-body { padding: 2px 2px 8px; }
 .vf-count { font-style: normal; font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 99px; background: rgba(255, 255, 255, .14); color: var(--text-secondary); }
 .vf-count.ok { background: #1FAE63; color: #fff; }
+
+/* ===== v89: предупреждения «не проверен» оранжевые; страница жилья компактнее; кнопка «Показать на карте»; карточки жилья и фото в группе ===== */
+.listing-body { margin-top: -24px; padding: 18px 16px 6px; border-radius: 26px 26px 0 0; }
+.listing-price-row { margin-bottom: 4px; }
+.listing-price { font-size: 21px; letter-spacing: -.6px; }
+.listing-title { font-size: 17px; line-height: 1.25; margin-bottom: 5px; }
+.listing-loc { font-size: 13px; gap: 6px; margin-bottom: 10px; }
+.listing-body .chip-row { gap: 6px; }
+.listing-body .chip { padding: 5px 10px; gap: 6px; font-size: 12px; }
+.listing-body .chip i { font-size: 11px; }
+.owner-card { margin-top: 12px; gap: 11px; padding: 10px 12px; border-radius: 18px; }
+.owner-avatar { width: 44px; height: 44px; font-size: 18px; border-width: 1.5px; }
+.owner-name { font-size: 14.5px; }
+.owner-sub { font-size: 11.5px; line-height: 1.35; }
+.owner-about { margin-top: 8px; font-size: 13px; line-height: 1.45; }
+.listing-body .unver-note { margin: 8px 0; padding: 8px 11px; border-radius: 12px; font-size: 12.5px; gap: 8px; }
+.l-section { margin-top: 16px; }
+.l-h { font-size: 14px; margin-bottom: 7px; }
+.l-text { font-size: 13.5px; line-height: 1.5; }
+.terms { gap: 6px; }
+.term-row { gap: 10px; padding: 8px 11px; border-radius: 14px; }
+.term-icon { width: 30px; height: 30px; font-size: 13px; }
+.term-label { font-size: 11px; }
+.term-value { font-size: 13px; line-height: 1.3; }
+.rules { gap: 5px; }
+.rules li { font-size: 13px; line-height: 1.4; padding-left: 18px; }
+.rules li::before { width: 6px; height: 6px; top: 7px; left: 3px; }
+.cal { padding: 10px; border-radius: 18px; }
+.cal-head { margin-bottom: 6px; }
+.cal-nav { width: 30px; height: 30px; }
+.cal-day { font-size: 13px; border-radius: 10px; }
+.cal-grid { row-gap: 2px; }
+.cal-legend { margin-top: 8px; font-size: 11px; }
+.cal-summary { font-size: 13px; }
+.loc-btn { width: 100%; height: 44px; display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-strong, var(--glass)); color: var(--text); font: 700 14px var(--font); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.loc-btn i { color: var(--sea, #2BC4D6); font-size: 16px; }
+.loc-btn:active { transform: scale(.98); }
+.listing-body .featured-list-inner .ad-card-body { padding: 8px 10px; }
+
+/* карточка жилья внутри группы — такая же мини-карточка, как в ленте */
+.group-ad.ga-card { padding: 0; width: 220px; max-width: 100%; overflow: hidden; border-radius: 16px; background: var(--glass, rgba(0,0,0,.16)); }
+.group-ad.ga-card .ad-card-img { position: relative; height: 128px; border-radius: 0; }
+.group-ad.ga-card .ad-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.group-ad.ga-card .ad-badges { top: 7px; left: 7px; }
+.group-ad.ga-card .ga-body { padding: 8px 11px 10px; }
+.group-ad.ga-card .group-ad-price { margin: 0 0 1px; font-size: 15px; }
+.group-ad.ga-card .group-ad-title { margin: 0 0 3px; font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.group-ad.ga-card .group-ad-loc { margin: 0; font-size: 12px; }
+.group-ad.ga-card .ga-ph { height: 128px; display: grid; place-items: center; background: rgba(128, 140, 160, .2); color: var(--text-secondary); font-size: 26px; }
+
+/* фото группы */
+.grp-photo-pick { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
+.grp-photo-btn { flex: none; position: relative; width: 72px; height: 72px; padding: 0; border-radius: 50%; border: 2px dashed var(--glass-border); background: var(--glass); color: var(--text-secondary); overflow: hidden; cursor: pointer; display: grid; place-items: center; font-size: 22px; -webkit-tap-highlight-color: transparent; }
+.grp-photo-btn img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.grp-photo-btn.has { border-style: solid; border-color: rgba(255, 255, 255, .5); }
+.grp-photo-txt { font: 600 13px/1.35 var(--font); color: var(--text-secondary); }
+.grp-photo-txt button { display: block; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--accent, #2BC4D6); font: 700 13px var(--font); cursor: pointer; }
+.group-avatar.has-photo { background: none; padding: 0; overflow: hidden; }
+.group-avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.group-pick .gp-av { flex: none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.chat-header .grp-head-av { flex: none; width: 36px; height: 36px; margin: 0 4px 0 0; border-radius: 50%; font-size: 15px; display: grid; place-items: center; cursor: pointer; }
+.chat-header .grp-head-av[hidden] { display: none; }
+.chat-header .grp-head-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.dialog-avatar.group-avatar.has-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .group-ad.ga-card .group-ad-price { color: var(--accent); }
+.group-ad.ga-card .group-ad-title { color: var(--text); }

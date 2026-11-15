@@ -223,17 +223,6 @@ function openListing(adId) {
         </div>`).join('');
     const rules = (ad.rules || []).map(r => `<li>${e(r)}</li>`).join('');
 
-    // расстояние до моря
-    let seaBlock = '';
-    if (hasMap && ad.beach) {
-        const m = distMeters(ad.coords, ad.beach);
-        seaBlock = `
-            <div class="sea-banner">
-                <div class="sea-icon"><i class="fas fa-umbrella-beach"></i></div>
-                <div><b>${fmtDist(m)} до моря</b><span>≈ ${walkMinutes(m * 1.25)} мин пешком</span></div>
-            </div>${typeof routePanelHTML === 'function' ? routePanelHTML() : ''}`;
-    }
-
     // другие объявления хозяина
     const others = getAllAds().filter(a => a.id !== ad.id && getOwner(a).id === owner.id);
     const othersBlock = others.length ? `
@@ -305,9 +294,7 @@ function openListing(adId) {
                 ${hasMap ? `
                 <section class="l-section">
                     <h2 class="l-h">Расположение</h2>
-                    ${seaBlock}
-                    <div class="listing-map" id="listingMap"></div>
-                    <a class="map-link" target="_blank" rel="noopener" href="https://yandex.ru/maps/?pt=${ad.coords[1]},${ad.coords[0]}&z=16&l=map"><i class="fas fa-diamond-turn-right"></i> Открыть в Яндекс Картах</a>
+                    <button type="button" class="loc-btn" id="listingMapBtn"><i class="fas fa-map-location-dot"></i><span>Показать на карте</span></button>
                 </section>` : ''}
 
                 ${rent ? `
@@ -368,8 +355,9 @@ function openListing(adId) {
         });
     }
 
-    // карта
-    if (hasMap) setTimeout(() => initListingMap(ad), 60);
+    // карта открывается по кнопке
+    const mapBtn = document.getElementById('listingMapBtn');
+    if (mapBtn) mapBtn.onclick = () => openListingMap(ad.id);
 }
 
 function updateCalSummary() {
@@ -403,39 +391,23 @@ function mapTiles(opts) {
 
 const mapPin = (cls, icon) => `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`;
 
-function initListingMap(ad) {
-    const el = document.getElementById('listingMap');
-    if (!el) return;
-    // карта «спит», пока по ней не тапнули — чтобы не мешала листать страницу
-    const secPanel = typeof routePanelInit === 'function' && ad.beach && el.closest('.l-section') && el.closest('.l-section').querySelector('.rt-panel');
-    let mapRef = null;
-    const rp = secPanel ? routePanelInit(secPanel, () => mapRef, ad) : null;
-    YM.open(el, { center: ad.coords, zoom: 16, interactive: false }).then((map) => {
-        if (!map) return;
-        if (!el.isConnected) { map.destroy(); return; }
-        map.addMarker({ coords: ad.coords, html: mapPin('pin-home', 'fa-home'), size: [40, 40] });
-        if (ad.beach) {
-            map.addMarker({ coords: ad.beach, html: mapPin('pin-sea', 'fa-umbrella-beach'), size: [40, 40] });
-            mapRef = map;
-            if (rp) rp.redraw();
-            else {
-                map.addLine([ad.coords, ad.beach], { color: '#2DD4DA', width: 3 });
-                map.fitBounds([ad.coords, ad.beach], { padding: 50, maxZoom: 17, animate: false });
-            }
-        }
-        const hint = document.createElement('div');
-        hint.className = 'map-hint';
-        hint.textContent = 'Нажмите, чтобы двигать карту';
-        el.appendChild(hint);
-        el.addEventListener('click', function wake() {
-            map.setInteractive(true);
-            map.showZoom();
-            hint.remove();
-            el.removeEventListener('click', wake);
+// «Показать на карте»: окно с картой, на ней только точка жилья (без маршрутов и расстояний)
+function openListingMap(id) {
+    const ad = typeof findAd === 'function' ? findAd(id) : null;
+    if (!ad || !Array.isArray(ad.coords)) { showToast('У этого объявления нет точки на карте'); return; }
+    const e = escapeHtml;
+    openSheet('На карте', `
+        ${ad.location ? `<p class="sv-where"><i class="fas fa-location-dot"></i><span>${e(ad.location)}</span></p>` : ''}
+        <div class="dv-map rt-map" id="listingMap" data-noswipe></div>
+        <a class="map-link" target="_blank" rel="noopener" href="https://yandex.ru/maps/?pt=${ad.coords[1]},${ad.coords[0]}&z=16&l=map"><i class="fas fa-diamond-turn-right"></i> Открыть в Яндекс Картах</a>`, (el) => {
+        YM.open(el.querySelector('#listingMap'), { center: ad.coords, zoom: 16, zoomControl: true }).then((map) => {
+            if (!map) return;
+            if (!el.isConnected) { map.destroy(); return; }
+            map.addMarker({ coords: ad.coords, html: mapPin('pin-home', 'fa-home'), size: [40, 40] });
+            if (listingMapInst) listingMapInst.destroy();
+            listingMapInst = map;
+            setTimeout(() => map.invalidate(), 250);
         });
-        if (listingMapInst) listingMapInst.destroy();
-        listingMapInst = map;
-        setTimeout(() => map.invalidate(), 250);
     });
 }
 
