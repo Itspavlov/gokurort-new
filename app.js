@@ -1037,12 +1037,32 @@ console.log('👤 Ваше имя:', getUserName());
 // ---------- КНОПКА «НАЗАД»: срабатывает с первого касания ----------
 // Раньше первое касание уходило на закрытие клавиатуры (поле теряло фокус, раскладка
 // сдвигалась) и «клик» не попадал в кнопку. Теперь действие запускается при касании.
+// Щипок по карте: второй палец может попасть на кнопку «Назад» или «Закрыть», и экран закрывался.
+// Запоминаем касания несколькими пальцами и касания карты: пока они свежие, кнопки закрытия не срабатывают.
+const touchGuard = { multiAt: 0, mapAt: 0, down: new Map() };   // pointerId -> когда нажат (застрявшие записи старше 3 с не считаем)
+const fingersDown = () => { const t = Date.now(); let n = 0; touchGuard.down.forEach((at, id) => { if (t - at < 3000) n++; else touchGuard.down.delete(id); }); return n; };
+const MAP_TOUCH_SEL = '.dv-map, .listing-map, .admap-map, .leaflet-container, [data-noswipe], ymaps, [class*="ymaps"]';
+function recentMapGesture() { const t = Date.now(); return t - touchGuard.multiAt < 1000 || t - touchGuard.mapAt < 700; }
+(function trackTouches() {
+    const onMap = (t) => !!(t && t.closest && t.closest(MAP_TOUCH_SEL));
+    document.addEventListener('pointerdown', (ev) => {
+        if (ev.pointerType === 'touch') { if (fingersDown() > 0) touchGuard.multiAt = Date.now(); touchGuard.down.set(ev.pointerId, Date.now()); }
+        if (onMap(ev.target)) touchGuard.mapAt = Date.now();
+    }, { capture: true, passive: true });
+    const up = (ev) => { touchGuard.down.delete(ev.pointerId); if (onMap(ev.target)) touchGuard.mapAt = Date.now(); };
+    document.addEventListener('pointerup', up, { capture: true, passive: true });
+    document.addEventListener('pointercancel', up, { capture: true, passive: true });
+    document.addEventListener('touchstart', (ev) => { if (ev.touches && ev.touches.length > 1) touchGuard.multiAt = Date.now(); }, { capture: true, passive: true });
+    document.addEventListener('touchmove', (ev) => { if (ev.touches && ev.touches.length > 1) touchGuard.multiAt = Date.now(); }, { capture: true, passive: true });
+})();
+
 (function fastBackButton() {
     let lastFire = 0, synthetic = false;
     document.addEventListener('pointerdown', (ev) => {
         if (ev.button > 0) return;
         const btn = ev.target.closest && ev.target.closest('.chat-back-btn');
         if (!btn) return;
+        if (recentMapGesture() || (ev.pointerType === 'touch' && ev.isPrimary === false)) return;   // щипок по карте — не нажатие
         lastFire = Date.now();
         synthetic = true;
         const t0 = performance.now(), wait = Math.round(t0 - ev.timeStamp);   // сколько касание ждало, пока страница освободится
@@ -1059,6 +1079,7 @@ console.log('👤 Ваше имя:', getUserName());
     document.addEventListener('click', (ev) => {
         const btn = ev.target.closest && ev.target.closest('.chat-back-btn');
         if (!btn || synthetic) return;
+        if (recentMapGesture()) { ev.stopPropagation(); ev.preventDefault(); return; }
         if (Date.now() - lastFire < 900) { ev.stopPropagation(); ev.preventDefault(); }
     }, true);
 })();

@@ -374,9 +374,10 @@ function cardsTour(force) {
             title: L.tabs[1], text: 'Так выглядит предложение водителя: фото машины, маршрут, цена и кнопка «Написать». Водители размещают поездки и трансферы здесь. Нужна поездка? Смотрите вкладку «' + L.tabs[0] + '».' }
         : { sel: '.seek-tabs', title: L.tabs[0] + ' и ' + L.tabs[1].toLowerCase(), text: 'Сверху выберите, какие объявления смотреть: тех, кто ищет, или тех, кто предлагает.' };
     if (first.img) { try { new Image().src = first.img; } catch (_) {} }
-    runTour('cards-' + sec + (sec === 'trips' ? '2' : ''), sec === 'services' ? [
+    runTour('cards-' + sec + (sec === 'trips' ? '3' : '2'), sec === 'services' ? [
         { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
     ] : [
+        helpStep(),
         first,
         { sel: '#dockSeek', title: 'Кнопка «' + L.btns[0] + '»', text: t.seek },
         { sel: '#dockOffer', title: 'Кнопка «' + L.btns[1] + '»', text: t.offer }

@@ -52,6 +52,8 @@ function openSheet(title, bodyHTML, onMount) {
         if (ev.target === el) {
             if (Date.now() - multiAt < 900 || Date.now() - mapAt < 1500 || Date.now() - openedAt < 450 || !downOnBack) return;
         }
+        // щипок по карте внутри шторки: ни фон, ни кнопка «закрыть» не должны сработать
+        if (Date.now() - multiAt < 1000 || (typeof recentMapGesture === 'function' && recentMapGesture())) return;
         if (ev.target === el || ev.target.closest('[data-sheet-close]')) closeSheet();
     });
     document.body.appendChild(el);

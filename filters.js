@@ -149,6 +149,7 @@ function openAdMap() {
     document.body.appendChild(view);
     view.addEventListener('click', (ev) => {
         const b = ev.target.closest('[data-m]'); if (!b) return;
+        if (typeof recentMapGesture === 'function' && recentMapGesture()) return;   // щипок по карте не закрывает её
         if (b.dataset.m === 'close') closeAdMap();
         else if (b.dataset.m === 'filters') openFilterSheet();
         else if (b.dataset.m === 'open') { const id = b.dataset.id; closeAdMap(); openListing(id); }
