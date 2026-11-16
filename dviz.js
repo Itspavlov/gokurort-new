@@ -8,8 +8,6 @@
 const DV_PHOTOS = 5;
 const DV_IDEAS = ['Джипы в горы', 'Морская прогулка', 'Волейбол на пляже', 'Просто потусить', 'Шашлыки у моря', 'Вечер на набережной'];
 const DV_EMOJI = ['❤️', '🙌', '🔥', '👏', '😍', '😂', '😮', '😢'];
-// Ключ Яндекса нужен только для поиска адреса; сами карты — Leaflet. Ограничьте ключ по домену в кабинете Яндекса.
-const DV_YKEY = '677f374a-c483-4bb5-a09a-2f25fdcba35e';
 let dvFeed = [];
 let dvOpenId = null;       // открытая в шторке карточка
 let dvCommId = null;       // карточка, чьи комментарии открыты
@@ -49,27 +47,14 @@ function dvOpenMap(el, center, zoom, o) {
     });
 }
 
-// Поиск адреса. Сначала геокодер Яндекса (нужен ключ с продуктом «HTTP Геокодер»), если он не отвечает или ключ не подходит —
-// OpenStreetMap (Nominatim, без ключа). Оба вызова идут из браузера человека.
+// Поиск адреса: запрос идёт через наш сервер (/api/geocode). Ключ геокодера хранится только там.
 function dvGeocode(q) {
     q = String(q || '').trim();
-    if (!/архипо|осипов/i.test(q)) q = 'Архипо-Осиповка, ' + q;
-    const ya = 'https://geocode-maps.yandex.ru/1.x/?apikey=' + DV_YKEY + '&format=json&results=1&lang=ru_RU&geocode=' + encodeURIComponent(q)
-        + '&ll=' + MAP_DEFAULT[1] + ',' + MAP_DEFAULT[0] + '&spn=0.4,0.3&rspn=0';
-    const osm = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ru&countrycodes=ru&q=' + encodeURIComponent(q)
-        + '&viewbox=' + (MAP_DEFAULT[1] - 0.3) + ',' + (MAP_DEFAULT[0] + 0.2) + ',' + (MAP_DEFAULT[1] + 0.3) + ',' + (MAP_DEFAULT[0] - 0.2);
-    const viaYandex = () => fetch(ya).then((r) => { if (!r.ok) throw new Error('ya'); return r.json(); }).then((j) => {
-        const m = j && j.response && j.response.GeoObjectCollection.featureMember[0];
-        if (!m) return null;
-        const pos = String(m.GeoObject.Point.pos).split(' ').map(Number);
-        return { lat: pos[1], lng: pos[0], name: m.GeoObject.name };
-    });
-    const viaOsm = () => fetch(osm).then((r) => { if (!r.ok) throw new Error('osm'); return r.json(); }).then((j) => {
-        const m = Array.isArray(j) && j[0];
-        if (!m) return null;
-        return { lat: Number(m.lat), lng: Number(m.lon), name: String(m.name || m.display_name || '').split(',')[0].trim() };
-    });
-    return viaYandex().then((r) => r || viaOsm(), () => viaOsm());
+    if (q.length < 2) return Promise.resolve(null);
+    return fetch(SERVER_URL + '/api/geocode?q=' + encodeURIComponent(q))
+        .then((r) => r.json())
+        .then((d) => (d && d.ok ? { lat: d.lat, lng: d.lng, name: d.name } : null))
+        .catch(() => null);
 }
 
 // ссылки «проложить маршрут»: из текущего положения человека до точки сбора
