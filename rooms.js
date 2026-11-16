@@ -249,6 +249,8 @@ function hostFormTip() {
 // ---------- первый запуск: что где находится ----------
 function homeTour() {
     const run = () => {
+        // слайды «Добро пожаловать» или окно регистрации ещё открыты: подсказки главной покажем после них
+        if (document.getElementById('onboard') || (document.querySelector('.sheet-overlay') && typeof tipSeen === 'function' && !tipSeen('home'))) { setTimeout(run, 1200); return; }
         if (document.getElementById('group-screen')?.style.display === 'flex' || document.querySelector('.sheet-overlay, .listing-screen.open')) return;
         runTour('home', [
             { sel: '.gc-housing', title: 'Чаты по темам', text: 'Нажмите на плитку — откроется чат. В «Жильё» сверху выбираете тип: квартиры, дома, отели, комнаты, гостевые.' },

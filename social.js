@@ -65,6 +65,7 @@ async function authRequest(mode, name, password) {
 function openAuthSheet(onDone, mode = 'login') {
     const e = escapeHtml;
     const body = `
+        <div class="auth-hero"><img src="images/hero.jpg" alt=""><div class="auth-hero-in"><b>YuGi <em>YuGi</em></b><span>Курорт Архипо-Осиповка в одном приложении</span></div></div>
         <div class="auth-tabs">
             <button type="button" class="auth-tab ${mode === 'login' ? 'active' : ''}" data-mode="login">Вход</button>
             <button type="button" class="auth-tab ${mode === 'register' ? 'active' : ''}" data-mode="register">Регистрация</button>
@@ -76,7 +77,7 @@ function openAuthSheet(onDone, mode = 'login') {
         <div class="auth-error" id="authError"></div>
         <button class="primary-btn wide-btn" id="authSubmit"></button>
         <p class="auth-note">Аккаунт нужен для личных сообщений и чтобы никто не писал под вашим именем. При регистрации выдадим код, по которому можно восстановить пароль.</p>`;
-    openSheet('Аккаунт YuGi YuGi', body, (el) => {
+    openSheet('Вход и регистрация', body, (el) => {
         let m = mode;
         const submit = el.querySelector('#authSubmit');
         const err = el.querySelector('#authError');
