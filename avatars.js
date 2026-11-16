@@ -5,7 +5,7 @@
 // Картинки подтягиваем с сервера пачкой по именам и запоминаем на устройстве.
 // ============================================
 const AV_KEY = 'yy-avmap-v1';
-const AV_HIT_TTL = 6 * 3600 * 1000, AV_MISS_TTL = 20 * 60 * 1000;
+const AV_HIT_TTL = 10 * 60 * 1000, AV_MISS_TTL = 5 * 60 * 1000;   // чужая аватарка меняется — спрашиваем сервер не реже раза в 10 минут
 let avMap = {};
 try { avMap = JSON.parse(localStorage.getItem(AV_KEY) || '{}') || {}; } catch (_) { avMap = {}; }
 const avQueue = new Set();
@@ -40,10 +40,21 @@ function avWant(name) {
 }
 function avApply(root) {
     (root || document).querySelectorAll('[data-avn]').forEach((el) => {
-        if (el.querySelector('img')) return;
         const src = avSrc(el.dataset.avn);
-        if (src) el.innerHTML = '<img src="' + avEsc(src) + '" alt="" decoding="async">';
+        const img = el.querySelector('img');
+        if (src) {
+            if (!img || img.getAttribute('src') !== src) el.innerHTML = '<img src="' + avEsc(src) + '" alt="" decoding="async">';
+        } else if (img && avMap[avKey(el.dataset.avn)]) {
+            el.innerHTML = avLetter(el.dataset.avn);   // человек убрал аватарку
+        }
     });
+}
+// кто-то сменил аватарку: сервер сообщил сразу
+function avChanged(d) {
+    if (!d || typeof d.name !== 'string') return;
+    avMap[avKey(d.name)] = { id: d.avatar || '', t: Date.now() };
+    try { localStorage.setItem(AV_KEY, JSON.stringify(avMap)); } catch (_) {}
+    avApply();
 }
 function avFetch() {
     const names = [...avQueue].slice(0, 40);
@@ -64,8 +75,8 @@ function avFetch() {
 // содержимое кружка: картинка или буква
 function avInner(name) {
     const src = avSrc(name);
+    avWant(name);   // сам решит, не устарела ли сохранённая запись
     if (src) return '<img src="' + avEsc(src) + '" alt="" decoding="async">';
-    avWant(name);
     return avLetter(name);
 }
 // готовый кружок целиком

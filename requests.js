@@ -165,7 +165,7 @@ function cardHTML(r) {
     const gal = carGalleryHTML(r);
     const art = r.section === 'work' && r.kind === 'offer' && typeof artCardHTML === 'function' ? artCardHTML(r.art) : '';   // иллюстрация вакансии из библиотеки
     return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${gal ? ' rq-ph' : ''}${art ? ' rq-has-art' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>${art}
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check" title="Проверен"></i>' : ''}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>${art}
         <div class="rq-title">${e(r.title || '')}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
@@ -193,7 +193,7 @@ function reqCardHTML(r, opts = {}) {
         ? (r.status === 'active' ? found + grp + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` + grp + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.text || ('Запрос на ' + noun), icon: true }) : '') : '');
     return `<div class="req-card rq2${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check" title="Проверен"></i>' : ''}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>
         <div class="rq-title">${r.mine ? 'Ваш запрос' : 'Запрос'} на ${noun}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}

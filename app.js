@@ -328,6 +328,7 @@ function connectSocket() {
     socket.on('dm-reaction', (d) => { if (typeof onDmReaction === 'function') onDmReaction(d); });
     socket.on('dm-read', (d) => { if (typeof onDmRead === 'function') onDmRead(d); });
     socket.on('notify', (p) => { if (typeof onNotify === 'function') onNotify(p); });
+    socket.on('avatar-changed', (d) => { if (typeof avChanged === 'function') avChanged(d); });
 
     ['group-message', 'group-reaction', 'group-members', 'group-invited', 'ad-reaction-update', 'listing-changed', 'request-changed'].forEach((ev) => {
         socket.on(ev, (d) => { if (typeof onSocialEvent === 'function') onSocialEvent(ev, d); });
