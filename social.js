@@ -992,8 +992,7 @@ function fetchAdReactions() {
 function onSocialEvent(ev, d) {
     if (!d) return;
     if (ev === 'listing-changed') {
-        clearTimeout(onSocialEvent._t);
-        onSocialEvent._t = setTimeout(fetchRemoteAds, 400);
+        onListingChanged(d);
     } else if (ev === 'ad-reaction-update') {
         const st = adState[d.adId] || { counts: {}, mine: [] };
         st.counts = d.reactions || {};
@@ -1374,26 +1373,68 @@ function hideAdSkeleton(box) {
 
 async function fetchRemoteAds() {
     try {
-        const res = await fetch(`${SERVER_URL}/api/listings`);
-        const data = await res.json();
-        if (!data || !data.ok) return;
+        // тянем страницы, пока сервер говорит, что есть ещё: ничего не отрезается молча
+        let all = [], before = null;
+        for (let page = 0; page < 20; page++) {
+            const res = await fetch(`${SERVER_URL}/api/listings?limit=100${before != null ? '&before=' + before : ''}`);
+            const data = await res.json();
+            if (!data || !data.ok) { if (!page) return; break; }
+            all = all.concat(data.listings);
+            if (data.next == null) break;
+            before = data.next;
+        }
         const old = new Map(remoteAds.map(a => [a.id, a]));
-        remoteAds = data.listings.map(l => {
+        const seen = new Set();
+        remoteAds = all.filter(l => !seen.has(l.id) && seen.add(l.id)).map(l => {
             const prev = old.get(l.id);
             // если полная версия уже загружена и не менялась — не теряем её
             return normalizeRemoteAd(prev && !prev.partial && prev.updated === l.updated ? prev : l);
         });
         remoteAdsReady = true;
-        renderFeatured();
-        refreshHousingAds();
-        if (typeof hydrateGroupAds === 'function') hydrateGroupAds();
-        const prof = document.getElementById('profileRoot');
-        if (prof && prof.offsetParent !== null) renderProfile();
+        afterRemoteAdsChanged();
     } catch (e) {
         /* сервер недоступен — остаются демо и локальные объявления */
         remoteAdsReady = true;
         if (typeof refreshHousingAds === 'function') refreshHousingAds();
     }
+}
+
+function afterRemoteAdsChanged() {
+    renderFeatured();
+    refreshHousingAds();
+    if (typeof hydrateGroupAds === 'function') hydrateGroupAds();
+    const prof = document.getElementById('profileRoot');
+    if (prof && prof.offsetParent !== null) renderProfile();
+}
+
+// Одно объявление изменилось: обновляем только его, без перезагрузки всей ленты
+const adChangeTimers = {};
+function onListingChanged(d) {
+    const id = d && d.id;
+    if (!id || typeof id !== 'string') { clearTimeout(onSocialEvent._t); onSocialEvent._t = setTimeout(fetchRemoteAds, 400); return; }
+    if (d.removed) {
+        remoteAds = remoteAds.filter(a => a.id !== id);
+        document.querySelectorAll(`.chat-message-ad[data-ad-id="${CSS.escape(id)}"]`).forEach(n => n.remove());
+        afterRemoteAdsChanged();
+        return;
+    }
+    clearTimeout(adChangeTimers[id]);
+    adChangeTimers[id] = setTimeout(async () => {
+        try {
+            const res = await fetch(`${SERVER_URL}/api/listings/${encodeURIComponent(id)}?lite=1`);
+            if (res.status === 404) { remoteAds = remoteAds.filter(a => a.id !== id); afterRemoteAdsChanged(); return; }
+            const data = await res.json();
+            if (!data || !data.ok) throw new Error('bad');
+            const ad = normalizeRemoteAd(data.listing);
+            const i = remoteAds.findIndex(a => a.id === id);
+            if (i >= 0) {
+                // полная версия остаётся, если объявление не менялось
+                if (!remoteAds[i].partial && remoteAds[i].updated === ad.updated) return;
+                remoteAds[i] = ad;
+            } else remoteAds.unshift(ad);
+            afterRemoteAdsChanged();
+        } catch (e) { fetchRemoteAds(); }   // не вышло точечно — обычная полная загрузка
+    }, 300);
 }
 
 async function fetchFullAd(id, cb) {
