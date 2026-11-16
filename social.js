@@ -1376,7 +1376,7 @@ async function fetchRemoteAds() {
         // тянем страницы, пока сервер говорит, что есть ещё: ничего не отрезается молча
         let all = [], before = null;
         for (let page = 0; page < 20; page++) {
-            const res = await fetch(`${SERVER_URL}/api/listings?limit=100${before != null ? '&before=' + before : ''}`);
+            const res = await fetch(`${SERVER_URL}/api/listings?limit=100${before != null ? '&before=' + encodeURIComponent(before) : ''}`);
             const data = await res.json();
             if (!data || !data.ok) { if (!page) return; break; }
             all = all.concat(data.listings);
