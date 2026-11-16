@@ -1,0 +1,32 @@
+name: Выкладка сайта
+on:
+  push:
+    branches: [main]
+concurrency: deploy-site
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Синтаксис всех скриптов
+        run: |
+          set -e
+          for f in *.js assistant/*.js; do node --check "$f" || exit 1; done
+          node -e "JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8'))"
+          echo "ok"
+      - name: Проверка подстановки версий
+        run: |
+          rm -rf /tmp/stampcheck && mkdir /tmp/stampcheck && git archive HEAD | tar -x -C /tmp/stampcheck
+          node deploy/stamp.js /tmp/stampcheck test
+      - name: Ключ и сервер
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id && chmod 600 ~/.ssh/id
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+      - name: Выкладка (с автооткатом на сервере)
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: ssh -i ~/.ssh/id -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes root@"$HOST" site
