@@ -612,8 +612,9 @@ function openCardSheet(kind, edit, prefill) {
                     }
                     if (!r) setCooldown(d.cooldown || 60);
                     closeSheet();
-                    showToast(r ? 'Карточка обновлена' : 'Карточка опубликована');
+                    showToast(d.held ? d.message : (r ? 'Карточка обновлена' : 'Карточка опубликована'));
                     if (r) loadRequests(refreshMyRequests);
+                    else if (d.held) refreshMyRequests();
                     else { refreshMyRequests(); pubShowInFeed({ section: section, kind, rid: d.request && d.request.id }); }
                 }).catch(() => { err.textContent = 'Нет связи с сервером'; label(); });
             });
