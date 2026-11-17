@@ -621,6 +621,7 @@ function saveAdForm() {
         closeAdForm();
         renderProfile();
         renderFeatured();
+        if (saved && saved._held) { showToast(saved._heldMsg || 'Объявление отправлено на проверку'); return; }   // первая карточка автора ждёт модератора
         if (!remoteId && typeof pubShowInFeed === 'function') {
             // новое объявление: сразу в ленту нужного типа жилья, вкладка «Готовые предложения»
             showToast('Объявление опубликовано в «Жильё · ' + adCat.label + '»');

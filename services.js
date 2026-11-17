@@ -400,10 +400,10 @@ function openServiceEditor(edit, after) {
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
                     if (!d || !d.ok) { err.textContent = (d && d.message) || 'Не удалось сохранить'; btn.disabled = false; return; }
                     closeSheet();
-                    showToast(edit ? 'Карточка обновлена' : 'Карточка опубликована');
+                    showToast(d.held ? d.message : (edit ? 'Карточка обновлена' : 'Карточка опубликована'));
                     afterServiceChange();
                     after && after(d.service);
-                    if (!edit && typeof pubShowService === 'function') setTimeout(() => pubShowService(d.service), 120);
+                    if (!edit && !d.held && typeof pubShowService === 'function') setTimeout(() => pubShowService(d.service), 120);
                 } catch (_) { err.textContent = 'Нет связи с сервером'; btn.disabled = false; }
             });
         });
