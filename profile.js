@@ -316,7 +316,8 @@ function openAdForm(editId) {
     formState = {
         id: old ? old.id : null,
         since: old ? old.since : new Date().getFullYear(),
-        type: old ? old.type : 'rent',
+        type: 'rent',
+        term: old && (old.terms || []).some(t => t && t.l === 'Срок аренды' && /длит/i.test(t.v)) ? 'long' : 'daily',
         photos: old ? [...(old.photos || [])] : [],
         amenities: new Set(old ? old.amenities : []),
         busy: new Set(old ? old.busy : []),
@@ -349,8 +350,8 @@ function openAdForm(editId) {
             </div>
 
             <div class="seg" id="fmType">
-                <button type="button" data-type="rent" class="${formState.type === 'rent' ? 'on' : ''}">Сдаю</button>
-                <button type="button" data-type="sale" class="${formState.type === 'sale' ? 'on' : ''}">Продаю</button>
+                <button type="button" data-type="daily" class="${formState.term === 'daily' ? 'on' : ''}">Сдаю посуточно</button>
+                <button type="button" data-type="long" class="${formState.term === 'long' ? 'on' : ''}">Сдаю на длительный срок</button>
             </div>
 
             <div class="form-block">
@@ -423,12 +424,10 @@ function openAdForm(editId) {
 }
 
 function applyFormType(screen) {
-    const sale = formState.type === 'sale';
-    screen.querySelectorAll('.only-rent').forEach(el => el.style.display = sale ? 'none' : '');
-    document.getElementById('fmPriceLabel').textContent = sale ? 'Цена, ₽' : 'Цена за сутки, ₽';
-    document.getElementById('fmRoomsLabel').textContent = sale ? 'Площадь и комнаты' : 'Комнаты и площадь';
-    document.getElementById('fmRooms').placeholder = sale ? '120 м² · 4 комнаты · участок 6 соток' : '1 комната · 32 м²';
-    document.querySelectorAll('#fmType button').forEach(b => b.classList.toggle('on', b.dataset.type === formState.type));
+    const long = formState.term === 'long';
+    document.getElementById('fmPriceLabel').textContent = long ? 'Цена за месяц, ₽' : 'Цена за сутки, ₽';
+    document.getElementById('fmPrice').placeholder = long ? '35000' : '2500';
+    document.querySelectorAll('#fmType button').forEach(b => b.classList.toggle('on', b.dataset.type === formState.term));
 }
 
 function catHint() {
@@ -449,7 +448,7 @@ function wireAdForm(screen) {
     screen.querySelector('#fmType').onclick = (ev) => {
         const b = ev.target.closest('button[data-type]');
         if (!b) return;
-        formState.type = b.dataset.type;
+        formState.term = b.dataset.type === 'long' ? 'long' : 'daily';
         applyFormType(screen);
     };
 
@@ -558,7 +557,7 @@ function updatePickDist() {
 // ---------- СОХРАНЕНИЕ ----------
 function saveAdForm() {
     const val = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
-    const sale = formState.type === 'sale';
+    const sale = false, long = formState.term === 'long';
 
     const title = val('fmTitle');
     const priceNum = Number(val('fmPrice'));
@@ -575,7 +574,7 @@ function saveAdForm() {
     if (!sale && guests) facts.push({ i: 'fa-users', t: 'до ' + guests + ' гостей' });
     if (rooms) facts.push({ i: sale ? 'fa-ruler-combined' : 'fa-bed', t: rooms });
 
-    const terms = [];
+    const terms = [{ i: 'fa-calendar-days', l: 'Срок аренды', v: long ? 'На длительный срок' : 'Посуточно' }];
     if (!sale) {
         if (from) terms.push({ i: 'fa-door-open', l: 'Заезд', v: 'с ' + from });
         if (out) terms.push({ i: 'fa-door-closed', l: 'Выезд', v: 'до ' + out });
@@ -592,7 +591,7 @@ function saveAdForm() {
         category: formState.category,
         title,
         priceNum,
-        price: sale ? fmtMoney(priceNum) : fmtMoney(priceNum) + '/сут',
+        price: fmtMoney(priceNum) + (long ? '/мес' : '/сут'),
         location: val('fmAddr'),
         description: val('fmDesc'),
         image: formState.photos[0] || '',

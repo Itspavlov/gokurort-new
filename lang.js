@@ -58,6 +58,7 @@
         [/(^|\s)от(?=\s\d)/g, (m, sp) => sp + 'from'],
         [/(^|\s)до(?=\s\d)/g, (m, sp) => sp + 'up to'],
         [/\/сут(?:ки)?(?![А-Яа-яЁё])/g, () => '/night'],
+        [/\/мес(?![А-Яа-яЁё])/g, () => '/month'],
         [new RegExp(N + '\\s*км' + NOT_CYR, 'g'), (m, n) => n + ' km'],
         [new RegExp(N + '\\s*м(?![А-Яа-яЁё²])', 'g'), (m, n) => n + ' m'],
         [new RegExp(N + '\\s*мин' + NOT_CYR, 'g'), (m, n) => n + ' min'],

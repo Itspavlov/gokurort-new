@@ -157,6 +157,11 @@ function pubReqCardHTML(r) {
     const e = escapeHtml, housing = typeof isHousingReq === 'function' && isHousingReq(r);
     const seek = r.kind !== 'offer';
     const icon = r.section === 'work' ? 'fa-briefcase' : r.section === 'trips' ? 'fa-car-side' : 'fa-magnifying-glass-location';
+    // картинка: первое фото поездки или иллюстрация вакансии
+    let img = '';
+    const ph = (Array.isArray(r.photos) ? r.photos : []).filter(id => typeof MEDIA_ID_RE !== 'undefined' && MEDIA_ID_RE.test(String(id)));
+    if (ph.length && typeof carUrl === 'function') img = carUrl(ph[0]);
+    else if (r.section === 'work' && r.art && typeof artKnown === 'function' && artKnown(r.art) && typeof artSrc === 'function') img = artSrc(r.art);
     const title = r.title || (housing ? 'Запрос на жильё' : 'Без названия');
     const price = r.budget ? (seek && r.section !== 'work' ? 'до ' : '') + Number(r.budget).toLocaleString('ru-RU') + ' ₽' : '';
     const st = r.status !== 'active' ? ((typeof REQ_STATUS !== 'undefined' && REQ_STATUS[r.status]) || '') : (seek ? 'Ищет' : 'Предлагает');
@@ -169,7 +174,7 @@ function pubReqCardHTML(r) {
             + (housing ? '' : `<button type="button" data-act="closed">Закрыть</button>`);
     }
     act += `<button type="button" class="req-del-btn" data-act="delete" aria-label="Удалить"><i class="fas fa-trash"></i><span hidden>Удалить</span></button>`;
-    return pubCardHTML({ icon, title, price, meta, actions: act, cls: 'req-card pub-rq', attrs: ` data-rid="${e(r.id)}"` });
+    return pubCardHTML({ img, icon, title, price, meta, actions: act, cls: 'req-card pub-rq', attrs: ` data-rid="${e(r.id)}"` });
 }
 
 function pubReqListHTML(list) {

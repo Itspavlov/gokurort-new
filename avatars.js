@@ -86,3 +86,29 @@ function avatarHTML(name, cls, extraStyle) {
 }
 // своя аватарка поменялась: перерисовываем уже стоящие на экране кружки
 window.addEventListener('storage', () => avApply());
+
+// Выбранная готовая аватарка хранится на сервере. На новом устройстве или в другом браузере
+// подтягиваем её в локальный профиль, иначе после входа там снова пустой кружок.
+let _avSyncing = false;
+async function syncMyAvatar() {
+    if (_avSyncing || typeof getToken !== 'function' || !getToken() || typeof getProfile !== 'function' || typeof avatarUrl !== 'function') return;
+    _avSyncing = true;
+    try {
+        const r = await fetch(SERVER_URL + '/api/auth/me', { headers: { Authorization: 'Bearer ' + getToken() } });
+        const d = await r.json();
+        const id = d && d.ok && d.user && d.user.avatar;
+        if (!id || !avatarUrl(id)) return;
+        const p = getProfile();
+        if (p.avatarId === id) return;
+        if (p.avatar && !p.avatarId) return;   // на этом устройстве загружено своё фото: его не трогаем
+        saveProfile(Object.assign({}, p, { avatar: avatarUrl(id), avatarId: id }));
+        if (typeof renderProfile === 'function' && document.getElementById('profileRoot')) renderProfile();
+        avApply();
+    } catch (_) {} finally { _avSyncing = false; }
+}
+if (typeof setSession === 'function' && !setSession._av) {
+    const _ssAv = setSession;
+    setSession = function () { const r = _ssAv.apply(this, arguments); setTimeout(syncMyAvatar, 300); return r; };
+    setSession._av = true;
+}
+setTimeout(syncMyAvatar, 1500);

@@ -198,7 +198,7 @@ function openReplyForm(reviewId) {
             if (!text) { showToast('Напишите ответ'); return; }
             const btn = ev.currentTarget; btn.disabled = true;
             fetch(`${SERVER_URL}/api/reviews/${encodeURIComponent(reviewId)}/reply`, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify({ text }) })
-                .then(r => r.json()).then(d => { btn.disabled = false; if (!d.ok) return reviewApiError(d); closeSheet(); reloadUserProfile(); loadOwnReviews(true); })
+                .then(r => r.json()).then(d => { btn.disabled = false; if (!d.ok) return reviewApiError(d); const back = window._rvFromOwn; window._rvFromOwn = false; closeSheet(); reloadUserProfile(); loadOwnReviews(true); if (back) setTimeout(openOwnReviews, 400); })
                 .catch(() => { btn.disabled = false; showToast('Нет связи с сервером'); });
         });
     });
@@ -303,23 +303,28 @@ function ownReviewItem(r) {
 function paintOwnReviews() {
     const root = document.getElementById('profileRoot');
     const top = root && root.querySelector('.pf-top');
-    if (!top) return;
     const d = ownRv;
     const show = !!(d && (d.count > 0 || (d.listings || []).some(isServerAd)));
-    let line = root.querySelector('.pf-rating'), box = document.getElementById('pfReviews');
-    if (!show) { if (line) line.remove(); if (box) box.remove(); return; }
+    // открытый список отзывов (отдельная шторка) обновляем на месте
+    const sheetBox = document.getElementById('pfReviews');
+    if (sheetBox) sheetBox.innerHTML = ownReviewsListHTML();
+    if (!top) return;
+    let line = root.querySelector('.pf-rating');
+    if (!show) { if (line) line.remove(); return; }
     if (!line) { const name = root.querySelector('.pf-name'); if (!name) return; line = document.createElement('button'); line.type = 'button'; line.className = 'pf-rating'; name.insertAdjacentElement('afterend', line); }
-    line.innerHTML = d.count ? `<b class="rv-big">${rateFmt(d.rating)}</b><span class="rv-stars">${starsHTML(d.rating)}</span><span class="rv-n">${d.count} ${ratingWord(d.count)}</span><i class="fas fa-chevron-right"></i>` : '<span class="rv-n">Пока без отзывов</span>';
-    if (!box) { box = document.createElement('section'); box.id = 'pfReviews'; box.className = 'pf-rv'; top.insertAdjacentElement('afterend', box); }
-    const list = d.reviews || [], vis = ownRvAll ? list : list.slice(0, 3);
-    box.innerHTML = `<div class="pf-rv-head"><h3>Отзывы</h3>${d.count ? `<span class="rv-n">${d.count}</span>` : ''}</div>`
-        + (vis.length ? vis.map(ownReviewItem).join('') : '<p class="rv-empty">Отзывов пока нет. Они появятся здесь, когда гости оценят ваше жильё.</p>')
-        + (!ownRvAll && list.length > 3 ? `<button type="button" class="rv-link" data-rv="all">Все отзывы (${list.length})</button>` : '');
+    line.innerHTML = d.count ? `<b class="rv-big">${rateFmt(d.rating)}</b><span class="rv-stars">${starsHTML(d.rating)}</span><span class="rv-n">${d.count} ${ratingWord(d.count)}</span><i class="fas fa-chevron-right"></i>` : '<span class="rv-n">Пока без отзывов</span><i class="fas fa-chevron-right"></i>';
 }
 
-function scrollToOwnReviews() {
-    const go = () => { const el = document.getElementById('pfReviews'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); return !!el; };
-    if (!go()) { let n = 0; const t = setInterval(() => { if (go() || ++n > 10) clearInterval(t); }, 250); }
+function ownReviewsListHTML() {
+    const list = (ownRv && ownRv.reviews) || [];
+    return list.length ? list.map(ownReviewItem).join('') : '<p class="rv-empty">Отзывов пока нет. Они появятся здесь, когда гости оценят ваше жильё.</p>';
+}
+
+// отзывы открываются отдельной шторкой по нажатию на рейтинг под именем
+function openOwnReviews() {
+    const n = ownRv && ownRv.count;
+    openSheet('Отзывы' + (n ? ' (' + n + ')' : ''), `<div id="pfReviews" class="pf-rv-list">${ownReviewsListHTML()}</div>`);
+    loadOwnReviews(true);
 }
 
 // уведомление об отзыве: на свой профиль, а к чужому — на его вкладку «Отзывы»
@@ -329,18 +334,17 @@ function openReviewsTarget(id) {
         if (typeof closeUserProfile === 'function') closeUserProfile();
         switchTab('profile');
         loadOwnReviews(true);
-        scrollToOwnReviews();
+        setTimeout(openOwnReviews, 250);
     } else openUserProfile({ id }, '', 'rev');
 }
 
 document.addEventListener('click', (ev) => {
     const b = ev.target.closest('#pfReviews [data-rv]');
     if (b) {
-        if (b.dataset.rv === 'all') { ownRvAll = true; paintOwnReviews(); }
-        else if (b.dataset.rv === 'reply') openReplyForm(b.dataset.id);
+        if (b.dataset.rv === 'reply') { window._rvFromOwn = true; openReplyForm(b.dataset.id); }
         return;
     }
-    if (ev.target.closest('.pf-rating')) scrollToOwnReviews();
+    if (ev.target.closest('.pf-rating')) openOwnReviews();
 });
 
 if (typeof renderProfile === 'function') {

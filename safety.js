@@ -455,13 +455,21 @@
     };
 
     // блок для экрана «Профиль»
+    SF.openSecurity = function () {
+        const a = me();
+        const row = (fn, ic, t) => `<button type="button" class="pf-row" onclick="${fn}"><i class="fas ${ic}"></i><span>${t}</span><i class="fas fa-chevron-right pf-go"></i></button>`;
+        openSheet('Безопасность', `<div class="pf-menu">
+            ${a ? row('SF.openPassword()', 'fa-key', 'Сменить пароль') : ''}
+            ${a ? row('SF.openRecovery()', 'fa-shield-halved', 'Восстановление доступа') : ''}
+            ${row('SF.openSupport()', 'fa-life-ring', 'Поддержка')}
+            ${row('SF.openSupport()', 'fa-file-lines', 'Документы')}
+        </div>`);
+    };
     window.sfProfileRows = function () {
         const a = me();
         return `
-            ${a ? `<button type="button" class="pf-row" onclick="SF.openPassword()"><i class="fas fa-key"></i><span>Сменить пароль</span><i class="fas fa-chevron-right pf-go"></i></button>` : ''}
-            ${a ? `<button type="button" class="pf-row" onclick="SF.openRecovery()"><i class="fas fa-shield-halved"></i><span>Восстановление доступа</span><i class="fas fa-chevron-right pf-go"></i></button>` : ''}
-            ${a ? `<button type="button" class="pf-row" onclick="SF.openBlocked()"><i class="fas fa-ban"></i><span>Заблокированные</span>${SF.users.length ? `<em>${SF.users.length}</em>` : ''}<i class="fas fa-chevron-right pf-go"></i></button>` : ''}
-            <button type="button" class="pf-row" onclick="SF.openSupport()"><i class="fas fa-life-ring"></i><span>Поддержка и документы</span><i class="fas fa-chevron-right pf-go"></i></button>`;
+            <button type="button" class="pf-row" onclick="SF.openSecurity()"><i class="fas fa-lock"></i><span>Безопасность</span><i class="fas fa-chevron-right pf-go"></i></button>
+            ${a ? `<button type="button" class="pf-row" onclick="SF.openBlocked()"><i class="fas fa-ban"></i><span>Заблокированные</span>${SF.users.length ? `<em>${SF.users.length}</em>` : ''}<i class="fas fa-chevron-right pf-go"></i></button>` : ''}`;
     };
     window.sfProfileDanger = function () {
         return me() ? '<button class="pf-delete" onclick="SF.openDelete()"><i class="fas fa-user-slash"></i> Удалить аккаунт</button>' : '';
