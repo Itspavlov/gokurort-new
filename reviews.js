@@ -20,7 +20,7 @@ let fromProfile = false;
 let pv = null;   // состояние открытого профиля: { data, tab, ctxAdId, query }
 
 // ---------- окно профиля ----------
-function openUserProfile(who, ctxAdId) {
+function openUserProfile(who, ctxAdId, tab) {
     who = who || {};
     const id = who.id && String(who.id).startsWith('u_') ? who.id : '';
     const name = who.name || '';
@@ -28,7 +28,7 @@ function openUserProfile(who, ctxAdId) {
     const q = id ? 'id=' + encodeURIComponent(id) : 'name=' + encodeURIComponent(name);
     const h = {}; const t = getToken(); if (t) h.Authorization = 'Bearer ' + t;
     fetch(`${SERVER_URL}/api/profile?${q}`, { headers: h }).then(r => r.json()).then(d => {
-        if (d && d.ok) { showUserProfile({ server: true, ...d }, ctxAdId, q); return; }
+        if (d && d.ok) { showUserProfile({ server: true, ...d }, ctxAdId, q, tab); return; }
         localProfile(who, ctxAdId);
     }).catch(() => localProfile(who, ctxAdId));
 }
@@ -45,8 +45,8 @@ function localProfile(who, ctxAdId) {
     }, ctxAdId, '');
 }
 
-function showUserProfile(data, ctxAdId, query) {
-    pv = { data, tab: 'ads', ctxAdId: ctxAdId || '', query };
+function showUserProfile(data, ctxAdId, query, tab) {
+    pv = { data, tab: ['ads', 'svc', 'rev'].includes(tab) ? tab : 'ads', ctxAdId: ctxAdId || '', query };
     let el = document.getElementById('user-screen');
     if (!el) {
         el = document.createElement('section');
