@@ -8,15 +8,14 @@ const PUB_CHIPS = [
     ['housing', 'Жильё', 'fa-house'],
     ['work', 'Работа', 'fa-briefcase'],
     ['trips', 'Поездки', 'fa-car-side'],
-    ['services', 'Развлечения', 'fa-sailboat']
+    ['services', 'Развлечения', 'fa-sailboat'],
+    ['dviz', 'Поиски компаний', 'fa-champagne-glasses']
 ];
 let pubChip = 'housing';
 // у каждого раздела две вкладки: ads — объявления, req — запросы (у «Развлечений» вторая — поиски компании)
 let pubTab = { housing: 'ads', work: 'ads', trips: 'ads', services: 'ads' };
-let pubQ = '';   // строка «Найти в моих публикациях»
 try {
     let c = localStorage.getItem('yugi-pubchip');
-    if (c === 'dviz') { c = 'services'; pubTab.services = 'req'; }   // «Поиск друзей» теперь вторая вкладка «Развлечений»
     if (PUB_CHIPS.some(x => x[0] === c)) pubChip = c;
     const t = JSON.parse(localStorage.getItem('yugi-pubtab') || '{}');
     for (const k in pubTab) if (t[k] === 'ads' || t[k] === 'req') pubTab[k] = t[k];
@@ -33,12 +32,13 @@ const pubActive = (list) => list.filter(r => r.status === 'active');
 function pubItems(sec, tab) {
     if (sec === 'housing') return tab === 'ads' ? myAdsAll() : pubReqs('housing');
     if (sec === 'work' || sec === 'trips') return pubReqs(sec).filter(r => (r.kind === 'offer') === (tab === 'ads'));
-    return tab === 'ads' ? pubSv() : pubDviz();
+    if (sec === 'dviz') return pubDviz();
+    return pubSv();
 }
 // число на вкладке: объявления считаем все, запросы — только активные
 function pubCount(sec, tab) {
     const list = pubItems(sec, tab);
-    return (sec === 'housing' && tab === 'ads') || sec === 'services' ? list.length : pubActive(list).length;
+    return (sec === 'housing' && tab === 'ads') || sec === 'services' || sec === 'dviz' ? list.length : pubActive(list).length;
 }
 
 // сколько у человека опубликовано в каждом разделе (для цифр на чипсах)
@@ -47,7 +47,8 @@ function pubCounts() {
         housing: pubCount('housing', 'ads') + pubCount('housing', 'req'),
         work: pubCount('work', 'ads') + pubCount('work', 'req'),
         trips: pubCount('trips', 'ads') + pubCount('trips', 'req'),
-        services: pubCount('services', 'ads') + pubCount('services', 'req')
+        services: pubCount('services', 'ads'),
+        dviz: pubCount('dviz', 'ads')
     };
 }
 
@@ -72,7 +73,6 @@ function renderMyPubs() {
     }
     root.innerHTML = `<div class="cat-chips-wrap pub-chips-wrap"><div class="cat-chips pub-chips" role="tablist" aria-label="Раздел">${PUB_CHIPS.map(([k, l, ic]) =>
         `<button type="button" role="tab" class="cat-chip ${pubChip === k ? 'on' : ''}" data-pc="${k}" aria-selected="${pubChip === k}"><i class="fas ${ic}"></i><span>${l}</span><b hidden></b></button>`).join('')}</div></div>
-        <div class="pub-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input id="pubSearch" type="search" placeholder="Найти в моих публикациях" autocomplete="off" enterkeyhint="search" value="${escapeHtml(pubQ)}"></div>
         <div id="pubBody" class="pub-body"></div>`;
     paintPubs();
     pubCenterChip();
@@ -86,24 +86,26 @@ function renderMyPubs() {
 }
 
 const pubEmpty = (text) => `<p class="pf-empty">${text}</p>`;
-const pubHas = (txt) => !pubQ || String(txt || '').toLowerCase().includes(pubQ);
 
 // кнопка размещения на каждой вкладке: data-pub — действие, подпись по-русски
 const PUB_ACT = {
     housing: { ads: ['hoffer', 'Разместить объявление'], req: ['hseek', 'Разместить запрос'] },
     work: { ads: ['offer', 'Разместить объявление'], req: ['seek', 'Разместить запрос'] },
     trips: { ads: ['offer', 'Разместить объявление'], req: ['seek', 'Разместить запрос'] },
-    services: { ads: ['svnew', 'Разместить объявление'], req: ['dviz', 'Разместить запрос'] }
+    services: { ads: ['svnew', 'Разместить объявление'] },
+    dviz: { ads: ['dviz', 'Разместить запрос'] }
 };
 const PUB_EMPTY = {
     housing: { ads: ['fa-house', 'Объявлений пока нет', 'Сдаёте или продаёте жильё? Нажмите кнопку выше.'], req: ['fa-magnifying-glass-location', 'Запросов пока нет', 'Ищете жильё? Разместите запрос: хозяева сами предложат варианты.'] },
     work: { ads: ['fa-briefcase', 'Объявлений пока нет', 'Нужен сотрудник? Разместите вакансию кнопкой выше.'], req: ['fa-briefcase', 'Запросов пока нет', 'Ищете работу? Разместите запрос кнопкой выше.'] },
     trips: { ads: ['fa-car-side', 'Объявлений пока нет', 'Едете и есть свободные места? Разместите поездку кнопкой выше.'], req: ['fa-car-side', 'Запросов пока нет', 'Нужна поездка? Разместите запрос кнопкой выше.'] },
-    services: { ads: ['fa-sailboat', 'Объявлений пока нет', 'Катаете на катере, водите экскурсии, возите на джипах? Добавьте объявление с фото: его увидят в разделе «Развлечения».'], req: ['fa-champagne-glasses', 'Поисков компании пока нет', 'Зовёте компанию на прогулку, джипы или волейбол? Разместите запрос: желающие откликнутся и напишут.'] }
+    services: { ads: ['fa-sailboat', 'Объявлений пока нет', 'Катаете на катере, водите экскурсии, возите на джипах? Добавьте объявление с фото: его увидят в разделе «Развлечения».'] },
+    dviz: { ads: ['fa-champagne-glasses', 'Поисков компании пока нет', 'Зовёте компанию на прогулку, джипы или волейбол? Разместите запрос: желающие откликнутся и напишут.'] }
 };
 
 function pubTabsHTML(sec) {
-    const lbl = sec === 'services' ? ['Объявления', 'Поиски компаний'] : ['Объявления', 'Запросы'];
+    if (sec === 'services' || sec === 'dviz') return '';
+    const lbl = ['Объявления', 'Запросы'];
     return `<div class="seek-tabs pub-tabs" role="tablist" aria-label="Что показать">${['ads', 'req'].map((t, i) =>
         `<button type="button" role="tab" class="seek-tab ${pubTab[sec] === t ? 'on' : ''}" data-pt="${t}" aria-selected="${pubTab[sec] === t}">${lbl[i]} <b>(${pubCount(sec, t)})</b></button>`).join('')}</div>`;
 }
@@ -114,35 +116,65 @@ function pubActionHTML(sec, tab) {
     return `<button type="button" class="primary-btn wide-btn pub-act" ${k === 'svnew' ? 'data-sv="new"' : `data-pub="${k}"`}><i class="fas fa-plus"></i> ${label}</button>`;
 }
 
-function pubEmptyHTML(sec, tab, hadItems) {
-    const [ic, t, sub] = hadItems ? ['fa-magnifying-glass', 'Ничего не найдено', 'Попробуйте другое слово.'] : PUB_EMPTY[sec][tab];
+function pubEmptyHTML(sec, tab) {
+    const [ic, t, sub] = PUB_EMPTY[sec][tab];
     return `<div class="req-empty"><i class="fas ${ic}"></i><b>${t}</b><span>${sub}</span></div>`;
 }
 
+// все карточки «Моих публикаций» одного вида и размера, как у «Развлечений»: фото слева, справа название, цена, подпись; внизу кнопки
+function pubCardHTML(o) {
+    const e = escapeHtml;
+    const thumb = o.img ? `<img src="${e(o.img)}" alt="" loading="lazy">` : `<i class="fas ${o.icon || 'fa-image'}"></i>`;
+    return `<div class="sv-card pub-card${o.cls ? ' ' + o.cls : ''}"${o.attrs || ''}>
+        <div class="sv-main"${o.open ? ` onclick="${o.open}"` : ''}>
+            <div class="sv-thumb">${thumb}</div>
+            <div class="sv-info">
+                <b class="sv-title">${e(o.title)}</b>
+                <span class="sv-price">${e(o.price || '')}</span>
+                <small class="sv-meta">${o.meta || ''}</small>
+            </div>
+        </div>
+        <div class="sv-actions">${o.actions}</div></div>`;
+}
+
 function pubAdsHTML() {
-    const e = escapeHtml, mine = myAdsAll().filter(ad => pubHas((ad.title || '') + ' ' + (ad.location || '')));
+    const e = escapeHtml, mine = myAdsAll();
     // «Скрыто» — объявление лежит только на этом устройстве и ещё не опубликовано для всех; «Активно» — его видят все
     const localIds = new Set(getMyAds().map(a => String(a.id)));
     return mine.map(ad => {
         const hid = localIds.has(String(ad.id));
-        return `
-        <div class="my-ad">
-            <div class="my-ad-thumb" onclick="openListing('${ad.id}')">${ad.image ? `<img src="${ad.image}" alt="">` : '<i class="fas fa-image"></i>'}</div>
-            <div class="my-ad-info" onclick="openListing('${ad.id}')">
-                <div class="my-ad-title">${e(ad.title)}</div>
-                <div class="my-ad-meta"><span class="my-ad-price">${e(ad.price)}</span><span class="ad-status ${hid ? 'off' : 'on'}" ${hid ? 'title="Видно только вам: объявление ещё не опубликовано для всех"' : ''}>${hid ? 'Скрыто' : 'Активно'}</span></div>
-            </div>
-            <div class="my-ad-actions">
-                <button onclick="openAdForm('${ad.id}')" aria-label="Изменить"><i class="fas fa-pen"></i></button>
-                <button onclick="deleteMyAd('${ad.id}')" aria-label="Удалить"><i class="fas fa-trash"></i></button>
-            </div>
-        </div>`;
+        return pubCardHTML({
+            img: ad.image, icon: 'fa-image', title: ad.title, price: ad.price,
+            open: `openListing('${ad.id}')`,
+            meta: `<span class="ad-status ${hid ? 'off' : 'on'}">${hid ? 'Скрыто' : 'Активно'}</span>${ad.location ? `<span><i class="fas fa-location-dot"></i>${e(ad.location)}</span>` : ''}`,
+            actions: `<button type="button" onclick="openAdForm('${ad.id}')"><i class="fas fa-pen"></i> Изменить</button><button type="button" onclick="deleteMyAd('${ad.id}')" data-del-ad aria-label="Удалить"><i class="fas fa-trash"></i></button>`
+        });
     }).join('');
+}
+
+// запрос или объявление в Работе/Поездках/Жилье: та же карточка; кнопки обрабатывает onReqCardClick
+function pubReqCardHTML(r) {
+    const e = escapeHtml, housing = typeof isHousingReq === 'function' && isHousingReq(r);
+    const seek = r.kind !== 'offer';
+    const icon = r.section === 'work' ? 'fa-briefcase' : r.section === 'trips' ? 'fa-car-side' : 'fa-magnifying-glass-location';
+    const title = r.title || (housing ? 'Запрос на жильё' : 'Без названия');
+    const price = r.budget ? (seek && r.section !== 'work' ? 'до ' : '') + Number(r.budget).toLocaleString('ru-RU') + ' ₽' : '';
+    const st = r.status !== 'active' ? ((typeof REQ_STATUS !== 'undefined' && REQ_STATUS[r.status]) || '') : (seek ? 'Ищет' : 'Предлагает');
+    const place = [r.city, housing ? r.district : ''].filter(Boolean).join(', ');
+    const meta = `<span class="req-kind ${r.status !== 'active' ? 'off' : (seek ? 'seek' : 'offer')}">${e(st)}</span>${place ? `<span><i class="fas fa-location-dot"></i>${e(place)}</span>` : ''}`;
+    let act = '';
+    if (r.status === 'active') {
+        act = (housing ? `<button type="button" data-act="options"><i class="fas fa-house-circle-check"></i> Варианты${r.matchCount ? ': ' + r.matchCount : ''}</button>` : '')
+            + `<button type="button" data-act="edit"><i class="fas fa-pen"></i> Изменить</button>`
+            + (housing ? '' : `<button type="button" data-act="closed">Закрыть</button>`);
+    }
+    act += `<button type="button" class="req-del-btn" data-act="delete" aria-label="Удалить"><i class="fas fa-trash"></i><span hidden>Удалить</span></button>`;
+    return pubCardHTML({ icon, title, price, meta, actions: act, cls: 'req-card pub-rq', attrs: ` data-rid="${e(r.id)}"` });
 }
 
 function pubReqListHTML(list) {
     const act = pubActive(list), hist = list.filter(r => r.status !== 'active');
-    const row = (typeof myReqRow === 'function') ? myReqRow : () => '';
+    const row = pubReqCardHTML;
     return (act.length ? '<div class="opt-sec">Активные</div>' + act.map(row).join('') : '')
         + (hist.length ? '<div class="opt-sec" style="margin-top:8px">История</div>' + hist.slice(0, 15).map(row).join('') : '');
 }
@@ -153,30 +185,23 @@ function paintPubs() {
     const chips = document.querySelectorAll('#pubRoot .cat-chip[data-pc]');
     const counts = pubCounts();
     chips.forEach(c => { const b = c.querySelector('b'), n = counts[c.dataset.pc] || 0; if (b) { b.hidden = !n; b.textContent = String(n); } });
-    const sec = pubChip, tab = pubTab[sec];
+    const sec = pubChip, tab = pubTab[sec] || 'ads';
     let list = pubItems(sec, tab);
-    const total = list.length;
-    let inner = '', shown = 0;
+    let inner = '', shown = list.length;
     if (sec === 'housing' && tab === 'ads') {
-        inner = pubAdsHTML(); shown = myAdsAll().filter(ad => pubHas((ad.title || '') + ' ' + (ad.location || ''))).length;
-        if (shown) inner = `<div class="my-ads">${inner}</div>`;
-    } else if (sec === 'services' && tab === 'ads') {
-        list = list.filter(s => pubHas((s.title || '') + ' ' + (s.place || '')));
-        shown = list.length;
+        shown = myAdsAll().length;
+        if (shown) inner = `<div class="sv-list">${pubAdsHTML()}</div>`;
+    } else if (sec === 'services') {
         inner = shown ? `<div class="sv-list">${list.map(s => serviceCardHTML(s, true)).join('')}</div>` : '';
         // прежние запросы раздела (если остались) не теряем: они лежат под карточками
         const old = pubReqs('services');
-        if (old.length) { inner += `<div class="req-mine" id="pubReqs">${pubReqListHTML(old)}</div>`; shown = shown || old.length; }
-    } else if (sec === 'services') {
-        list = list.filter(ev => pubHas(ev.title || ev.text || ''));
-        shown = list.length;
+        if (old.length) { inner += `<div class="sv-list" id="pubReqs">${pubReqListHTML(old)}</div>`; shown = shown || old.length; }
+    } else if (sec === 'dviz') {
         inner = shown ? `<div class="dv-feed pub-dv" id="pubDv">${list.map(dvCardHTML).join('')}</div>` : '';
     } else {
-        list = list.filter(r => pubHas((r.title || '') + ' ' + (r.text || '') + ' ' + (r.city || '')));
-        shown = list.length;
-        inner = shown ? `<div class="req-mine" id="pubReqs">${pubReqListHTML(list)}</div>` : '';
+        inner = shown ? `<div class="sv-list" id="pubReqs">${pubReqListHTML(list)}</div>` : '';
     }
-    let h = pubTabsHTML(sec) + pubActionHTML(sec, tab) + (shown ? inner : pubEmptyHTML(sec, tab, total > 0 && !!pubQ));
+    let h = pubTabsHTML(sec) + pubActionHTML(sec, tab) + (shown ? inner : pubEmptyHTML(sec, tab));
     if (sec === 'housing' && tab === 'ads') {
         if (pubQuota) h += `<div class="quota-line pub-quota${pubQuota.left === 0 ? ' full' : ''}"><i class="fas fa-calendar-plus"></i><span>${escapeHtml(quotaText(pubQuota))}</span></div>`;
         const hasMatch = typeof matchReqs !== 'undefined' && matchReqs.length;
@@ -219,19 +244,32 @@ document.addEventListener('click', (ev) => {
         return;
     }
     if (ev.target.closest('#pubReqs')) {
-        if (ev.target.closest('.req-card .req-text') && !ev.target.closest('button')) { onReqCardClick(ev); return; }
-        onMyReqBoxClick(ev);
+        const del = ev.target.closest('.pub-rq [data-act="delete"]');
+        if (del) {          // первое нажатие просит подтвердить, второе удаляет
+            if (!del.classList.contains('sure')) {
+                del.classList.add('sure'); del.innerHTML = '<i class="fas fa-trash"></i> Точно?';
+                setTimeout(() => { if (del.isConnected) { del.classList.remove('sure'); del.innerHTML = '<i class="fas fa-trash"></i><span hidden>Удалить</span>'; } }, 3000);
+                return;
+            }
+            const rid = del.closest('.pub-rq').dataset.rid;
+            del.disabled = true;
+            fetch(`${SERVER_URL}/api/requests/${encodeURIComponent(rid)}`, { method: 'DELETE', headers: reqAuthHeaders() }).then(r => r.json()).then(d => {
+                if (!d.ok) { del.disabled = false; showToast(d.message || 'Не удалось удалить'); return; }
+                myReqs = myReqs.filter(x => x.id !== rid);
+                paintMyRequests(); showToast('Удалено'); if (typeof loadRequests === 'function') loadRequests();
+            }).catch(() => { del.disabled = false; showToast('Нет связи с сервером'); });
+            return;
+        }
+        const b = ev.target.closest('.pub-rq button[data-act]');
+        if (b) {
+            const rr = myReqs.find(x => x.id === b.closest('.pub-rq').dataset.rid);
+            if (rr && b.dataset.act === 'edit') { if (typeof isHousingReq === 'function' && isHousingReq(rr)) openRequestSheet(rr); else onReqCardClick(ev); return; }
+            onReqCardClick(ev);
+        }
         return;
     }
     if (ev.target.closest('#pubDv')) onFeedClick(ev);
 });
-// поиск по своим публикациям: перерисовывается только список, поле ввода не трогаем
-document.addEventListener('input', (ev) => {
-    if (!ev.target || ev.target.id !== 'pubSearch') return;
-    pubQ = ev.target.value.trim().toLowerCase();
-    paintPubs();
-});
-
 // ---------- обновления из других модулей ----------
 if (typeof renderProfile === 'function') {
     const _rpPub = renderProfile;
@@ -243,7 +281,7 @@ if (typeof fetchRemoteAds === 'function') {
 }
 if (typeof paintDviz === 'function') {
     const _pdPub = paintDviz;
-    paintDviz = function () { const r = _pdPub.apply(this, arguments); if (document.getElementById('pubBody') && pubChip === 'services' && pubTab.services === 'req') paintPubs(); return r; };
+    paintDviz = function () { const r = _pdPub.apply(this, arguments); if (document.getElementById('pubBody') && pubChip === 'dviz') paintPubs(); return r; };
 }
 // как только открыт чат раздела, раздел снова берётся из самого чата
 if (typeof openGroup === 'function') {
