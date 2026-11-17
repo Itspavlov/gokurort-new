@@ -198,7 +198,7 @@ function openReplyForm(reviewId) {
             if (!text) { showToast('Напишите ответ'); return; }
             const btn = ev.currentTarget; btn.disabled = true;
             fetch(`${SERVER_URL}/api/reviews/${encodeURIComponent(reviewId)}/reply`, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify({ text }) })
-                .then(r => r.json()).then(d => { btn.disabled = false; if (!d.ok) return reviewApiError(d); closeSheet(); reloadUserProfile(); })
+                .then(r => r.json()).then(d => { btn.disabled = false; if (!d.ok) return reviewApiError(d); closeSheet(); reloadUserProfile(); loadOwnReviews(true); })
                 .catch(() => { btn.disabled = false; showToast('Нет связи с сервером'); });
         });
     });
@@ -267,4 +267,83 @@ document.addEventListener('click', (ev) => {
 function openListingById(id) {
     if (typeof findAd === 'function' && findAd(id)) { openListing(id); return; }
     fetchFullAd(id, (ok) => { if (ok) openListing(id); });
+}
+
+
+// ============================================
+// ОТЗЫВЫ В СВОЁМ ПРОФИЛЕ: под именем и аватаркой — рейтинг со звёздами, ниже сами отзывы (как на Авито).
+// Уведомление «Новый отзыв» открывает именно это место.
+// ============================================
+let ownRv = null, ownRvAll = false, ownRvAt = 0;
+
+function loadOwnReviews(force) {
+    const acc = typeof getAccount === 'function' ? getAccount() : null;
+    if (!acc || !acc.id || !getToken()) { ownRv = null; return; }
+    if (!force && Date.now() - ownRvAt < 20000) return;
+    ownRvAt = Date.now();
+    fetch(`${SERVER_URL}/api/profile?id=${encodeURIComponent(acc.id)}`, { headers: reqAuthHeaders() })
+        .then(r => r.json()).then(d => { if (d && d.ok) { ownRv = d; paintOwnReviews(); } }).catch(() => {});
+}
+
+function ownReviewItem(r) {
+    const e = escapeHtml;
+    const ava = typeof avatarHTML === 'function' ? avatarHTML(r.author.name, 'rv-ava') : `<span class="rv-ava">${e(Array.from(r.author.name || '?')[0] || '?')}</span>`;
+    return `<div class="rv-item pf-rv-item">
+        ${ava}
+        <div class="rv-main">
+            <div class="rv-top"><b>${e(r.author.name)}</b><span class="rv-date">${reviewDate(r.created)}</span></div>
+            <div class="rv-stars sm">${starsHTML(r.rating)}</div>
+            ${r.listingTitle ? `<div class="rv-on">${e(r.listingTitle)}</div>` : ''}
+            ${r.text ? `<p class="rv-text">${e(r.text)}</p>` : ''}
+            ${r.reply ? `<div class="rv-reply"><b>Ваш ответ</b><p>${e(r.reply.text)}</p></div>` : `<button type="button" class="rv-link" data-rv="reply" data-id="${e(r.id)}">Ответить</button>`}
+        </div>
+    </div>`;
+}
+
+function paintOwnReviews() {
+    const root = document.getElementById('profileRoot');
+    const top = root && root.querySelector('.pf-top');
+    if (!top) return;
+    const d = ownRv;
+    const show = !!(d && (d.count > 0 || (d.listings || []).some(isServerAd)));
+    let line = root.querySelector('.pf-rating'), box = document.getElementById('pfReviews');
+    if (!show) { if (line) line.remove(); if (box) box.remove(); return; }
+    if (!line) { const name = root.querySelector('.pf-name'); if (!name) return; line = document.createElement('button'); line.type = 'button'; line.className = 'pf-rating'; name.insertAdjacentElement('afterend', line); }
+    line.innerHTML = d.count ? `<b class="rv-big">${rateFmt(d.rating)}</b><span class="rv-stars">${starsHTML(d.rating)}</span><span class="rv-n">${d.count} ${ratingWord(d.count)}</span><i class="fas fa-chevron-right"></i>` : '<span class="rv-n">Пока без отзывов</span>';
+    if (!box) { box = document.createElement('section'); box.id = 'pfReviews'; box.className = 'pf-rv'; top.insertAdjacentElement('afterend', box); }
+    const list = d.reviews || [], vis = ownRvAll ? list : list.slice(0, 3);
+    box.innerHTML = `<div class="pf-rv-head"><h3>Отзывы</h3>${d.count ? `<span class="rv-n">${d.count}</span>` : ''}</div>`
+        + (vis.length ? vis.map(ownReviewItem).join('') : '<p class="rv-empty">Отзывов пока нет. Они появятся здесь, когда гости оценят ваше жильё.</p>')
+        + (!ownRvAll && list.length > 3 ? `<button type="button" class="rv-link" data-rv="all">Все отзывы (${list.length})</button>` : '');
+}
+
+function scrollToOwnReviews() {
+    const go = () => { const el = document.getElementById('pfReviews'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); return !!el; };
+    if (!go()) { let n = 0; const t = setInterval(() => { if (go() || ++n > 10) clearInterval(t); }, 250); }
+}
+
+// уведомление об отзыве: на свой профиль, а к чужому — на его вкладку «Отзывы»
+function openReviewsTarget(id) {
+    const acc = typeof getAccount === 'function' ? getAccount() : null;
+    if (acc && acc.id === id) {
+        if (typeof closeUserProfile === 'function') closeUserProfile();
+        switchTab('profile');
+        loadOwnReviews(true);
+        scrollToOwnReviews();
+    } else openUserProfile({ id }, '', 'rev');
+}
+
+document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('#pfReviews [data-rv]');
+    if (b) {
+        if (b.dataset.rv === 'all') { ownRvAll = true; paintOwnReviews(); }
+        else if (b.dataset.rv === 'reply') openReplyForm(b.dataset.id);
+        return;
+    }
+    if (ev.target.closest('.pf-rating')) scrollToOwnReviews();
+});
+
+if (typeof renderProfile === 'function') {
+    const _rpRv = renderProfile;
+    renderProfile = function () { const r = _rpRv.apply(this, arguments); paintOwnReviews(); loadOwnReviews(); return r; };
 }

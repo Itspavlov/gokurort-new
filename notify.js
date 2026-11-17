@@ -149,7 +149,7 @@ function openTarget(target) {
     const [kind, id] = target.split(':');
     if (kind === 'profile') { switchTab('profile'); return; }
     if (kind === 'listing') { if (typeof openListingById === 'function') openListingById(id); return; }
-    if (kind === 'reviews') { if (typeof openUserProfile === 'function') openUserProfile({ id }, '', 'rev'); return; }   // отзывы — во вкладке профиля хозяина
+    if (kind === 'reviews') { if (typeof openReviewsTarget === 'function') openReviewsTarget(id); return; }   // свои отзывы — в своём профиле, чужие — на вкладке профиля хозяина
     whenSocketReady(() => {
         if (kind === 'dm') openDmById(id);
         else if (kind === 'group') openGroupById(id);

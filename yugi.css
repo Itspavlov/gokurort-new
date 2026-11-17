@@ -1928,3 +1928,28 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 
 /* значок «проверен» в карточках запросов и поездок */
 .rq-who .pf-check { color: #2F9BFF; font-size: 12px; margin-left: 2px; vertical-align: 1px; }
+
+/* «Мои публикации»: поиск, вкладки «Объявления / Запросы» и кнопка размещения на каждой */
+.pub-search { position: relative; margin: 2px 0 12px; }
+.pub-search i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px; pointer-events: none; }
+.pub-search input { width: 100%; box-sizing: border-box; height: 44px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); padding: 0 16px 0 40px; font: 600 14px var(--font); outline: none; -webkit-appearance: none; appearance: none; }
+.pub-search input::placeholder { color: var(--text-secondary); font-weight: 500; }
+.pub-search input:focus { border-color: var(--accent, #F28A1E); }
+.pub-tabs { margin: 0 0 12px; flex: none; width: 100%; box-sizing: border-box; }
+.pub-act { margin: 0 0 12px; }
+p.pub-act { text-align: center; }
+
+/* отзывы в своём профиле (как на Авито): рейтинг под именем и список под шапкой */
+.pf-rating { display: inline-flex; align-items: center; gap: 8px; margin: 6px 0 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pf-rating .rv-big { font-size: 18px; }
+.pf-rating > i { font-size: 11px; opacity: .55; }
+.pf-rv { margin: 14px 0 6px; padding: 14px; border-radius: 18px; background: var(--glass); border: 1px solid var(--glass-border); }
+.pf-rv-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.pf-rv-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+.pf-rv-item { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; }
+.pf-rv-item .rv-main { flex: 1; min-width: 0; }
+.rv-ava { flex: none; width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; color: #fff; font-weight: 800; font-size: 15px; }
+.rv-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf-rv-item .rv-top b { font-size: 14px; }
+.pf-rv-item .rv-date { font-size: 12px; color: var(--text-muted); }
+.pf-rv-item .rv-stars { margin-top: 3px; }
