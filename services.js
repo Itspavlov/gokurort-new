@@ -310,7 +310,7 @@ async function svGuessPhoto(dataUrl) {
 // ---------- редактор ----------
 function openServiceEditor(edit, after) {
     loginRequired(async () => {
-        if (edit && edit.id && edit.photoCount && !edit.photos) {      // из списка пришло без фото — берём полную
+        if (edit && edit.id && (edit.photoCount || edit.hasMapPhoto) && !edit.photos) {      // из списка пришло без фото — берём полную
             const { d } = await svApi('/api/services/' + encodeURIComponent(edit.id)).catch(() => ({}));
             if (!d || !d.ok) { showToast('Не удалось загрузить карточку'); return; }
             edit = d.service;
