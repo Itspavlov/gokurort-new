@@ -1566,9 +1566,9 @@ async function publishAd(ad, remoteId, done) {
 }
 
 async function fitThumb(src) {
-    for (const [side, q] of [[480, 0.65], [400, 0.55], [320, 0.5]]) {
+    for (const [side, q] of [[640, 0.7], [520, 0.62], [440, 0.56], [360, 0.5], [300, 0.45]]) {
         const out = await shrinkDataURL(src, side, q);
-        if (out.length * 0.75 <= 75000) return out;
+        if (out.length * 0.75 <= 78000) return out;
     }
     return '';
 }

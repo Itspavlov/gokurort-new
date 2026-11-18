@@ -187,10 +187,27 @@ async function svMapPhoto(file) {
     }
     throw new Error('big');
 }
+// обложка для ленты: плитка в ленте высокая (≈ 17×25), поэтому режем кадр по центру под её пропорции и держим 440×630,
+// чтобы на экранах с плотной картинкой (×2–×3) фото не расплывалось. Раньше было 320 пикселей по длинной стороне — отсюда мыло.
+function svCrop(src, w, h, q) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+            const k = Math.max(w / img.width, h / img.height);          // как object-fit: cover
+            const sw = w / k, sh = h / k, sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+            g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+            resolve(c.toDataURL('image/jpeg', q));
+        };
+        img.src = src;
+    });
+}
 async function svThumb(first) {
-    for (const [side, q] of [[320, 0.7], [240, 0.6], [160, 0.55]]) {
-        const out = await svShrink(first, side, q);
-        if (out.length <= 78000) return out;
+    for (const [w, h, q] of [[440, 630, 0.74], [400, 570, 0.68], [360, 515, 0.62], [300, 430, 0.58], [240, 345, 0.55]]) {
+        const out = await svCrop(first, w, h, q);
+        if (out.length <= 106000) return out;      // сервер принимает до 80 КБ (≈ 107 тыс. знаков base64)
     }
     return '';
 }
