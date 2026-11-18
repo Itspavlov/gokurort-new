@@ -5,9 +5,12 @@
 //  • в разделе есть быстрый поиск и категории, чтобы не листать всё подряд
 //  • «Предлагаю / Сдаю»: если карточки или объявления уже есть — предложим опубликовать старое заново или создать новое
 // ============================================
-const SV_TAGS = { sea: 'Морские прогулки', tours: 'Экскурсии', active: 'Активный отдых', kids: 'Детям', show: 'Шоу и вечера', food: 'Гастро', other: 'Другое' };
+const SV_TAGS = { sea: 'Морские прогулки', tours: 'Экскурсии', active: 'Активный отдых', kids: 'Детям', show: 'Шоу и вечера', food: 'Кафе и еда', other: 'Другое' };
 const SV_ICONS = { sea: 'fa-ship', tours: 'fa-map-location-dot', active: 'fa-person-hiking', kids: 'fa-child-reaching', show: 'fa-masks-theater', food: 'fa-utensils', other: 'fa-star' };
-const SV_UNITS = ['', 'за человека', 'за час', 'за день', 'за билет', 'за лодку / группу'];
+const SV_UNITS = ['', 'за человека', 'за час', 'за день', 'за билет', 'за лодку / группу', 'за порцию', 'средний чек'];
+const SV_CITY_DEFAULT = 'Архипо-Осиповка';
+// +79001234567 → +7 900 123-45-67
+const svFmtPhone = (p) => { const m = /^\+7(\d{3})(\d{3})(\d{2})(\d{2})$/.exec(String(p || '')); return m ? `+7 ${m[1]} ${m[2]}-${m[3]}-${m[4]}` : String(p || ''); };
 const SV_MAX = 10, SV_PHOTOS = 4;
 let serviceFeed = [];      // карточки в разделе «Услуги»
 let myServices = [];       // мои карточки
@@ -43,7 +46,8 @@ function serviceFeedHTML(s) {
     const price = s.price ? Number(s.price).toLocaleString('ru-RU') + ' ₽' : 'Договорная';
     const btns = mine
         ? `<button type="button" class="sv-cta" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i><span>Изменить</span></button>`
-        : `<button type="button" class="main sv-cta" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i><span>Написать</span></button>`;
+        : `<button type="button" class="main sv-cta" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i><span>Написать</span></button>`
+          + (s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : '');
     const mapBtn = s.coords ? `<button type="button" class="sv-mapbtn" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта</button>` : '';
     return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
         <div class="sv-t-bg">${svSlidesHTML(s)}</div>
@@ -133,8 +137,9 @@ function openServiceView(id) {
             ${s.coords ? `<button type="button" class="ghost-btn wide-btn sv-viewmap" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта${s.place ? ' · ' + e(s.place) : ''}</button>` : ''}
             <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
                 <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
-            ${mine ? `<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button></div>`
-                : `<button class="primary-btn wide-btn" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i> Написать</button>`}
+            ${s.phone && !mine ? `<div class="sv-view-phone"><i class="fas fa-phone"></i><a href="tel:${e(s.phone)}" data-sv="call">${e(svFmtPhone(s.phone))}</a></div>` : ''}
+            ${mine ? `${s.phone ? `<div class="sv-view-phone${s.hidePhone ? ' off' : ''}"><i class="fas ${s.hidePhone ? 'fa-phone-slash' : 'fa-phone'}"></i><span>${e(svFmtPhone(s.phone))}${s.hidePhone ? ' · скрыт от других' : ''}</span></div>` : ''}<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button></div>`
+                : `<div class="sv-view-act"><button class="main sv-cta" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i><span>Написать</span></button>${s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : ''}</div>`}
             <button type="button" class="ghost-btn wide-btn dv-from-sv" data-dv-create><i class="fas fa-champagne-glasses"></i> Создать поиск с этим развлечением</button>
             ${!mine && typeof sfReportBtn === 'function' ? `<div class="sf-row">${sfReportBtn({ kind: 'service', id: s.id, ownerId: s.ownerId, ownerName: s.ownerName, title: s.title })}</div>` : ''}`, (el) => {
             el.querySelector('[data-dv-create]').addEventListener('click', () => { closeSheet(); if (typeof openDvizForm === 'function') openDvizForm({ attach: s }); });
@@ -212,14 +217,15 @@ const SV_FIELDS = {
         { k: 'Возраст', o: ['', '0+', '6+', '12+', '16+', '18+'] },
         { k: 'Что будет', ph: 'живая музыка, шоу-программа' }],
     food: [
-        { k: 'Формат', o: ['', 'Дегустация', 'Мастер-класс', 'Ужин / банкет', 'Доставка', 'Другое'] },
-        { k: 'Длительность', o: SV_DUR },
-        { k: 'Гостей', ph: 'до 10 человек' },
-        { k: 'Что входит', ph: 'вино, сыр, закуски' }],
+        { k: 'Заведение', o: ['', 'Кафе', 'Ресторан', 'Столовая', 'Бар / паб', 'Пиццерия', 'Шашлычная / гриль', 'Пекарня / кондитерская', 'Фастфуд / кофе с собой', 'Доставка еды', 'Дегустация / мастер-класс', 'Банкет / ужин'] },
+        { k: 'Кухня', o: ['', 'Домашняя', 'Русская', 'Кавказская', 'Европейская', 'Итальянская', 'Азиатская', 'Морепродукты', 'Смешанная'] },
+        { k: 'Часы работы', ph: '10:00–23:00' },
+        { k: 'Мест в зале', ph: 'например, 40' },
+        { k: 'Что есть', ph: 'веранда, wi-fi, детское меню, бизнес-ланч' }],
     other: []
 };
 const SV_ALL_LABELS = Array.from(new Set([].concat(...Object.values(SV_FIELDS).map(a => a.map(f => f.k)))));
-const SV_CHIP_SHORT = { sea: 'Море', tours: 'Экскурсии', active: 'Актив', kids: 'Детям', show: 'Шоу', food: 'Гастро', other: 'Другое' };
+const SV_CHIP_SHORT = { sea: 'Море', tours: 'Экскурсии', active: 'Актив', kids: 'Детям', show: 'Шоу', food: 'Еда', other: 'Другое' };
 
 // Детали карточки хранятся в тексте первыми строками «Название: значение», дальше — свободное описание.
 function svPackText(tag, facts, desc) {
@@ -243,7 +249,7 @@ const SV_KEYS = [
     ['active', /джип|квадр|багги|дайвинг|парашют|параплан|рафтинг|верхом|лошад|конн|\bсап\b|sup|серф|кайт|гидроцикл|банан|тарзанк|верёвоч|веревоч|канатн|пейнтбол|картинг|эндуро|вело/i],
     ['kids', /детск|детям|малыш|аниматор|батут|игров\w* комнат|для детей/i],
     ['show', /шоу|концерт|дискотек|караоке|театр|представлен|стендап|stand-?up|живая музыка|вечеринк/i],
-    ['food', /дегустац|ресторан|кафе|мастер-?класс|шашлык|вино|сыр|кухн|ужин|банкет|гастро|еда/i],
+    ['food', /дегустац|ресторан|кафе|кофейн|столов|пиццер|пекарн|кондитер|бургер|шаурм|фастфуд|бар\b|паб\b|завтрак|обед|бизнес-?ланч|мастер-?класс|шашлык|вино|сыр|кухн|ужин|банкет|гастро|еда|доставка еды/i],
     ['tours', /экскурс|\bтур\b|водопад|дольмен|маршрут|трансфер|заповедник|винодельн|музей|поход|поездка|горы|в горы/i]
 ];
 function svGuessText(str) {
@@ -316,7 +322,10 @@ function openServiceEditor(edit, after) {
             <div class="sv-extra" id="svExtra"></div>
             <div class="rq-row"><label class="field"><span>Цена, ₽</span><input id="svPrice" type="number" inputmode="numeric" min="1" value="${s.price || ''}" placeholder="Можно пусто"></label>
             <label class="field"><span>Как считать</span><select id="svUnit">${SV_UNITS.map(u => `<option value="${e(u)}" ${(s.unit || '') === u ? 'selected' : ''}>${u || '—'}</option>`).join('')}</select></label></div>
-            <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || '')}" placeholder="Например: Архипо-Осиповка, причал"></label>
+            <label class="field"><span>Город или место</span><input id="svCity" maxlength="60" value="${e(s.city || (edit ? '' : SV_CITY_DEFAULT))}" placeholder="Например: Архипо-Осиповка, причал"></label>
+            <label class="field"><span>Телефон для звонков</span><input id="svPhone" type="tel" inputmode="tel" maxlength="30" value="${e(s.phone || '')}" placeholder="+7 900 123-45-67" autocomplete="tel"></label>
+            <label class="watch-top phone-hide-row"><span><i class="fas fa-phone-slash"></i> Скрыть номер</span><input type="checkbox" id="svHidePhone" ${s.hidePhone ? 'checked' : ''}><i class="pref-sw"></i></label>
+            <small class="phone-hide-note" id="svPhoneNote"></small>
             <label class="field"><span>Куда подойти</span><input id="svPlace" maxlength="120" value="${e(s.place || '')}" placeholder="Например: причал №3, у синего катера"></label>
             ${mapPickHTML('Точка на карте: причал или место встречи', 'Нажмите на карту, чтобы отметить причал или место, куда подходить. Люди увидят карту под вашей карточкой и смогут проложить маршрут.')}
             <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="600" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>
@@ -328,6 +337,9 @@ function openServiceEditor(edit, after) {
                     + (photos.length < SV_PHOTOS ? '<button type="button" class="photo-add"><i class="fas fa-camera"></i><span>Добавить</span></button>' : '');
             };
             paint();
+            const hideSw = el.querySelector('#svHidePhone'), phoneNote = el.querySelector('#svPhoneNote');
+            const paintPhoneNote = () => { phoneNote.textContent = hideSw.checked ? 'Номер скрыт: вам не смогут звонить, в карточке номера и кнопки «Позвонить» не будет. Писать смогут.' : 'В карточке будет кнопка «Позвонить», звонок пойдёт на этот номер.'; };
+            hideSw.addEventListener('change', paintPhoneNote); paintPhoneNote();
             const picker = mapPickInit(el, s.coords, (name) => { const pl = el.querySelector('#svPlace'); if (pl && !pl.value.trim()) pl.value = name; });
             let tag = s.tag || '', userPicked = !!edit, guessSeq = 0;
             const extra = el.querySelector('#svExtra'), cats = el.querySelector('#svCats'), sug = el.querySelector('#svSuggest');
@@ -394,7 +406,7 @@ function openServiceEditor(edit, after) {
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
-                const body = { id: s.id, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, text: fullText, photos, thumb };
+                const body = { id: s.id, phone: v('#svPhone'), hidePhone: el.querySelector('#svHidePhone').checked, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, text: fullText, photos, thumb };
                 try {
                     const { status, d } = await svApi('/api/services', { method: 'POST', headers: svAuth(), body: JSON.stringify(body) });
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
@@ -504,6 +516,7 @@ document.addEventListener('click', (ev) => {
     const sv = t.closest('[data-sv]');
     if (sv) {
         const id = sv.dataset.id, act = sv.dataset.sv;
+        if (act === 'call') return;          // обычная ссылка tel: — звонок идёт сам
         const known = () => myServices.find(x => x.id === id) || serviceFeed.find(x => x.id === id);
         if (act === 'view') openServiceView(id);
         else if (act === 'new') { closeSheet(); openServiceEditor(); }

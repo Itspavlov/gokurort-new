@@ -155,7 +155,7 @@ function cardHTML(r) {
         r.city ? `<span><i class="fas fa-location-dot"></i>${e(r.city)}</span>` : '',
         r.dateFrom ? `<span><i class="fas fa-calendar"></i>${fmtShortDate(r.dateFrom)}</span>` : '',
         r.guests ? `<span><i class="fas fa-user-group"></i>${r.guests} ${sec && sec.seats ? 'мест' : 'чел.'}</span>` : '',
-        r.budget ? `<span><i class="fas fa-ruble-sign"></i>${seek && r.section !== 'work' ? 'до ' : ''}${Number(r.budget).toLocaleString('ru-RU')} ₽</span>` : ''
+        r.budget ? `<span><i class="fas fa-ruble-sign"></i>${seek && r.section !== 'work' ? 'до ' : ''}${Number(r.budget).toLocaleString('ru-RU')} ₽</span>` : (r.negotiable ? '<span><i class="fas fa-handshake"></i>Цена договорная</span>' : '')
     ].join('');
     const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : `<em class="req-kind ${seek ? 'seek' : 'offer'}">${seek ? 'Ищет' : 'Предлагает'}</em>`;
     const delBtn = `<button type="button" class="req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
@@ -457,7 +457,7 @@ function openRequestSheet(edit) {
         openSheet(reqEditing ? 'Изменить запрос' : 'Хочу снять жильё', `
             <p class="seek-note"><i class="fas fa-circle-info"></i><span>${SEEK_TIP} Запрос живёт 14 дней.</span></p>
             <label class="field"><span>Что ищете</span><select id="rqCat">${catOpts}</select></label>
-            <label class="field"><span>Город</span><input id="rqCity" maxlength="60" placeholder="Например: Адлер" value="${e(r.city || '')}"></label>
+            <label class="field"><span>Город</span><input id="rqCity" maxlength="60" placeholder="Например: Адлер" value="${e(r.city || (r.id ? '' : 'Архипо-Осиповка'))}"></label>
             <label class="field"><span>Район (необязательно)</span><input id="rqDistrict" maxlength="60" value="${e(r.district || '')}"></label>
             <div class="rq-row"><label class="field"><span>Заезд</span><input id="rqFrom" type="date" min="${todayISO()}" value="${e(r.dateFrom || '')}"></label>
             <label class="field"><span>Выезд</span><input id="rqTo" type="date" min="${todayISO()}" value="${e(r.dateTo || '')}"></label></div>
@@ -540,10 +540,11 @@ function openCardSheet(kind, edit, prefill) {
         openSheet(r ? 'Изменить карточку' : cfg.head, `
             <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
             <label class="field"><span>Заголовок</span><input id="cdTitle" maxlength="80" placeholder="${e(cfg.ph)}" value="${e(v0.title || '')}"></label>
-            <label class="field"><span>Город или место (необязательно)</span><input id="cdCity" maxlength="60" value="${e(v0.city || '')}"></label>
+            <label class="field"><span>Город или место (необязательно)</span><input id="cdCity" maxlength="60" value="${e(v0.city || (r ? '' : 'Архипо-Осиповка'))}"></label>
             ${sec.date ? `<div class="rq-row"><label class="field"><span>${sec.date}</span><input id="cdDate" type="date" min="${todayISO()}" value="${e(v0.dateFrom || '')}"></label>
             <label class="field"><span>${sec.seats}</span><input id="cdSeats" type="number" inputmode="numeric" min="1" max="30" value="${v0.guests || ''}"></label></div>` : ''}
-            <label class="field"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}"></label>
+            <label class="field" id="cdPriceBox"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}" ${v0.negotiable ? 'disabled placeholder="Цена договорная"' : ''}></label>
+            ${section !== 'services' ? `<label class="watch-top neg-row"><span><i class="fas fa-handshake"></i> Цена договорная</span><input type="checkbox" id="cdNeg" ${v0.negotiable ? 'checked' : ''}><i class="pref-sw"></i></label>` : ''}
             ${artOn ? artPickerHTML() : ''}
             ${carOn ? `<div class="field"><span>Фото автомобиля (до 3, необязательно)</span><div class="photo-grid sv-photo-grid rq-photo-grid" id="cdPhotos"></div><input type="file" id="cdFile" accept="image/*" multiple hidden><small class="rq-photo-hint">Первое фото видно на карточке, остальные листаются пальцем.</small></div>` : ''}
             <label class="field"><span>Подробности</span><textarea id="cdText" maxlength="300" rows="3">${e(v0.text || '')}</textarea></label>
@@ -591,13 +592,19 @@ function openCardSheet(kind, edit, prefill) {
                     }
                 });
             }
+            const neg = el.querySelector('#cdNeg'), priceInp = el.querySelector('#cdPrice');
+            if (neg) neg.addEventListener('change', () => {
+                priceInp.disabled = neg.checked;
+                priceInp.placeholder = neg.checked ? 'Цена договорная' : '';
+                if (neg.checked) priceInp.value = '';
+            });
             btn.addEventListener('click', () => {
                 const v = (id) => { const n = el.querySelector(id); return n ? n.value.trim() : ''; };
                 if (uploading) { err.textContent = 'Подождите, фото загружается'; return; }
                 if (!v('#cdTitle')) { err.textContent = 'Напишите заголовок'; return; }
                 err.textContent = '';
                 btn.disabled = true;
-                const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), text: v('#cdText') };
+                const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText') };
                 if (carOn) body.photos = cars.map(c => c.id);
                 if (artOn) body.art = art;
                 const url = r ? `${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}` : `${SERVER_URL}/api/requests`;

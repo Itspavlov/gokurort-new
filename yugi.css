@@ -2106,3 +2106,34 @@ p.pub-act { text-align: center; }
 
 .sv-cell > .sv-panel:last-child { border-radius: 0 0 23px 23px; }
 .sv-cell .sv-tile, .sv-cell .sv-panel, .sv-cell .sv-mapbtn { flex-shrink: 0; }
+
+/* ===== v101: «Позвонить» и «Написать» одного размера, телефон и «договорная» ===== */
+.sv-panel { flex-direction: column; align-items: stretch; gap: 10px; }
+.sv-panel .sv-t-btns { display: flex; gap: 8px; width: 100%; }
+.sv-panel .sv-t-btns .sv-cta, .sv-view-act .sv-cta { flex: 1 1 0; min-width: 0; height: 38px; padding: 0 10px; border-radius: 99px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font: 800 13.5px var(--font); white-space: nowrap; text-decoration: none; cursor: pointer; color: var(--text); background: var(--glass-strong, rgba(255,255,255,.14)); border: 1px solid var(--rq-border); box-sizing: border-box; }
+.sv-panel .sv-t-btns .sv-cta > i, .sv-view-act .sv-cta > i { font-size: 13px; }
+.sv-panel .sv-t-btns .sv-cta.main, .sv-view-act .sv-cta.main { border: 0; color: #fff; background: linear-gradient(160deg, #3FB8F5, #229ED9 60%, #1B86C0); box-shadow: 0 4px 12px rgba(34, 158, 217, .38); }
+.sv-panel .sv-t-btns .sv-cta.call, .sv-view-act .sv-cta.call { border: 0; color: #fff; background: linear-gradient(160deg, #4BD37B, #25A85A 60%, #1B8A47); box-shadow: 0 4px 12px rgba(37, 168, 90, .38); }
+.sv-panel .sv-t-btns .sv-cta:active, .sv-view-act .sv-cta:active { transform: scale(.96); }
+.sv-view-act { display: flex; gap: 10px; margin: 12px 0 4px; }
+.sv-view-act .sv-cta { height: 46px; font-size: 15px; }
+.sv-view-phone { display: flex; align-items: center; gap: 10px; margin: 12px 2px 0; font-size: 17px; font-weight: 800; }
+.sv-view-phone i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; background: rgba(37, 168, 90, .16); color: #25A85A; }
+.sv-view-phone a { color: inherit; text-decoration: none; }
+.sv-view-phone.off { opacity: .6; font-size: 14px; font-weight: 700; }
+.sv-view-phone.off i { background: rgba(128, 128, 128, .2); color: var(--text-secondary); }
+/* узкие карточки: только значки */
+.req-item.sv-item .sv-panel .sv-t-btns .sv-cta > span { display: none; }
+.req-item.sv-item .sv-panel .sv-t-btns .sv-cta { height: 36px; padding: 0; }
+.req-item.sv-item .sv-panel .sv-t-btns .sv-cta > i { font-size: 15px; }
+/* переключатели в формах */
+.phone-hide-row, .neg-row { margin: 2px 2px 4px; padding: 10px 2px; }
+.phone-hide-row .pref-sw, .neg-row .pref-sw { background: rgba(120, 130, 150, .38); }
+.phone-hide-row span i, .neg-row span i { color: var(--text-secondary); }
+.phone-hide-note { display: block; margin: 0 2px 14px; font-size: 11.5px; line-height: 1.35; color: var(--text-secondary); }
+.neg-row { margin-bottom: 10px; }
+/* лента: убираем лишнее при касании, чтобы не мешало прокрутке */
+.sv-cell:active { transform: none; }
+.sv-grid { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+.sv-panel .sv-t-btns button.sv-cta, .sv-panel .sv-t-btns a.sv-cta { width: auto; height: 38px; padding: 0 10px; font-size: 13.5px; flex: 1 1 0; }
+.req-item.sv-item .sv-panel .sv-t-btns button.sv-cta, .req-item.sv-item .sv-panel .sv-t-btns a.sv-cta { width: auto; height: 36px; padding: 0; flex: 1 1 0; justify-content: center; }
