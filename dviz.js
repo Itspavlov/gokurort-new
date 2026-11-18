@@ -178,15 +178,26 @@ function openPointMap(o) {
     let lmSrc = o.landmark || '', lmMark = null, mapRef = null;
     const big = view.querySelector('#ptMapBig');
     big.addEventListener('click', () => { big.hidden = true; });
+    const showBig = () => { big.innerHTML = `<img src="${e(lmSrc)}" alt="Ориентир"><span>Нажмите, чтобы закрыть</span>`; big.hidden = false; };
+    // то же фото и в плашке снизу: так оно видно, даже если метку на карте не отрисовали
+    const paintRow = () => {
+        let row = panel.querySelector('.ptmap-lmrow');
+        if (!lmSrc) { if (row) row.remove(); return; }
+        if (!row) { row = document.createElement('button'); row.type = 'button'; row.className = 'ptmap-lmrow'; panel.insertBefore(row, panel.firstChild); row.onclick = showBig; }
+        row.innerHTML = `<img src="${e(lmSrc)}" alt=""><span><b>Ориентир</b><small>Так выглядит место. Нажмите, чтобы увеличить</small></span>`;
+        lift();
+    };
     const applyLandmark = () => {
+        paintRow();
         if (!mapRef) return;
         if (lmMark) { try { lmMark.remove(); } catch (x) {} lmMark = null; }
         if (!lmSrc) return;
         lmMark = mapRef.addMarker({ coords: o.coords, size: [84, 84], anchor: [42, 84 + 26], zIndex: 1100,
             html: `<div class="ptmap-lm"><img src="${e(lmSrc)}" alt="Ориентир"></div>`,
-            onClick: () => { big.innerHTML = `<img src="${e(lmSrc)}" alt="Ориентир"><span>Нажмите, чтобы закрыть</span>`; big.hidden = false; } });
+            onClick: showBig });
     };
     api.setLandmark = (src) => { lmSrc = src || ''; applyLandmark(); };
+    paintRow();
     YM.open(view.querySelector('#ptMapBox'), { center: o.coords, zoom: o.zoom || 16, zoomControl: true, zoomBottom: panel.offsetHeight + 24 }).then((map) => {
         if (!map) return;
         if (ptMapToken !== token || !view.isConnected) { map.destroy(); return; }
