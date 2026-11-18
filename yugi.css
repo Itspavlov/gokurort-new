@@ -2141,3 +2141,7 @@ p.pub-act { text-align: center; }
 /* карта на весь экран: щипок двумя пальцами не должен зумить страницу */
 .admap, .admap-top, .admap-map { touch-action: none; }
 .admap-card { touch-action: manipulation; }
+
+/* комментарии не сжимаются при длинном списке: список прокручивается */
+.dv-comment { flex: none; }
+.dv-clist { display: flex; flex-direction: column; gap: 10px; }
