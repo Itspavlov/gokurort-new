@@ -85,6 +85,11 @@ function openFilterSheet() {
     const e = escapeHtml;
     const chip = (on, attr, label) => `<button type="button" class="chip chip-toggle ${on ? 'on' : ''}" ${attr}>${label}</button>`;
     openSheet('Фильтры', `
+        <div class="watch-plate">
+            <label class="watch-top"><span><i class="fas fa-bell"></i> Следить за этим поиском</span><input type="checkbox" id="ffWatchSw"><i class="pref-sw"></i></label>
+            <small>Мы пришлём уведомление, если найдётся что-то подходящее.</small>
+            <button type="button" class="watch-link" id="ffSubs">Мои подписки</button>
+        </div>
         <label class="field"><span>Район или улица</span><input id="ffQ" maxlength="40" value="${e(f.q)}" placeholder="Например, Витязево"></label>
         <div class="f-row"><label class="field"><span>Цена от, ₽</span><input id="ffMin" type="number" inputmode="numeric" min="0" value="${e(f.min)}"></label>
             <label class="field"><span>до, ₽</span><input id="ffMax" type="number" inputmode="numeric" min="0" value="${e(f.max)}"></label></div>
@@ -97,7 +102,6 @@ function openFilterSheet() {
         <div class="f-h">Удобства</div>
         <div class="chip-row" id="ffAmen">${AMENITIES.map(a => chip(f.amen.includes(a.l), `data-a="${e(a.l)}"`, `<i class="fas ${a.i}"></i>${e(a.l)}`)).join('')}</div>
         <label class="pref-row" style="margin-top:14px"><span><b>Только проверенные хозяева</b></span><input type="checkbox" id="ffVer" ${f.verified ? 'checked' : ''}><i class="pref-sw"></i></label>
-        <div class="watch-row"><button type="button" class="watch-btn" id="ffWatch"><i class="fas fa-bell"></i> Следить за этим поиском</button><button type="button" class="watch-link" id="ffSubs">Мои подписки</button></div>
         <div class="f-actions"><button type="button" class="ghost-btn" id="ffReset">Сбросить</button><button type="button" class="primary-btn" id="ffApply">Показать</button></div>`, (el) => {
         const read = () => {
             f.q = el.querySelector('#ffQ').value.trim();
@@ -122,8 +126,39 @@ function openFilterSheet() {
         });
         el.addEventListener('input', recount); el.addEventListener('change', recount);
         el.querySelector('#ffReset').onclick = () => { adFilter = { ...FILTER_DEFAULT, amen: [] }; saveAdFilter(); closeSheet(); applyAdFilters(); refreshAdMap(); };
-        el.querySelector('#ffApply').onclick = () => { read(); adFilter = f; saveAdFilter(); closeSheet(); applyAdFilters(); refreshAdMap(); };
-        el.querySelector('#ffWatch').onclick = () => { read(); watchSearch(f); };
+        // бегунок «Следить за этим поиском»: включил — подписка сохранена, выключил — удалена
+        const sw = el.querySelector('#ffWatchSw');
+        let watchId = '', watchSig = '';
+        const sigNow = () => searchSig(searchPayload(f).filter);
+        if (getToken() && typeof watchFind === 'function') watchFind(f).then(id => { if (id && sw.isConnected) { watchId = id; watchSig = sigNow(); sw.checked = true; } });
+        sw.addEventListener('change', async () => {
+            read();
+            if (sw.checked) {
+                if (!getToken()) { sw.checked = false; showToast('Войдите, чтобы следить за поиском'); return; }
+                if (!activeFilterCount(f)) { sw.checked = false; showToast('Сначала задайте хотя бы один фильтр'); return; }
+                sw.disabled = true;
+                const id = await watchCreate(f);
+                sw.disabled = false;
+                if (!id) { sw.checked = false; return; }
+                watchId = id; watchSig = sigNow();
+                showToast('Готово! Сообщим, когда появится подходящее жильё');
+            } else if (watchId) {
+                sw.disabled = true;
+                const ok = await watchRemove(watchId);
+                sw.disabled = false;
+                if (!ok) { sw.checked = true; showToast('Не удалось выключить'); return; }
+                watchId = ''; watchSig = '';
+            }
+        });
+        el.querySelector('#ffApply').onclick = async () => {
+            read();
+            // если условия поменяли после включения, подписка обновляется под них
+            if (sw.checked && watchId && watchSig !== sigNow()) {
+                await watchRemove(watchId);
+                watchId = activeFilterCount(f) ? await watchCreate(f) : '';
+            }
+            adFilter = f; saveAdFilter(); closeSheet(); applyAdFilters(); refreshAdMap();
+        };
         el.querySelector('#ffSubs').onclick = () => openSearchSubs();
         recount();
     });

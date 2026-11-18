@@ -94,6 +94,7 @@ function inboxAgo(ts) {
 function openInbox() {
     loginRequired(() => {
         openSheet('Уведомления', '<div id="inboxBox"><p class="opt-empty">Загружаю…</p></div>', (el) => {
+            el.classList.add('inbox-full');     // центр уведомлений открывается на весь экран
             const box = el.querySelector('#inboxBox');
             const draw = (d) => {
                 const e = escapeHtml;

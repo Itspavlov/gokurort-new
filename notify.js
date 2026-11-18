@@ -142,12 +142,16 @@ window.showToast = function (message) {
 };
 
 // ---------- ПЕРЕХОД ПО УВЕДОМЛЕНИЮ ----------
-const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|services|dating|trips)|listing:l_[\w-]{1,40}|reviews:u_[\w-]{1,40}|profile)$/;
+const OPEN_RE = /^(?:(?:dm|group):[\w-]{1,60}|room:(?:housing(?:-[a-z]{3,12})?|work|market|services|dating|trips)|listing:l_[\w-]{1,40}|service:[\w-]{1,40}|dviz:[\w-]{1,40}|reviews:u_[\w-]{1,40}|pubs:(?:housing|work|trips|services|dviz)(?::(?:ads|req))?|verify|profile)$/;
 
 function openTarget(target) {
     if (typeof target !== 'string' || !OPEN_RE.test(target)) return;
-    const [kind, id] = target.split(':');
+    const [kind, id, sub] = target.split(':');
     if (kind === 'profile') { switchTab('profile'); return; }
+    if (kind === 'verify') { switchTab('profile'); setTimeout(() => { if (typeof openVerify === 'function') openVerify(); }, 250); return; }   // окно «Верификация»
+    if (kind === 'pubs') { if (typeof pubGoto === 'function') pubGoto(id, sub); else switchTab('mypubs'); return; }              // «Мои публикации», нужный раздел
+    if (kind === 'service') { if (typeof openServiceView === 'function') openServiceView(id); return; }
+    if (kind === 'dviz') { if (typeof openDvizView === 'function') openDvizView(id); return; }
     if (kind === 'listing') { if (typeof openListingById === 'function') openListingById(id); return; }
     if (kind === 'reviews') { if (typeof openReviewsTarget === 'function') openReviewsTarget(id); return; }   // свои отзывы — в своём профиле, чужие — на вкладке профиля хозяина
     whenSocketReady(() => {

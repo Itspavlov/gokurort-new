@@ -21,6 +21,35 @@ function searchSummary(f) {
     return p;
 }
 
+// фильтр так, как его хранит сервер (для сравнения и сохранения)
+function searchPayload(f) {
+    const cat = typeof currentRoom === 'string' ? housingCatByRoom(currentRoom).id : 'all';
+    const filter = { q: f.q, min: f.min, max: f.max, from: f.from, to: f.to, guests: f.guests, sea: f.sea, amen: f.amen, verified: f.verified, cat: cat === 'all' ? '' : cat };
+    return { name: searchSummary(filter).slice(0, 3).join(', ') || 'Мой поиск', filter };
+}
+const searchSig = (x) => JSON.stringify([String(x.q || '').trim().toLowerCase(), x.min === '' || x.min == null ? '' : Number(x.min), x.max === '' || x.max == null ? '' : Number(x.max), x.from || '', x.to || '', Number(x.guests) || 0, Number(x.sea) || 0, [...(x.amen || [])].sort(), !!x.verified, x.cat || '']);
+// id уже сохранённой подписки с такими же условиями (или '')
+function watchFind(f) {
+    if (!getToken()) return Promise.resolve('');
+    const sig = searchSig(searchPayload(f).filter);
+    return fetch(`${SERVER_URL}/api/searches`, { headers: searchHeaders() }).then(r => r.json()).then(d => {
+        const hit = d && d.ok && (d.searches || []).find(x => searchSig(x.filter) === sig);
+        return hit ? hit.id : '';
+    }).catch(() => '');
+}
+// создаёт подписку; возвращает id или '' (ошибку уже показали)
+function watchCreate(f) {
+    return fetch(`${SERVER_URL}/api/searches`, { method: 'POST', headers: searchHeaders(), body: JSON.stringify(searchPayload(f)) }).then(r => r.json()).then(async d => {
+        if (d && d.ok) { if (document.getElementById('subsBox')) paintSubs(d.searches); return d.search.id; }
+        if (d && d.code === 'SEARCH_DUPLICATE') return await watchFind(f);
+        showToast((d && d.message) || 'Не удалось сохранить');
+        return '';
+    }).catch(() => { showToast('Нет связи с сервером'); return ''; });
+}
+function watchRemove(id) {
+    return fetch(`${SERVER_URL}/api/searches/${encodeURIComponent(id)}`, { method: 'DELETE', headers: searchHeaders() }).then(r => r.json()).then(d => !!(d && d.ok)).catch(() => false);
+}
+
 function watchSearch(f) {
     if (typeof activeFilterCount === 'function' && !activeFilterCount(f)) { showToast('Задайте хотя бы один фильтр'); return; }
     ensureLogin(() => {

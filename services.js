@@ -23,7 +23,6 @@ function serviceCardHTML(s, mine) {
     const thumb = s.thumb ? `<img src="${e(s.thumb)}" alt="" loading="lazy">` : '<i class="fas fa-image"></i>';
     const act = mine ? `<div class="sv-actions">
             <button type="button" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button>
-            <button type="button" data-sv="bump" data-id="${e(s.id)}"><i class="fas fa-arrow-up"></i> Поднять</button>
             <button type="button" data-sv="del" data-id="${e(s.id)}" aria-label="Удалить"><i class="fas fa-trash"></i></button></div>` : '';
     return `<div class="sv-card" data-sid="${e(s.id)}">
         <div class="sv-main" data-sv="view" data-id="${e(s.id)}">
@@ -43,7 +42,7 @@ function serviceFeedHTML(s) {
     const mine = !!(acc && acc.id === s.ownerId);
     const price = s.price ? Number(s.price).toLocaleString('ru-RU') + ' ₽' : 'Договорная';
     const btns = mine
-        ? `<button type="button" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button><button type="button" data-sv="bump" data-id="${e(s.id)}" aria-label="Поднять"><i class="fas fa-arrow-up"></i></button>`
+        ? `<button type="button" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i></button>`
         : `<button type="button" class="main" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i></button>`;
     const mapBtn = s.coords ? `<button type="button" class="sv-mapbtn" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта</button>` : '';
     return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
@@ -133,7 +132,7 @@ function openServiceView(id) {
             ${s.coords ? `<button type="button" class="ghost-btn wide-btn sv-viewmap" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта${s.place ? ' · ' + e(s.place) : ''}</button>` : ''}
             <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
                 <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
-            ${mine ? `<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button><button class="primary-btn" data-sv="bump" data-id="${e(s.id)}"><i class="fas fa-arrow-up"></i> Поднять</button></div>`
+            ${mine ? `<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button></div>`
                 : `<button class="primary-btn wide-btn" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i> Написать</button>`}
             <button type="button" class="ghost-btn wide-btn dv-from-sv" data-dv-create><i class="fas fa-champagne-glasses"></i> Создать поиск с этим развлечением</button>
             ${!mine && typeof sfReportBtn === 'function' ? `<div class="sf-row">${sfReportBtn({ kind: 'service', id: s.id, ownerId: s.ownerId, ownerName: s.ownerName, title: s.title })}</div>` : ''}`, (el) => {

@@ -173,6 +173,7 @@ function pubReqCardHTML(r) {
             + `<button type="button" data-act="edit"><i class="fas fa-pen"></i> Изменить</button>`
             + (housing ? '' : `<button type="button" data-act="closed">Закрыть</button>`);
     }
+    else act = `<button type="button" data-act="again"><i class="fas fa-rotate-right"></i> Публиковать снова</button>`;
     act += `<button type="button" class="req-del-btn" data-act="delete" aria-label="Удалить"><i class="fas fa-trash"></i><span hidden>Удалить</span></button>`;
     return pubCardHTML({ img, icon, title, price, meta, actions: act, cls: 'req-card pub-rq', attrs: ` data-rid="${e(r.id)}"` });
 }
@@ -249,6 +250,16 @@ document.addEventListener('click', (ev) => {
         return;
     }
     if (ev.target.closest('#pubReqs')) {
+        const again = ev.target.closest('.pub-rq [data-act="again"]');
+        if (again) {          // закрытую карточку публикуем заново: форма открывается с прежними данными
+            const rr = myReqs.find(x => x.id === again.closest('.pub-rq').dataset.rid);
+            if (!rr) return;
+            pubSetSection();
+            const pre = { ...rr, id: '' };
+            if (typeof isHousingReq === 'function' && isHousingReq(rr)) openRequestSheet(pre);
+            else openCardSheet(rr.kind === 'offer' ? 'offer' : 'seek', null, pre);
+            return;
+        }
         const del = ev.target.closest('.pub-rq [data-act="delete"]');
         if (del) {          // первое нажатие просит подтвердить, второе удаляет
             if (!del.classList.contains('sure')) {
@@ -275,6 +286,18 @@ document.addEventListener('click', (ev) => {
     }
     if (ev.target.closest('#pubDv')) onFeedClick(ev);
 });
+// Переход из уведомления: «Мои публикации», нужный раздел и вкладка
+function pubGoto(chip, tab) {
+    if (PUB_CHIPS.some(x => x[0] === chip)) {
+        pubChip = chip;
+        if (tab === 'ads' || tab === 'req') pubTab[chip] = tab;
+        try { localStorage.setItem('yugi-pubchip', pubChip); localStorage.setItem('yugi-pubtab', JSON.stringify(pubTab)); } catch (_) {}
+    }
+    if (typeof closeSheet === 'function') closeSheet();
+    switchTab('mypubs');
+    if (document.getElementById('pubRoot')) renderMyPubs();
+}
+
 // ---------- обновления из других модулей ----------
 if (typeof renderProfile === 'function') {
     const _rpPub = renderProfile;

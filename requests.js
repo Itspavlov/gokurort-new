@@ -452,7 +452,7 @@ function openRequestSheet(edit) {
     if (edit && edit.id && !isHousingReq(edit)) { openCardSheet(edit.kind, edit); return; }
     loginRequired(() => {
         reqEditing = edit && edit.id ? edit : null;
-        const e = escapeHtml, r = reqEditing || {};
+        const e = escapeHtml, r = reqEditing || (edit && typeof edit === 'object' ? edit : {});   // без id это заготовка («Публиковать снова»)
         const catOpts = REQ_CATS.map(([v, l]) => `<option value="${v}" ${(r.category || (typeof currentRoom === 'string' && currentRoom.startsWith('housing-') && housingCatByRoom(currentRoom).id) || '') === v ? 'selected' : ''}>${l}</option>`).join('');
         openSheet(reqEditing ? 'Изменить запрос' : 'Хочу снять жильё', `
             <p class="seek-note"><i class="fas fa-circle-info"></i><span>${SEEK_TIP} Запрос живёт 14 дней.</span></p>
