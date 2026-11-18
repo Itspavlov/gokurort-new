@@ -153,7 +153,8 @@ function mapPickInit(el, initial, onName) {
 let ptMapInst = null, ptMapToken = null;
 function openPointMap(o) {
     o = o || {};
-    if (!Array.isArray(o.coords) || o.coords.length !== 2) { showToast('Точка на карте не отмечена'); return; }
+    const api = { setLandmark() {} };
+    if (!Array.isArray(o.coords) || o.coords.length !== 2) { showToast('Точка на карте не отмечена'); return api; }
     closePointMap();
     const e = escapeHtml;
     const view = document.createElement('div');
@@ -161,6 +162,7 @@ function openPointMap(o) {
     view.innerHTML = `<div class="admap-top"><button type="button" class="chat-back-btn" data-pm="close" aria-label="Закрыть карту"><i class="fas fa-xmark"></i></button>
         <div class="admap-title ptmap-title">${e(o.title || 'На карте')}</div><span style="width:40px"></span></div>
         <div class="admap-map" id="ptMapBox" data-noswipe></div>
+        <div class="ptmap-big" id="ptMapBig" hidden></div>
         <div class="ptmap-panel" id="ptMapPanel">${o.place ? `<p class="sv-where"><i class="fas fa-location-dot"></i><span>${e(o.place)}</span></p>` : ''}${o.panel || ''}</div>`;
     document.body.appendChild(view);
     view.addEventListener('click', (ev) => {
@@ -172,17 +174,32 @@ function openPointMap(o) {
     const lift = () => view.style.setProperty('--ptp', (panel.offsetHeight + 20) + 'px');   // кнопки масштаба не прячем под плашкой
     lift();
     const token = ptMapToken = {};
+    // фото-ориентир: маленькая картинка над меткой, тап — показать крупнее
+    let lmSrc = o.landmark || '', lmMark = null, mapRef = null;
+    const big = view.querySelector('#ptMapBig');
+    big.addEventListener('click', () => { big.hidden = true; });
+    const applyLandmark = () => {
+        if (!mapRef) return;
+        if (lmMark) { try { lmMark.remove(); } catch (x) {} lmMark = null; }
+        if (!lmSrc) return;
+        lmMark = mapRef.addMarker({ coords: o.coords, size: [84, 84], anchor: [42, 84 + 26], zIndex: 1100,
+            html: `<div class="ptmap-lm"><img src="${e(lmSrc)}" alt="Ориентир"></div>`,
+            onClick: () => { big.innerHTML = `<img src="${e(lmSrc)}" alt="Ориентир"><span>Нажмите, чтобы закрыть</span>`; big.hidden = false; } });
+    };
+    api.setLandmark = (src) => { lmSrc = src || ''; applyLandmark(); };
     YM.open(view.querySelector('#ptMapBox'), { center: o.coords, zoom: o.zoom || 16, zoomControl: true, zoomBottom: panel.offsetHeight + 24 }).then((map) => {
         if (!map) return;
         if (ptMapToken !== token || !view.isConnected) { map.destroy(); return; }
-        ptMapInst = map;
+        ptMapInst = map; mapRef = map;
         const icon = { home: ['pin-home', 'fa-home'], flag: ['pin-meet', 'fa-flag'], ship: ['pin-meet', 'fa-ship'] }[o.pin || 'flag'] || ['pin-meet', 'fa-flag'];
         map.addMarker({ coords: o.coords, html: mapPin(icon[0], icon[1]), size: [40, 40] });
         (o.markers || []).forEach(m => map.addMarker({ coords: m.coords, html: m.html, size: [40, 40] }));
+        applyLandmark();
         if (typeof o.init === 'function') o.init(panel, () => map);
         lift();
         setTimeout(() => { if (ptMapInst === map) { map.invalidate(); lift(); } }, 200);
     });
+    return api;
 }
 function closePointMap() {
     ptMapToken = null;
@@ -194,7 +211,12 @@ document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && docume
 // «Карта» у карточки услуги: где причал или куда подойти, и ссылки на маршрут
 function openServiceMap(s) {
     if (!s || !s.coords) { showToast('Автор не отметил точку на карте'); return; }
-    openPointMap({ title: s.title || 'Услуга', place: s.place, coords: s.coords, pin: 'flag', panel: dvRouteHTML(s.coords) });
+    const m = openPointMap({ title: s.title || 'Услуга', place: s.place, coords: s.coords, pin: 'flag', panel: dvRouteHTML(s.coords), landmark: s.mapPhoto || '' });
+    // в ленте у карточки только признак, что фото есть: докачиваем его, пока карта уже открыта
+    if (s.hasMapPhoto && !s.mapPhoto && s.id) {
+        fetch(SERVER_URL + '/api/services/' + encodeURIComponent(s.id)).then(r => r.json())
+            .then(d => { if (d && d.ok && d.service && d.service.mapPhoto) m.setLandmark(d.service.mapPhoto); }).catch(() => {});
+    }
 }
 const dvPeople = (e) => e.max ? `${e.joins} из ${e.max}` : (e.joins ? String(e.joins) : '');
 

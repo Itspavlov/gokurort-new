@@ -178,6 +178,15 @@ async function svPhoto(file) {
     }
     throw new Error('big');
 }
+// маленькая картинка-ориентир для карты: до ~70 КБ
+async function svMapPhoto(file) {
+    const raw = await svReadFile(file);
+    for (const [side, q] of [[360, 0.72], [300, 0.62], [240, 0.55], [180, 0.5]]) {
+        const out = await svShrink(raw, side, q);
+        if (out.length <= 88000) return out;
+    }
+    throw new Error('big');
+}
 async function svThumb(first) {
     for (const [side, q] of [[320, 0.7], [240, 0.6], [160, 0.55]]) {
         const out = await svShrink(first, side, q);
@@ -328,6 +337,14 @@ function openServiceEditor(edit, after) {
             <small class="phone-hide-note" id="svPhoneNote"></small>
             <label class="field"><span>Куда подойти</span><input id="svPlace" maxlength="120" value="${e(s.place || '')}" placeholder="Например: причал №3, у синего катера"></label>
             ${mapPickHTML('Точка на карте: причал или место встречи', 'Нажмите на карту, чтобы отметить причал или место, куда подходить. Люди увидят карту под вашей карточкой и смогут проложить маршрут.')}
+            <div class="sv-mapphoto" id="svMp">
+                <div class="sv-mp-pic" id="svMpPic" hidden></div>
+                <div class="sv-mp-body">
+                    <button type="button" class="ghost-btn" id="svMpAdd"><i class="fas fa-image"></i> <span>Добавить фото на карту</span></button>
+                    <small>Маленькая картинка-ориентир рядом с меткой: синий катер, вход на причал, вывеска. По ней вас быстрее найдут.</small>
+                </div>
+                <input type="file" id="svMpFile" accept="image/*" hidden>
+            </div>
             <label class="field"><span>Описание</span><textarea id="svText" rows="4" maxlength="600" placeholder="Что входит, сколько длится, как договориться">${e(s.text || '')}</textarea></label>
             <div class="auth-error" id="svErr"></div>
             <button class="primary-btn wide-btn" id="svSave" type="button"><i class="fas fa-check"></i> ${edit ? 'Сохранить' : 'Опубликовать'}</button>`, (el) => {
@@ -340,6 +357,22 @@ function openServiceEditor(edit, after) {
             const hideSw = el.querySelector('#svHidePhone'), phoneNote = el.querySelector('#svPhoneNote');
             const paintPhoneNote = () => { phoneNote.textContent = hideSw.checked ? 'Номер скрыт: вам не смогут звонить, в карточке номера и кнопки «Позвонить» не будет. Писать смогут.' : 'В карточке будет кнопка «Позвонить», звонок пойдёт на этот номер.'; };
             hideSw.addEventListener('change', paintPhoneNote); paintPhoneNote();
+            // фото-ориентир для карты (одно): показывается рядом с меткой на полноэкранной карте
+            let mapPhoto = s.mapPhoto || '';
+            const mpPic = el.querySelector('#svMpPic'), mpAdd = el.querySelector('#svMpAdd'), mpFile = el.querySelector('#svMpFile');
+            const paintMp = () => {
+                mpPic.hidden = !mapPhoto;
+                mpPic.innerHTML = mapPhoto ? `<img src="${e(mapPhoto)}" alt=""><button type="button" data-mp-del aria-label="Убрать фото с карты"><i class="fas fa-xmark"></i></button>` : '';
+                mpAdd.querySelector('span').textContent = mapPhoto ? 'Заменить фото на карте' : 'Добавить фото на карту';
+            };
+            paintMp();
+            mpAdd.onclick = () => { if (!picker.get()) { showToast('Сначала отметьте точку на карте'); return; } mpFile.click(); };
+            mpPic.onclick = (ev) => { if (ev.target.closest('[data-mp-del]')) { mapPhoto = ''; paintMp(); } };
+            mpFile.onchange = async () => {
+                const f = mpFile.files && mpFile.files[0]; mpFile.value = '';
+                if (!f) return;
+                try { mapPhoto = await svMapPhoto(f); paintMp(); } catch (_) { err.textContent = 'Не удалось обработать фото для карты'; }
+            };
             const picker = mapPickInit(el, s.coords, (name) => { const pl = el.querySelector('#svPlace'); if (pl && !pl.value.trim()) pl.value = name; });
             let tag = s.tag || '', userPicked = !!edit, guessSeq = 0;
             const extra = el.querySelector('#svExtra'), cats = el.querySelector('#svCats'), sug = el.querySelector('#svSuggest');
@@ -406,7 +439,7 @@ function openServiceEditor(edit, after) {
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
-                const body = { id: s.id, phone: v('#svPhone'), hidePhone: el.querySelector('#svHidePhone').checked, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, text: fullText, photos, thumb };
+                const body = { id: s.id, phone: v('#svPhone'), hidePhone: el.querySelector('#svHidePhone').checked, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, mapPhoto: picker.get() ? mapPhoto : '', text: fullText, photos, thumb };
                 try {
                     const { status, d } = await svApi('/api/services', { method: 'POST', headers: svAuth(), body: JSON.stringify(body) });
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }

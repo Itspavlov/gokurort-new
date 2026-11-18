@@ -2162,3 +2162,20 @@ p.pub-act { text-align: center; }
 .ptmap-panel .rt-panel { margin: 0; }
 .ptmap .leaflet-bottom { bottom: var(--ptp, 0px); }
 .dv-mapopen { margin: 12px 0 4px; }
+
+/* ===== v104: фото-ориентир на карте услуги ===== */
+.sv-mapphoto { display: flex; gap: 12px; align-items: center; margin: 4px 0 14px; }
+.sv-mp-pic { position: relative; width: 76px; height: 76px; flex: none; border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border); }
+.sv-mp-pic[hidden] { display: none; }
+.sv-mp-pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sv-mp-pic button { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.sv-mp-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sv-mp-body .ghost-btn { width: 100%; }
+.sv-mp-body small { color: var(--text-muted); font-size: 12px; line-height: 1.35; }
+.ptmap-lm { position: relative; width: 84px; height: 84px; box-sizing: border-box; border-radius: 18px; border: 3px solid #fff; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.45); cursor: pointer; }
+.ptmap-lm img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; display: block; }
+.ptmap-lm::after { content: ''; position: absolute; left: 50%; bottom: -9px; width: 14px; height: 14px; background: #fff; transform: translateX(-50%) rotate(45deg); border-radius: 3px; }
+.ptmap-big { position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,.82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
+.ptmap-big[hidden] { display: none; }
+.ptmap-big img { max-width: 100%; max-height: 74%; border-radius: 18px; object-fit: contain; }
+.ptmap-big span { color: rgba(255,255,255,.7); font-size: 13px; }
