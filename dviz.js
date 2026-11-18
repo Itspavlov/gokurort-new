@@ -12,6 +12,36 @@ let dvFeed = [];
 let dvOpenId = null;       // открытая в шторке карточка
 let dvCommId = null;       // карточка, чьи комментарии открыты
 
+// сколько комментариев человек уже видел (по каждому поиску): считается только там, где он автор, идёт или писал
+const DV_SEEN_KEY = 'yy-dv-seen';
+function dvSeenMap() { try { return JSON.parse(localStorage.getItem(DV_SEEN_KEY) || '{}') || {}; } catch (_) { return {}; } }
+function dvSetSeen(id, n) {
+    const m = dvSeenMap(); m[id] = n;
+    const keys = Object.keys(m); if (keys.length > 300) delete m[keys[0]];
+    try { localStorage.setItem(DV_SEEN_KEY, JSON.stringify(m)); } catch (_) {}
+}
+function dvUnread(e) {
+    const acc = typeof getAccount === 'function' ? getAccount() : null;
+    if (!acc || !e) return 0;
+    const m = dvSeenMap(), known = e.id in m;
+    if (!(acc.id === e.ownerId || e.joined || known)) return 0;
+    return Math.max(0, (e.comments || 0) - (known ? m[e.id] : 0));
+}
+// цифра на плитке «Развлечения и поиск друзей» на главной
+function dvUpdateBadge(list) {
+    const b = document.getElementById('dvGroupBadge'); if (!b) return;
+    const n = (list || []).reduce((s, e) => s + dvUnread(e), 0);
+    b.textContent = n > 99 ? '99+' : String(n); b.hidden = !n;
+}
+let dvPollT = 0;
+function dvPollBadge() {
+    if (typeof getToken !== 'function' || !getToken()) { dvUpdateBadge([]); return; }
+    clearTimeout(dvPollT);
+    dvPollT = setTimeout(() => dvGet('/api/dviz').then(({ d }) => { if (d && d.ok) { dvFeed = d.events || dvFeed; dvUpdateBadge(dvFeed); } }).catch(() => {}), 300);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) dvPollBadge(); });
+setTimeout(dvPollBadge, 2000);
+
 const dvEsc = (s) => escapeHtml(String(s == null ? '' : s));
 const dvPrice = (a) => a && a.price ? Number(a.price).toLocaleString('ru-RU') + ' ₽' + (a.unit ? ' ' + a.unit : '') : '';
 const dvAuthed = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });
@@ -259,7 +289,7 @@ openGroup = function (id) { return id === 'dating' ? openDvizScreen('dviz') : id
 function loadDviz() {
     dvGet('/api/dviz').then(({ d }) => {
         if (d && d.ok) dvFeed = d.events || [];
-        paintDviz();
+        paintDviz(); dvUpdateBadge(dvFeed);
     }).catch(() => { const f = document.getElementById('dvFeed'); if (f && !dvFeed.length) f.innerHTML = '<div class="dv-empty"><i class="fas fa-wifi"></i><b>Нет связи с сервером</b></div>'; });
 }
 
@@ -300,7 +330,7 @@ function dvCardHTML(e, i) {
             ${pics}
             <div class="dvb-talk">${talk}</div>
         </div>
-        <div class="dvb-under"><button type="button" class="dvb-comm" data-dv="comments"><i class="far fa-comment"></i> ${cn ? 'Комментарии · ' + cn : 'Комментировать'}</button>${join}</div></div>`;
+        <div class="dvb-under"><button type="button" class="dvb-comm" data-dv="comments"><i class="far fa-comment"></i> ${cn ? 'Комментарии · ' + cn : 'Комментировать'}${dvUnread(e) ? `<b class="dv-new">+${dvUnread(e)}</b>` : ''}</button>${join}</div></div>`;
 }
 
 function dvAttachHTML(a) {
@@ -336,7 +366,7 @@ function dvToggleJoin(id, after) {
             if (typeof haptic === 'function') haptic(10);
             showToast(d.joined ? 'Вы идёте! Автор получил уведомление' : 'Отклик снят');
             const e = dvFeed.find(x => x.id === id);
-            if (e) { e.joined = d.joined; e.joins = d.joins; paintDviz(); }
+            if (e) { e.joined = d.joined; e.joins = d.joins; if (d.joined) dvSetSeen(id, e.comments || 0); paintDviz(); }
             after && after();
         }).catch(() => showToast('Нет связи с сервером'));
     });
@@ -348,9 +378,10 @@ function dvCommentsHTML(e) {
     const list = e.commentList || [];
     return list.length ? list.map(c => {
         const can = acc && (acc.id === c.userId || acc.id === e.ownerId);
-        return `<div class="dv-comment" data-cid="${dvEsc(c.id)}"><div class="chat-avatar" data-avn="${avEsc(c.name)}" style="background:${dmColor(c.name)}">${avInner(c.name)}</div>
-            <div class="dv-cbody"><div class="dv-chead"><b>${dvEsc(c.name)}${c.userId === e.ownerId ? ' <em>автор</em>' : ''}</b><small>${fmtAgo(c.time)}</small>${can ? `<button type="button" data-cdel="${dvEsc(c.id)}" aria-label="Удалить комментарий"><i class="fas fa-trash"></i></button>` : ''}</div>
-            <p>${dvEsc(c.text)}</p></div></div>`;
+        const quote = c.reply ? `<button type="button" class="dv-quote" data-cq="${dvEsc(c.reply.id)}"><b>${dvEsc(c.reply.name)}</b><span>${dvEsc(c.reply.text)}</span></button>` : '';
+        return `<div class="dv-comment" data-cid="${dvEsc(c.id)}" data-cname="${dvEsc(c.name)}"><span class="dv-swipe-ico"><i class="fas fa-reply"></i></span><div class="dv-cwrap"><div class="chat-avatar" data-avn="${avEsc(c.name)}" style="background:${dmColor(c.name)}">${avInner(c.name)}</div>
+            <div class="dv-cbody"><div class="dv-chead"><b>${dvEsc(c.name)}${c.userId === e.ownerId ? ' <em>автор</em>' : ''}</b><small>${fmtAgo(c.time)}</small><button type="button" data-creply="${dvEsc(c.id)}" aria-label="Ответить"><i class="fas fa-reply"></i></button>${can ? `<button type="button" data-cdel="${dvEsc(c.id)}" aria-label="Удалить комментарий"><i class="fas fa-trash"></i></button>` : ''}</div>
+            ${quote}<p>${dvEsc(c.text)}</p></div></div></div>`;
     }).join('') : '<div class="dv-nocomm"><i class="far fa-comment"></i><b>Комментариев пока нет</b><span>Спросите, что взять с собой и где встречаться.</span></div>';
 }
 
@@ -373,6 +404,7 @@ function openDvizComments(id) {
             <button type="button" data-cclose aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>
         <div class="dv-comments dv-clist" id="dvCList"><div class="dv-nocomm"><i class="fas fa-spinner fa-spin"></i></div></div>
         <div class="dv-emoji" id="dvEmoji">${DV_EMOJI.map(m => `<button type="button" tabindex="-1">${m}</button>`).join('')}</div>
+        <div class="dv-replybar" id="dvReplyBar" hidden><i class="fas fa-reply"></i><div><b></b><span></span></div><button type="button" data-cunreply aria-label="Отменить ответ"><i class="fas fa-xmark"></i></button></div>
         <form class="dv-write" id="dvWrite">
             <span class="chat-avatar"${acc ? ` data-avn="${avEsc(acc.name)}"` : ''} style="background:${acc ? dmColor(acc.name) : 'rgba(128,128,128,.4)'}">${acc ? avInner(acc.name) : '<i class="fas fa-user"></i>'}</span>
             <input id="dvText" maxlength="400" placeholder="Добавьте комментарий…" autocomplete="off" enterkeyhint="send">
@@ -386,8 +418,51 @@ function openDvizComments(id) {
         panel.style.transition = 'transform .22s ease-out'; panel.style.transform = 'translateY(100%)';
         setTimeout(() => { if (document.getElementById('dvComm') === el) closeDvizComments(); }, 200);
     };
+    // ответ человеку: свайп комментария влево или кнопка со стрелкой
+    let replyTo = null;
+    const rbar = el.querySelector('#dvReplyBar');
+    const setReply = (cid) => {
+        const row = cid && el.querySelector('.dv-comment[data-cid="' + cid + '"]');
+        if (!row) { replyTo = null; rbar.hidden = true; return; }
+        replyTo = { id: cid, name: row.dataset.cname };
+        rbar.querySelector('b').textContent = 'Ответ: ' + row.dataset.cname;
+        rbar.querySelector('span').textContent = (row.querySelector('.dv-cbody > p') || {}).textContent || '';
+        rbar.hidden = false; inp.focus();
+        if (typeof haptic === 'function') haptic(10);
+    };
+    (function swipe() {
+        const list = el.querySelector('#dvCList');
+        let row = null, x0 = 0, y0s = 0, dx = 0, lock = '';
+        list.addEventListener('touchstart', (e) => {
+            row = e.touches.length === 1 ? e.target.closest('.dv-comment') : null;
+            if (!row) return;
+            x0 = e.touches[0].clientX; y0s = e.touches[0].clientY; dx = 0; lock = '';
+        }, { passive: true });
+        list.addEventListener('touchmove', (e) => {
+            if (!row) return;
+            const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0s;
+            if (!lock) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; lock = Math.abs(mx) > Math.abs(my) * 1.3 && mx < 0 ? 'x' : 'y'; }
+            if (lock !== 'x') return;
+            dx = Math.max(-90, mx);
+            const w = row.querySelector('.dv-cwrap'); w.style.transition = 'none'; w.style.transform = 'translateX(' + dx + 'px)';
+            row.classList.toggle('arm', dx <= -60);
+            if (e.cancelable) e.preventDefault();
+        }, { passive: false });
+        const end = () => {
+            if (!row) return;
+            const w = row.querySelector('.dv-cwrap'); w.style.transition = 'transform .2s'; w.style.transform = '';
+            if (lock === 'x' && dx <= -60) setReply(row.dataset.cid);
+            row.classList.remove('arm'); row = null;
+        };
+        list.addEventListener('touchend', end); list.addEventListener('touchcancel', end);
+    })();
     el.addEventListener('click', (ev) => {
         if (ev.target === el || ev.target.closest('[data-cclose]')) { close(); return; }
+        const crep = ev.target.closest('[data-creply]');
+        if (crep) { setReply(crep.dataset.creply); return; }
+        if (ev.target.closest('[data-cunreply]')) { setReply(null); return; }
+        const cq = ev.target.closest('[data-cq]');
+        if (cq) { const t = el.querySelector('.dv-comment[data-cid="' + cq.dataset.cq + '"]'); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1200); } return; }
         const cdel = ev.target.closest('[data-cdel]');
         if (cdel) {
             svApi('/api/dviz/' + encodeURIComponent(id) + '/comments/' + encodeURIComponent(cdel.dataset.cdel), { method: 'DELETE', headers: dvAuthed() })
@@ -424,11 +499,11 @@ function openDvizComments(id) {
         if (!text) return;
         loginRequired(() => {
             inp.disabled = true; send.disabled = true;
-            svApi('/api/dviz/' + encodeURIComponent(id) + '/comments', { method: 'POST', headers: dvAuthed(), body: JSON.stringify({ text }) }).then(({ status, d }) => {
+            svApi('/api/dviz/' + encodeURIComponent(id) + '/comments', { method: 'POST', headers: dvAuthed(), body: JSON.stringify({ text, replyTo: replyTo ? replyTo.id : undefined }) }).then(({ status, d }) => {
                 inp.disabled = false;
                 if (status === 401) { clearSession(); showToast('Сессия истекла. Войдите снова.'); send.disabled = !inp.value.trim(); return; }
                 if (!d || !d.ok) { showToast((d && d.message) || 'Не удалось отправить'); send.disabled = !inp.value.trim(); return; }
-                inp.value = ''; send.disabled = true;
+                inp.value = ''; send.disabled = true; setReply(null);
                 inp.focus();
                 dvRefreshOpen(true);
             }).catch(() => { inp.disabled = false; send.disabled = !inp.value.trim(); showToast('Нет связи с сервером'); });
@@ -510,10 +585,12 @@ function dvRefreshOpen(scrollDown) {
             const keep = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
             box.innerHTML = dvCommentsHTML(e);
             const cnt = document.getElementById('dvCCount'); if (cnt) cnt.textContent = e.comments ? e.comments : '';
+            dvSetSeen(e.id, e.comments || 0);
             if (scrollDown || keep) box.scrollTop = box.scrollHeight;
         }
         const f = dvFeed.find(x => x.id === e.id);
         if (f) { f.comments = e.comments; f.joins = e.joins; f.joined = e.joined; paintDviz(); }
+        dvUpdateBadge(dvFeed);
     }).catch(() => {});
 }
 
@@ -527,7 +604,7 @@ function dvDelete(id) {
 
 // сервер сообщает: кто-то создал, удалил или прокомментировал движ
 function onDvizChanged(d) {
-    if (document.getElementById('dvFeed')) loadDviz();
+    if (document.getElementById('dvFeed')) loadDviz(); else dvPollBadge();
     if (d && ((dvOpenId && d.id === dvOpenId) || (dvCommId && d.id === dvCommId))) {
         if (d.removed) { closeSheet(); closeDvizComments(); showToast('Этот поиск удалён'); } else dvRefreshOpen();
     }
