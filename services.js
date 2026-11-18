@@ -75,7 +75,7 @@ function svSlidesHTML(s) {
     const slide = (src) => src ? `<div class="sv-slide"><img src="${e(src)}" alt="" loading="lazy"></div>` : '<div class="sv-slide ph"></div>';
     let html = slide(cached ? cached[0] : s.thumb);
     for (let i = 1; i < n; i++) html += slide(cached ? cached[i] : '');
-    return `<div class="sv-slides" data-svslides="${e(id)}" data-loaded="${cached || n <= 1 ? 1 : 0}">${html}</div>`;
+    return `<div class="sv-slides" data-svslides="${e(id)}" data-loaded="${cached ? 1 : 0}">${html}</div>`;
 }
 function svLoadSlides(box) {
     if (!box || box.dataset.loaded === '1' || box.dataset.loading === '1') return;
@@ -90,7 +90,14 @@ function svLoadSlides(box) {
             const slides = el.querySelectorAll('.sv-slide');
             photos.forEach((src, i) => {
                 const sl = slides[i];
-                if (!sl || (i === 0 && sl.querySelector('img'))) return;
+                if (!sl) return;
+                const old = sl.querySelector('img');
+                if (old) {      // обложка в ленте — уменьшенная копия: меняем её на полное фото, когда оно прогрузилось, без мигания
+                    const pre = new Image();
+                    pre.onload = () => { old.src = src; };
+                    pre.src = src;
+                    return;
+                }
                 sl.classList.remove('ph'); sl.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
             });
             el.dataset.loaded = '1';
@@ -98,6 +105,28 @@ function svLoadSlides(box) {
     }).catch(() => { box.dataset.loading = ''; });
 }
 document.addEventListener('pointerdown', (ev) => { const b = ev.target.closest && ev.target.closest('.sv-slides'); if (b) svLoadSlides(b); }, true);
+// Плитка, которая задержалась на экране, сама меняет обложку на полное фото (раньше это случалось только после касания:
+// сначала фото было мыльным, а следующее при пролистывании — чётким). Быстро пролистанные плитки не грузим.
+(function () {
+    if (typeof IntersectionObserver !== 'function' || typeof MutationObserver !== 'function') return;
+    const timers = new Map();
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach((en) => {
+            const box = en.target;
+            if (!en.isIntersecting) { clearTimeout(timers.get(box)); timers.delete(box); return; }
+            if (box.dataset.loaded === '1') { io.unobserve(box); return; }
+            if (timers.has(box)) return;
+            timers.set(box, setTimeout(() => { timers.delete(box); io.unobserve(box); svLoadSlides(box); }, 350));
+        });
+    }, { threshold: 0.6 });
+    const watch = (root) => {
+        if (!root || root.nodeType !== 1) return;
+        const list = root.matches && root.matches('.sv-slides') ? [root] : (root.querySelectorAll ? root.querySelectorAll('.sv-slides') : []);
+        list.forEach((b) => { if (b.dataset.loaded !== '1') io.observe(b); });
+    };
+    new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach(watch))).observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', () => watch(document.body));
+})();
 document.addEventListener('scroll', (ev) => {
     const b = ev.target;
     if (!b || !b.classList || !b.classList.contains('sv-slides')) return;
