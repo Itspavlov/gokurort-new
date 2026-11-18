@@ -1,0 +1,55 @@
+/* ============================================
+   YuGi YuGi — версия для компьютера (от 900 px).
+   Телефон не меняется: всё ниже включается только на широком экране.
+   ============================================ */
+@media (min-width: 900px) {
+    :root { --dw: 1080px; --dscr: 880px; }
+    body { overflow-x: hidden; }
+
+    /* главная: шире, плитки в один ряд */
+    .app-container { max-width: var(--dw); }
+    .group-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .group-card, .group-card.gc-housing, .group-card.gc-services, .group-card.gc-work, .group-card.gc-trips { min-height: 300px; }
+    .group-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(8, 20, 38, .3); }
+    .group-card { transition: transform .2s, box-shadow .2s; }
+    .hero-title.hero-caps { font-size: 56px; }
+    .hero-tag { font-size: 17px; max-width: 640px; }
+    .search-pill { max-width: 720px; }
+    .bottom-nav-inner { max-width: 560px; }
+    .hero-photo { object-position: 50% 62%; }
+
+    /* экраны поверх главной: комфортная ширина, а не телефонная полоска и не весь монитор */
+    .group-screen, .listing-screen, .user-screen, .admap { max-width: var(--dscr); box-shadow: 0 0 60px rgba(0, 0, 0, .35), 0 0 0 100vmax rgba(2, 8, 20, .55); }
+    .group-screen { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); }
+
+    /* ленты карточек в несколько колонок */
+    .group-screen .sv-grid, .sv-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; padding: 22px 26px 120px; }
+    .group-screen .sv-grid .sv-cell { align-items: stretch; }
+    .group-screen .sv-grid .sv-tile { height: 210px; }
+    .dv-feed { padding-left: 24px; padding-right: 24px; }
+    .dv2.cloud { max-width: 420px; width: 55%; }
+    .featured-list { gap: 14px; }
+
+    /* окна: по центру экрана, а не снизу */
+    .sheet-overlay { align-items: center; }
+    .sheet-panel { max-width: 580px; max-height: 88vh; border-radius: 28px; transform: translateY(24px) scale(.98); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+    .sheet-overlay.open .sheet-panel { transform: none; }
+    .sheet-grab { display: none; }
+    .sheet-overlay.inbox-full .sheet-panel { max-width: 640px; height: 88vh; max-height: 88vh; border-radius: 28px; }
+    .dv-comm-overlay .dv-comm-panel { height: 80vh; max-height: 80vh; }
+
+    /* баннеры уведомлений и подсказки */
+    #bannerHost .banner { max-width: 560px; }
+
+    /* мышь: курсор и наведение */
+    button, [onclick], .group-card, .sv-cell, .dialog-row { cursor: pointer; }
+    .sv-cell:hover { box-shadow: 0 16px 36px rgba(8, 20, 38, .3); }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(128, 140, 160, .45); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+}
+
+/* очень широкие мониторы */
+@media (min-width: 1500px) {
+    :root { --dw: 1240px; --dscr: 960px; }
+    .group-card, .group-card.gc-housing, .group-card.gc-services, .group-card.gc-work, .group-card.gc-trips { min-height: 340px; }
+}
