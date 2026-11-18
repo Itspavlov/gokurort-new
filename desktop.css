@@ -3,11 +3,11 @@
    Телефон не меняется: всё ниже включается только на широком экране.
    ============================================ */
 @media (min-width: 900px) {
-    :root { --dw: 1080px; --dscr: 880px; }
+    :root { --dw: none; --dscr: none; }
     body { overflow-x: hidden; }
 
     /* главная: шире, плитки в один ряд */
-    .app-container { max-width: var(--dw); }
+    .app-container { max-width: none; padding-left: clamp(24px, 4vw, 72px); padding-right: clamp(24px, 4vw, 72px); box-sizing: border-box; }
     .group-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
     .group-card, .group-card.gc-housing, .group-card.gc-services, .group-card.gc-work, .group-card.gc-trips { min-height: 300px; }
     .group-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(8, 20, 38, .3); }
@@ -19,8 +19,15 @@
     .hero-photo { object-position: 50% 62%; }
 
     /* экраны поверх главной: комфортная ширина, а не телефонная полоска и не весь монитор */
-    .group-screen, .listing-screen, .user-screen, .admap { max-width: var(--dscr); box-shadow: 0 0 60px rgba(0, 0, 0, .35), 0 0 0 100vmax rgba(2, 8, 20, .55); }
-    .group-screen { border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); }
+    .group-screen, .listing-screen, .user-screen, .admap { max-width: none; }
+
+
+    /* на весь экран: поля по бокам, ленты — столько колонок, сколько влезает */
+    .group-screen, .listing-screen, .user-screen { padding-left: clamp(16px, 4vw, 72px); padding-right: clamp(16px, 4vw, 72px); box-sizing: border-box; }
+    #chatMessages.cards:has(.chat-message-ad) { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 8px; }
+    #chatMessages.cards:has(.chat-message-ad) .chat-ad-image { aspect-ratio: 1 / .72; }
+    .group-screen .sv-grid, .sv-grid { padding-left: 4px; padding-right: 4px; }
+    .chat-messages .req-item, .dv-feed { max-width: 760px; }
 
     /* ленты карточек в несколько колонок */
     .group-screen .sv-grid, .sv-grid { grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; padding: 22px 26px 120px; }
@@ -50,6 +57,5 @@
 
 /* очень широкие мониторы */
 @media (min-width: 1500px) {
-    :root { --dw: 1240px; --dscr: 960px; }
     .group-card, .group-card.gc-housing, .group-card.gc-services, .group-card.gc-work, .group-card.gc-trips { min-height: 340px; }
 }
