@@ -146,15 +146,55 @@ function mapPickInit(el, initial, onName) {
     });
     return { get: () => coords };
 }
-// окно «Карта» у карточки услуги: где причал или куда подойти, и ссылки на маршрут
+// ---------- карта на весь экран ----------
+// Одна карта на все карточки (услуга, жильё, место сбора): на весь экран, сверху «закрыть» и название,
+// снизу плашка с адресом, маршрутом и кнопками. Закрытие возвращает туда, откуда открыли.
+// o: { title, place, coords, pin: 'home'|'flag'|'ship', panel (HTML снизу), init(panelEl, getMap) → после открытия, markers: [{coords, html}] }
+let ptMapInst = null, ptMapToken = null;
+function openPointMap(o) {
+    o = o || {};
+    if (!Array.isArray(o.coords) || o.coords.length !== 2) { showToast('Точка на карте не отмечена'); return; }
+    closePointMap();
+    const e = escapeHtml;
+    const view = document.createElement('div');
+    view.id = 'ptMapView'; view.className = 'admap ptmap';
+    view.innerHTML = `<div class="admap-top"><button type="button" class="chat-back-btn" data-pm="close" aria-label="Закрыть карту"><i class="fas fa-xmark"></i></button>
+        <div class="admap-title ptmap-title">${e(o.title || 'На карте')}</div><span style="width:40px"></span></div>
+        <div class="admap-map" id="ptMapBox" data-noswipe></div>
+        <div class="ptmap-panel" id="ptMapPanel">${o.place ? `<p class="sv-where"><i class="fas fa-location-dot"></i><span>${e(o.place)}</span></p>` : ''}${o.panel || ''}</div>`;
+    document.body.appendChild(view);
+    view.addEventListener('click', (ev) => {
+        if (!ev.target.closest('[data-pm="close"]')) return;
+        if (typeof recentMapGesture === 'function' && recentMapGesture()) return;
+        closePointMap();
+    });
+    const panel = view.querySelector('#ptMapPanel');
+    const lift = () => view.style.setProperty('--ptp', (panel.offsetHeight + 20) + 'px');   // кнопки масштаба не прячем под плашкой
+    lift();
+    const token = ptMapToken = {};
+    YM.open(view.querySelector('#ptMapBox'), { center: o.coords, zoom: o.zoom || 16, zoomControl: true, zoomBottom: panel.offsetHeight + 24 }).then((map) => {
+        if (!map) return;
+        if (ptMapToken !== token || !view.isConnected) { map.destroy(); return; }
+        ptMapInst = map;
+        const icon = { home: ['pin-home', 'fa-home'], flag: ['pin-meet', 'fa-flag'], ship: ['pin-meet', 'fa-ship'] }[o.pin || 'flag'] || ['pin-meet', 'fa-flag'];
+        map.addMarker({ coords: o.coords, html: mapPin(icon[0], icon[1]), size: [40, 40] });
+        (o.markers || []).forEach(m => map.addMarker({ coords: m.coords, html: m.html, size: [40, 40] }));
+        if (typeof o.init === 'function') o.init(panel, () => map);
+        lift();
+        setTimeout(() => { if (ptMapInst === map) { map.invalidate(); lift(); } }, 200);
+    });
+}
+function closePointMap() {
+    ptMapToken = null;
+    if (ptMapInst) { try { ptMapInst.destroy(); } catch (e) {} ptMapInst = null; }
+    const v = document.getElementById('ptMapView'); if (v) v.remove();
+}
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && document.getElementById('ptMapView')) closePointMap(); });
+
+// «Карта» у карточки услуги: где причал или куда подойти, и ссылки на маршрут
 function openServiceMap(s) {
     if (!s || !s.coords) { showToast('Автор не отметил точку на карте'); return; }
-    const e = escapeHtml;
-    openSheet('Карта · ' + e(s.title || 'услуга'), `
-        ${s.place ? `<p class="sv-where"><i class="fas fa-flag"></i><span>${e(s.place)}</span></p>` : ''}
-        <div class="dv-map" id="svViewMap" data-noswipe></div>${dvRouteHTML(s.coords)}`, (el) => {
-        dvOpenMap(el.querySelector('#svViewMap'), s.coords, 16).then((m) => { if (m) m.setPoint(s.coords); });
-    });
+    openPointMap({ title: s.title || 'Услуга', place: s.place, coords: s.coords, pin: 'flag', panel: dvRouteHTML(s.coords) });
 }
 const dvPeople = (e) => e.max ? `${e.joins} из ${e.max}` : (e.joins ? String(e.joins) : '');
 
@@ -529,8 +569,7 @@ function openDvizView(id) {
                 ${dvPeople(e) ? `<span><i class="fas fa-user-group"></i>${dvEsc(dvPeople(e))}</span>` : ''}
             </div>
             ${e.text ? `<p class="sv-view-text">${dvEsc(e.text)}</p>` : ''}
-            ${e.coords ? `<div class="form-h" style="margin:12px 2px 8px">Точка сбора</div>
-                <div class="dv-map" id="dvViewMap" data-noswipe></div>${dvRouteHTML(e.coords)}` : ''}
+            ${e.coords ? `<button type="button" class="ghost-btn wide-btn dv-mapopen" data-dv-map><i class="fas fa-map-location-dot"></i> Точка сбора на карте</button>` : ''}
             ${e.attached ? dvAttachHTML(e.attached) : ''}
             <button type="button" class="sv-owner" data-dv-owner><span class="chat-avatar" data-avn="${avEsc(e.ownerName)}" style="background:${dmColor(e.ownerName)}">${avInner(e.ownerName)}</span>
                 <span><b>${dvEsc(mine ? 'Вы' : e.ownerName)}</b><small>Организатор · открыть профиль</small></span><i class="fas fa-chevron-right"></i></button>
@@ -550,9 +589,8 @@ function openDvizView(id) {
             };
             paintTop(e);
             el._dv = { id: e.id, paintTop, owner: e.ownerId, e };
-            if (e.coords) {
-                dvOpenMap(el.querySelector('#dvViewMap'), e.coords, 16).then((m) => { if (m) m.setPoint(e.coords); });
-            }
+            const mapBtn = el.querySelector('[data-dv-map]');
+            if (mapBtn) mapBtn.onclick = () => openPointMap({ title: e.title, place: e.place, coords: e.coords, pin: 'flag', panel: dvRouteHTML(e.coords) });
             el.querySelector('[data-dv-owner]').onclick = () => { closeSheet(); if (typeof openUserProfile === 'function') openUserProfile({ id: e.ownerId, name: e.ownerName }); };
             const att = el.querySelector('[data-dv="service"]');
             if (att) att.onclick = () => openServiceView(att.dataset.sid);

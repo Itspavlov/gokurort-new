@@ -9,6 +9,7 @@
 //   карта: setView(c, z, animate) · fitBounds(points, { padding, maxZoom, animate }) · getZoom()
 //          addMarker({ coords, html, size, anchor, draggable, onClick, onDrag, group }) → { setCoords(c), remove() }
 //          clearMarkers(group) · addLine(points, { color, width }) · onClick(fn) · setInteractive(on) · showZoom()
+//          getBounds() → [юг, запад, север, восток] · onMoveEnd(fn) — после сдвига/масштаба
 //          project(c) → { x, y } в пикселях блока · invalidate() · destroy() · engine: 'yandex' | 'osm'
 // ============================================
 // Ключ «JavaScript API». В кабинете Яндекса его нужно ограничить по HTTP-referer (yugiyugi.ru).
@@ -58,6 +59,8 @@ const YM = (() => {
                     .then(() => { if (f.maxZoom && map.getZoom() > f.maxZoom) map.setZoom(f.maxZoom, { duration: dur }); }, () => {});
             },
             getZoom() { return map.getZoom(); },
+            getBounds() { const b = map.getBounds(); return b ? [b[0][0], b[0][1], b[1][0], b[1][1]] : null; },
+            onMoveEnd(fn) { map.events.add('actionend', () => fn()); },
             addMarker(m) {
                 const [w, hgt] = m.size || [40, 40], [ax, ay] = m.anchor || [w / 2, hgt / 2];
                 const id = 'ymk' + (++seq);
@@ -159,6 +162,8 @@ const YM = (() => {
                 map.fitBounds(pts, { padding: [p, p], maxZoom: f.maxZoom || 18, animate: f.animate !== false });
             },
             getZoom() { return map.getZoom(); },
+            getBounds() { const b = map.getBounds(); return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]; },
+            onMoveEnd(fn) { map.on('moveend', () => fn()); },
             addMarker(m) {
                 const [w, hgt] = m.size || [40, 40], [ax, ay] = m.anchor || [w / 2, hgt / 2];
                 const mk = L.marker(m.coords, { icon: L.divIcon({ className: 'map-pin-wrap', html: m.html, iconSize: [w, hgt], iconAnchor: [ax, ay] }), draggable: !!m.draggable });

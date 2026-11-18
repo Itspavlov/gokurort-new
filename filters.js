@@ -165,12 +165,27 @@ function openFilterSheet() {
 }
 
 // ---------- карта ----------
-let adMap = null, adMapSel = null, adMapToken = null;
+// Карта не знает про все объявления сразу. Она спрашивает у сервера только то, что попало в кадр:
+// отдельные метки с ценой, а плотные места приходят кружками с числом (тап — приблизить).
+// Поэтому работает одинаково быстро хоть с 50, хоть с 50 000 объявлений.
+let adMap = null, adMapSel = null, adMapToken = null, adMapMoved = false;
+let adMapMarks = new Map();          // ключ метки → { rec, sig }
+let adMapSeen = new Map();           // id → короткие данные метки (для карточки внизу)
+let adMapSig = '', adMapSeq = 0, adMapTimer = null, adMapAbort = null, adMapStat = { total: 0, noPoint: 0 };
+const AD_TOWN = MAP_DEFAULT.slice();
+const AD_MAP_PINS = 120;
 function shortPrice(ad) {
     const n = Number(ad.priceNum) || 0;
     if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' млн';
     if (n >= 10000) return Math.round(n / 1000) + ' тыс';
     return n.toLocaleString('ru-RU') + ' ₽';
+}
+
+// те же правила, что у подписки на поиск: сервер сам отберёт подходящие
+function adMapServerFilter() {
+    const f = adFilter, cat = (typeof housingCatByRoom === 'function' && typeof currentRoom === 'string') ? housingCatByRoom(currentRoom).id : 'all';
+    const o = { q: f.q || '', min: f.min, max: f.max, from: f.from || '', to: f.to || '', guests: f.guests || 0, sea: f.sea || 0, amen: f.amen || [], verified: !!f.verified, cat: cat === 'all' ? '' : cat };
+    return JSON.stringify(o);
 }
 
 function openAdMap() {
@@ -187,47 +202,104 @@ function openAdMap() {
         if (typeof recentMapGesture === 'function' && recentMapGesture()) return;   // щипок по карте не закрывает её
         if (b.dataset.m === 'close') closeAdMap();
         else if (b.dataset.m === 'filters') openFilterSheet();
-        else if (b.dataset.m === 'open') { const id = b.dataset.id; closeAdMap(); openListing(id); }
+        else if (b.dataset.m === 'open') {
+            const id = b.dataset.id;
+            if (findAd(id)) { closeAdMap(); openListing(id); }
+            else fetchFullAd(id, (ok) => { if (ok) { closeAdMap(); openListing(id); } });   // объявления нет в ленте: догружаем одно
+        }
     });
     const box = document.getElementById('adMapBox');
-    adMapMoved = false;
+    adMapMoved = false; adMapMarks = new Map(); adMapSeen = new Map(); adMapStat = { total: 0, noPoint: 0 };
     box.addEventListener('pointerdown', () => { adMapMoved = true; }, { once: true });
     const token = adMapToken = {};
-    // сразу ставим итоговый вид, без «наезда»: иначе карта сначала грузит квадрат плиток на дальнем зуме, потом приближается
-    const first = filteredAds().filter(a => nearTown(a.coords)).map(a => a.coords);
-    const mid = first.length ? [first.reduce((x, p) => x + p[0], 0) / first.length, first.reduce((x, p) => x + p[1], 0) / first.length] : MAP_DEFAULT.slice();
-    YM.open(box, { center: mid, zoom: first.length ? 14 : 14 }).then((map) => {
+    // стартуем с посёлка: сразу нужный вид, без «наезда» с дальнего масштаба
+    const own = getAllAds().filter(a => Array.isArray(a.coords) && nearTown(a.coords)).map(a => a.coords);
+    const mid = own.length ? [own.reduce((x, p) => x + p[0], 0) / own.length, own.reduce((x, p) => x + p[1], 0) / own.length] : AD_TOWN.slice();
+    YM.open(box, { center: mid, zoom: 14 }).then((map) => {
         if (!map) return;
         if (adMapToken !== token || !document.getElementById('adMapView')) { map.destroy(); return; }
         adMap = map;
-        fitAdMap(false);
         map.onClick(() => { adMapSel = null; paintAdMapCard(); markSelected(); });
-        view.classList.add('intro');
-        refreshAdMap(false, true);
-        // блок карты получает размер не сразу (плавное появление): после этого подгоняем масштаб ещё раз
-        setTimeout(() => { if (adMap === map) { map.invalidate(); fitAdMap(false); startBoat(); } }, 160);
-        setTimeout(() => { if (adMap === map && !adMapMoved) { map.invalidate(); fitAdMap(false); } }, 700);
+        map.onMoveEnd(() => scheduleAdMapLoad(220));
+        loadAdMapView();
+        // блок карты получает размер не сразу (плавное появление): после этого подгоняем и перезапрашиваем кадр
+        setTimeout(() => { if (adMap === map) { map.invalidate(); loadAdMapView(); } }, 200);
+        setTimeout(() => { if (adMap === map && !adMapMoved) { map.invalidate(); loadAdMapView(); } }, 700);
     });
 }
 
-// масштаб под город: все объявления с точками в кадре; нет точек — показываем посёлок целиком
-const AD_TOWN = MAP_DEFAULT.slice();
-// в кадр берём только то, что рядом с Архипо-Осиповкой (до 40 км): дальние точки не отдаляют карту
+// рядом с Архипо-Осиповкой (до 40 км)
 const nearTown = (c) => Array.isArray(c) && distMeters(c, AD_TOWN) < 40000;
-let adMapMoved = false;
-function fitAdMap(animate) {
+
+function scheduleAdMapLoad(ms, force) {
+    clearTimeout(adMapTimer);
+    adMapTimer = setTimeout(() => loadAdMapView(force), ms == null ? 0 : ms);
+}
+
+// без сервера (или он недоступен): то, что уже есть на телефоне, тем же способом — только из кадра
+function localAdMapView(bbox) {
+    const [s, w, n, e] = bbox;
+    const all = filteredAds().filter(a => Array.isArray(a.coords));
+    const inView = all.filter(a => a.coords[0] >= s && a.coords[0] <= n && a.coords[1] >= w && a.coords[1] <= e);
+    return { ok: true, local: true, total: filteredAds().length, noPoint: filteredAds().length - all.length, inView: inView.length, clusters: [],
+        pins: inView.slice(0, AD_MAP_PINS).map(a => ({ id: a.id, coords: a.coords, price: a.price, priceNum: a.priceNum, title: a.title })) };
+}
+
+async function loadAdMapView(force) {
     if (!adMap) return;
-    const pts = filteredAds().filter(a => nearTown(a.coords)).map(a => a.coords);
-    if (pts.length) adMap.fitBounds(pts, { padding: 50, maxZoom: 15, animate: animate !== false });
-    else adMap.setView(AD_TOWN, 14, animate !== false);
+    const bb = adMap.getBounds();
+    if (!bb || !bb.every(Number.isFinite)) return;
+    const flt = adMapServerFilter(), q = `bbox=${bb.map(x => Math.round(x * 1e5) / 1e5).join(',')}&z=${adMap.getZoom()}&f=${encodeURIComponent(flt)}`;
+    if (!force && q === adMapSig) return;       // кадр и фильтры те же — повторно не спрашиваем
+    adMapSig = q;
+    const my = ++adMapSeq;
+    if (adMapAbort) { try { adMapAbort.abort(); } catch (e) {} }
+    const ctl = adMapAbort = typeof AbortController === 'function' ? new AbortController() : null;
+    let data = null;
+    try {
+        const res = await fetch(`${SERVER_URL}/api/listings/map?${q}`, ctl ? { signal: ctl.signal } : undefined);
+        const d = await res.json();
+        if (d && d.ok) data = d;
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    if (my !== adMapSeq || !adMap) return;      // пока ждали, кадр уже сменился
+    if (!data) { adMapSig = ''; }
+    if (!data) data = localAdMapView(bb);
+    paintAdMapView(data);
+}
+
+function paintAdMapView(d) {
+    if (!adMap) return;
+    const e = escapeHtml, want = new Map();
+    (d.clusters || []).forEach(c => {
+        const key = 'c' + c.coords[0] + ',' + c.coords[1] + ':' + c.count;
+        want.set(key, { key, coords: c.coords, size: [48, 48], anchor: [24, 24],
+            html: `<div class="ad-cluster" data-k="${e(key)}"><span>${c.count > 999 ? Math.round(c.count / 100) / 10 + 'k' : c.count}</span></div>`,
+            onClick: () => adMap && adMap.setView(c.coords, Math.min(adMap.getZoom() + 2, 18), true) });
+    });
+    (d.pins || []).forEach(p => {
+        if (!Array.isArray(p.coords)) return;
+        adMapSeen.set(String(p.id), p);
+        const key = 'p' + p.id + ':' + (p.priceNum || 0);
+        want.set(key, { key, coords: p.coords, size: [64, 30], anchor: [32, 30],
+            html: `<div class="ad-pin show" data-id="${e(String(p.id))}">${e(shortPrice(p))}</div>`,
+            onClick: () => { adMapSel = String(p.id); paintAdMapCard(); markSelected(); } });
+    });
+    // убираем только то, чего в новом кадре нет; остальное не трогаем, поэтому карта не мигает
+    for (const [k, m] of adMapMarks) if (!want.has(k)) { try { m.rec.remove(); } catch (x) {} adMapMarks.delete(k); }
+    for (const [k, w] of want) if (!adMapMarks.has(k)) adMapMarks.set(k, { rec: adMap.addMarker({ coords: w.coords, group: 'ads', size: w.size, anchor: w.anchor, html: w.html, onClick: w.onClick }) });
+    adMapStat = { total: d.total || 0, noPoint: d.noPoint || 0 };
+    paintAdMapCard(); markSelected(); paintMapTitle();
+    const view = document.getElementById('adMapView'); if (view) view.classList.remove('intro');
 }
 
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && document.getElementById('adMapView') && !document.getElementById('sheet')) closeAdMap(); });
 
 function closeAdMap() {
     stopBoat();
+    clearTimeout(adMapTimer); adMapSeq++;
+    if (adMapAbort) { try { adMapAbort.abort(); } catch (e) {} adMapAbort = null; }
     if (adMap) { try { adMap.destroy(); } catch (e) {} }
-    adMap = null; adMapSel = null; adMapToken = null; adMapMoved = false;
+    adMap = null; adMapSel = null; adMapToken = null; adMapMoved = false; adMapMarks = new Map(); adMapSeen = new Map(); adMapSig = '';
     const v = document.getElementById('adMapView'); if (v) v.remove();
 }
 
@@ -237,7 +309,7 @@ function markSelected() {
 
 function paintAdMapCard() {
     const card = document.getElementById('adMapCard'); if (!card) return;
-    const ad = adMapSel ? findAd(adMapSel) : null;
+    const ad = adMapSel ? (findAd(adMapSel) || adMapSeen.get(String(adMapSel))) : null;
     if (!ad) { card.hidden = true; return; }
     const e = escapeHtml;
     const sea = ad.coords && ad.beach ? fmtDist(distMeters(ad.coords, ad.beach)) + ' до моря' : '';
@@ -245,28 +317,28 @@ function paintAdMapCard() {
     card.innerHTML = `<div class="admap-thumb">${ad.image ? `<img src="${e(ad.image)}" alt="">` : '<i class="fas fa-image"></i>'}</div>
         <div class="admap-info"><b>${e(ad.title)}</b><span class="admap-price">${e(ad.price || '')}</span><small>${e([ad.location, sea].filter(Boolean).join(' · '))}</small></div>
         <button type="button" class="primary-btn" data-m="open" data-id="${e(String(ad.id))}">Открыть</button>`;
+    // объявления нет в ленте (она может быть длинной): догружаем лёгкую карточку ради фото и адреса
+    if (!findAd(adMapSel) && !ad._lite) {
+        const id = String(adMapSel); ad._lite = true;
+        fetch(`${SERVER_URL}/api/listings/${encodeURIComponent(id)}?lite=1`).then(r => r.json()).then(r => {
+            if (!r || !r.ok || !r.listing) return;
+            const full = normalizeRemoteAd(r.listing); full._lite = true;
+            adMapSeen.set(id, full);
+            if (String(adMapSel) === id) paintAdMapCard();
+        }).catch(() => {});
+    }
 }
 
-function refreshAdMap(fit, initial) {
-    if (!initial) endBoat(true);
-    if (!adMap) { const t = document.getElementById('adMapTitle'); if (t) paintMapTitle(); return; }
-    adMap.clearMarkers('ads');
-    const list = filteredAds(), withPoint = list.filter(a => Array.isArray(a.coords));
-    const pts = [];
-    withPoint.forEach(ad => {
-        adMap.addMarker({ coords: ad.coords, group: 'ads', size: [64, 30], anchor: [32, 30],
-            html: `<div class="ad-pin" data-id="${escapeHtml(String(ad.id))}">${escapeHtml(shortPrice(ad))}</div>`,
-            onClick: () => { adMapSel = ad.id; paintAdMapCard(); markSelected(); } });
-        pts.push(ad.coords);
-    });
-    if (adMapSel && !list.some(a => String(a.id) === String(adMapSel))) adMapSel = null;
-    paintAdMapCard(); markSelected(); paintMapTitle(withPoint.length, list.length - withPoint.length);
-    if (fit !== false) fitAdMap(true);
+// сменили фильтры: перерисовываем кадр уже по ним
+function refreshAdMap() {
+    if (!adMap) return;
+    adMapSel = null;
+    loadAdMapView(true);
 }
-function paintMapTitle(n, noPoint) {
+function paintMapTitle() {
     const t = document.getElementById('adMapTitle'); if (!t) return;
-    if (n === undefined) { const l = filteredAds(); n = l.filter(a => Array.isArray(a.coords)).length; noPoint = l.length - n; }
-    t.textContent = n ? `Жильё на карте: ${n}` : 'На карте ничего нет';
+    const n = Math.max(0, adMapStat.total - adMapStat.noPoint), noPoint = adMapStat.noPoint;
+    t.textContent = n ? `Жильё на карте: ${n.toLocaleString('ru-RU')}` : 'На карте ничего нет';
     t.title = noPoint ? `Ещё ${noPoint} без точки на карте` : '';
 }
 
@@ -298,6 +370,8 @@ const _openGroupFilters = openGroup;
 openGroup = function () { closeAdMap(); const r = _openGroupFilters.apply(this, arguments); setTimeout(setupFilters, 40); return r; };
 const _closeGroupFilters = closeGroup;
 closeGroup = function () { closeAdMap(); return _closeGroupFilters.apply(this, arguments); };
+const _afterRemoteF = afterRemoteAdsChanged;
+afterRemoteAdsChanged = function () { const r = _afterRemoteF.apply(this, arguments); if (adMap) scheduleAdMapLoad(300, true); return r; };
 const _placeRemoteAdsF = placeRemoteAds;
 placeRemoteAds = function () { const r = _placeRemoteAdsF.apply(this, arguments); applyAdFilters(); return r; };
 

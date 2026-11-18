@@ -391,28 +391,16 @@ function mapTiles(opts) {
 
 const mapPin = (cls, icon) => `<div class="map-pin ${cls}"><i class="fas ${icon}"></i></div>`;
 
-// «Показать на карте»: окно с картой, на ней только точка жилья (без маршрутов и расстояний)
+// «Показать на карте»: карта на весь экран, на ней точка жилья (без маршрутов и расстояний)
 function openListingMap(id) {
     const ad = typeof findAd === 'function' ? findAd(id) : null;
     if (!ad || !Array.isArray(ad.coords)) { showToast('У этого объявления нет точки на карте'); return; }
-    const e = escapeHtml;
-    openSheet('На карте', `
-        ${ad.location ? `<p class="sv-where"><i class="fas fa-location-dot"></i><span>${e(ad.location)}</span></p>` : ''}
-        <div class="dv-map rt-map" id="listingMap" data-noswipe></div>
-        <a class="map-link" target="_blank" rel="noopener" href="https://yandex.ru/maps/?pt=${ad.coords[1]},${ad.coords[0]}&z=16&l=map"><i class="fas fa-diamond-turn-right"></i> Открыть в Яндекс Картах</a>`, (el) => {
-        YM.open(el.querySelector('#listingMap'), { center: ad.coords, zoom: 16, zoomControl: true }).then((map) => {
-            if (!map) return;
-            if (!el.isConnected) { map.destroy(); return; }
-            map.addMarker({ coords: ad.coords, html: mapPin('pin-home', 'fa-home'), size: [40, 40] });
-            if (listingMapInst) listingMapInst.destroy();
-            listingMapInst = map;
-            setTimeout(() => map.invalidate(), 250);
-        });
-    });
+    openPointMap({ title: ad.title || 'На карте', place: ad.location, coords: ad.coords, pin: 'home',
+        panel: `<a class="map-link" target="_blank" rel="noopener" href="https://yandex.ru/maps/?pt=${ad.coords[1]},${ad.coords[0]}&z=16&l=map"><i class="fas fa-diamond-turn-right"></i> Открыть в Яндекс Картах</a>` });
 }
 
 function closeListingMap() {
-    if (listingMapInst) { listingMapInst.destroy(); listingMapInst = null; }
+    if (typeof closePointMap === 'function') closePointMap();
 }
 
 // ---------- ПРОСМОТР ФОТО НА ВЕСЬ ЭКРАН ----------

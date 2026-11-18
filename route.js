@@ -88,32 +88,25 @@ function routePanelInit(panel, mapOrFn, ad) {
     return { show, redraw: draw };
 }
 
-// окно «Карта» под карточкой объявления
+// «Карта» под карточкой объявления: на весь экран, дом, море и маршрут до моря
 function openRouteMap(id) {
     const ad = typeof findAd === 'function' ? findAd(id) : null;
     if (!ad || !Array.isArray(ad.coords)) { showToast('У этого объявления нет точки на карте'); return; }
     const e = escapeHtml;
     const sea = Array.isArray(ad.beach);
-    openSheet('Карта · ' + e(ad.title || 'жильё'), `
-        ${ad.location ? `<p class="sv-where"><i class="fas fa-location-dot"></i><span>${e(ad.location)}</span></p>` : ''}
-        <div class="dv-map rt-map" id="rtMap" data-noswipe></div>
-        ${sea ? routePanelHTML() : '<p class="auth-note">Хозяин не отметил, где море.</p>'}
-        <a class="map-link" target="_blank" rel="noopener" href="https://yandex.ru/maps/?pt=${ad.coords[1]},${ad.coords[0]}&z=16&l=map"><i class="fas fa-map"></i> Открыть в Яндекс Картах</a>
-        <button type="button" class="ghost-btn wide-btn" data-rt-open="${e(String(ad.id))}" style="margin-top:10px"><i class="fas fa-house"></i> Открыть объявление</button>`, (el) => {
-        const o = el.querySelector('[data-rt-open]');
-        if (o) o.onclick = () => { closeSheet(); openListing(o.dataset.rtOpen); };
-        let mapRef = null;
-        const rp = sea ? routePanelInit(el.querySelector('.rt-panel'), () => mapRef, ad) : null;
-        YM.open(el.querySelector('#rtMap'), { center: ad.coords, zoom: 16, zoomControl: true }).then((map) => {
-            if (!map) return;
-            if (!el.isConnected) { map.destroy(); return; }
-            mapRef = map;
-            map.addMarker({ coords: ad.coords, html: mapPin('pin-home', 'fa-home'), size: [40, 40] });
-            if (sea) map.addMarker({ coords: ad.beach, html: mapPin('pin-sea', 'fa-umbrella-beach'), size: [40, 40] });
-            if (rp) rp.redraw();
-            setTimeout(() => map.invalidate(), 250);
-        });
-    });
+    openPointMap({ title: ad.title || 'Жильё', place: ad.location, coords: ad.coords, pin: 'home',
+        markers: sea ? [{ coords: ad.beach, html: mapPin('pin-sea', 'fa-umbrella-beach') }] : [],
+        panel: `${sea ? routePanelHTML() : '<p class="auth-note">Хозяин не отметил, где море.</p>'}
+            <a class="map-link" target="_blank" rel="noopener" href="https://yandex.ru/maps/?pt=${ad.coords[1]},${ad.coords[0]}&z=16&l=map"><i class="fas fa-map"></i> Открыть в Яндекс Картах</a>
+            <button type="button" class="ghost-btn wide-btn" data-rt-open="${e(String(ad.id))}"><i class="fas fa-house"></i> Открыть объявление</button>`,
+        init: (el, getMap) => {
+            const o = el.querySelector('[data-rt-open]');
+            if (o) o.onclick = () => { closePointMap(); openListing(o.dataset.rtOpen); };
+            if (sea) {
+                const rp = routePanelInit(el.querySelector('.rt-panel'), getMap, ad);
+                if (rp) rp.redraw();
+            }
+        } });
 }
 
 // плашка «Карта» под карточкой
