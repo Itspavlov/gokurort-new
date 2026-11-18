@@ -2137,3 +2137,7 @@ p.pub-act { text-align: center; }
 .sv-grid { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
 .sv-panel .sv-t-btns button.sv-cta, .sv-panel .sv-t-btns a.sv-cta { width: auto; height: 38px; padding: 0 10px; font-size: 13.5px; flex: 1 1 0; }
 .req-item.sv-item .sv-panel .sv-t-btns button.sv-cta, .req-item.sv-item .sv-panel .sv-t-btns a.sv-cta { width: auto; height: 36px; padding: 0; flex: 1 1 0; justify-content: center; }
+
+/* карта на весь экран: щипок двумя пальцами не должен зумить страницу */
+.admap, .admap-top, .admap-map { touch-action: none; }
+.admap-card { touch-action: manipulation; }

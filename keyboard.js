@@ -17,7 +17,10 @@
 
     function sync() {
         raf = 0;
-        const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        // щипок по странице или карте уменьшает видимую область так же, как клавиатура: при увеличении клавиатурой не считаем,
+        // иначе экран подгонялся под «клавиатуру» на каждом касании двумя пальцами, и карта мигала и пропадала
+        const zoomed = vv.scale > 1.02;
+        const kb = zoomed ? 0 : Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
         const now = kb > 100;                                    // меньше — это не клавиатура, а панель браузера
         if (now) {
             root.style.setProperty('--vvh', Math.round(vv.height) + 'px');
@@ -32,7 +35,7 @@
             document.body.classList.toggle('kb-open', now);
             if (stick && typeof scrollChatToBottom === 'function') requestAnimationFrame(() => scrollChatToBottom());
         }
-        if (now && window.scrollY !== 0) window.scrollTo(0, 0);   // страница под чатом не должна уезжать
+        if (now && !zoomed && window.scrollY !== 0) window.scrollTo(0, 0);   // страница под чатом не должна уезжать
     }
     const schedule = () => { if (!raf) raf = requestAnimationFrame(sync); };
     vv.addEventListener('resize', schedule);

@@ -202,6 +202,16 @@ const YM = (() => {
         return h;
     }
 
+    // Щипок двумя пальцами, где хотя бы один палец на карте (или на её кнопках), меняет масштаб карты и не трогает страницу:
+    // браузерный зум страницы заставлял карту мигать и пропадать.
+    const MAPSEL = '.admap, .dv-map, .listing-map, .leaflet-container, ymaps, [class*="ymaps"], [data-noswipe]';
+    const onMapEl = (n) => !!(n && n.closest && n.closest(MAPSEL));
+    document.addEventListener('touchmove', (ev) => {
+        if (!ev.touches || ev.touches.length < 2 || !ev.cancelable) return;
+        for (let i = 0; i < ev.touches.length; i++) if (onMapEl(ev.touches[i].target)) { ev.preventDefault(); return; }
+    }, { passive: false });
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((n) => document.addEventListener(n, (ev) => { if (onMapEl(ev.target)) ev.preventDefault(); }, { passive: false }));
+
     function open(el, o) {
         o = Object.assign({ zoom: 15, interactive: true, zoomControl: false }, o || {});
         if (!el) return Promise.resolve(null);
