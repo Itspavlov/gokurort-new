@@ -351,8 +351,23 @@ function dvPaintSvc() {
     }
     const list = serviceFeed.filter(s => (!dvSvcCat || (s.tag || 'other') === dvSvcCat)
         && (!dvSvcQ || ((s.title || '') + ' ' + (SV_TAGS[s.tag] || '') + ' ' + (s.city || '')).toLowerCase().includes(dvSvcQ)));
-    grid.innerHTML = list.length ? list.map(serviceFeedHTML).join('')
-        : `<div class="dv-empty" style="grid-column:1/-1"><i class="fas fa-ship"></i><b>${serviceFeed.length ? 'Ничего не нашлось' : 'Пока нет готовых услуг'}</b><span>${serviceFeed.length ? 'Попробуйте другое слово или категорию.' : 'Катаете на катере или водите экскурсии? Разместите услугу кнопкой внизу.'}</span></div>`;
+    if (!list.length) { grid.innerHTML = `<div class="dv-empty" style="grid-column:1/-1"><i class="fas fa-ship"></i><b>${serviceFeed.length ? 'Ничего не нашлось' : 'Пока нет готовых услуг'}</b><span>${serviceFeed.length ? 'Попробуйте другое слово или категорию.' : 'Катаете на катере или водите экскурсии? Разместите услугу кнопкой внизу.'}</span></div>`; return; }
+    // Плитки не пересоздаём, если они не менялись: раньше при входе лента рисовалась дважды (из памяти и после ответа сервера),
+    // и картинки на долю секунды мигали. Теперь неизменившиеся плитки остаются на месте, а новые и изменённые заменяются.
+    const acc = typeof getAccount === 'function' ? getAccount() : null, me = acc ? acc.id : '';
+    const keyOf = (x) => [x.id, x.updated, x.title, x.price, x.unit, x.city, x.tag, x.phone, x.ownerName, x.verified, x.photoCount, (x.thumb || '').length, !!x.coords, me].join('|');
+    const old = new Map();
+    Array.from(grid.children).forEach((n) => { if (n.dataset && n.dataset.svk !== undefined) old.set(n.dataset.sid, n); });
+    const nodes = list.map((x) => {
+        const key = keyOf(x), had = old.get(String(x.id));
+        if (had && had.dataset.svk === key) return had;
+        const t = document.createElement('template'); t.innerHTML = serviceFeedHTML(x);
+        const n = t.content.firstElementChild;
+        n.dataset.svk = key; n.dataset.sid = String(x.id);
+        return n;
+    });
+    if (grid.children.length === nodes.length && nodes.every((n, i) => grid.children[i] === n)) return;     // ничего не изменилось
+    grid.replaceChildren(...nodes);
 }
 
 const _openGroupDv = openGroup;

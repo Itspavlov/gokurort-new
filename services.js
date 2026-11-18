@@ -94,8 +94,9 @@ function svLoadSlides(box) {
                 const old = sl.querySelector('img');
                 if (old) {      // обложка в ленте — уменьшенная копия: меняем её на полное фото, когда оно прогрузилось, без мигания
                     const pre = new Image();
-                    pre.onload = () => { old.src = src; };
                     pre.src = src;
+                    const swap = () => { if (old.src !== src) old.src = src; };
+                    if (pre.decode) pre.decode().then(swap, swap); else pre.onload = swap;
                     return;
                 }
                 sl.classList.remove('ph'); sl.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
