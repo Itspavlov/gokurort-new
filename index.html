@@ -50,7 +50,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css?v=2d">
     <link rel="stylesheet" href="features.css?v=3">
-    <link rel="stylesheet" href="yugi.css?v=119">
+    <link rel="stylesheet" href="yugi.css?v=120">
     <link rel="stylesheet" href="desktop.css?v=2">
 </head>
 <body>
@@ -129,13 +129,13 @@
 
             <div class="search-pill">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Что ищешь?" enterkeyhint="search">
+                <input type="text" id="searchInput" placeholder="Например: погулять" enterkeyhint="search">
                 <button class="search-go" id="searchGo" aria-label="Найти">Найти</button>
-            </div>
-            <div class="search-hints" aria-label="Подсказки">
-                <button type="button" class="search-hint" data-q="погулять"><i class="fas fa-person-walking"></i>Погулять</button>
-                <button type="button" class="search-hint" data-q="покататься"><i class="fas fa-ship"></i>Покататься</button>
-                <button type="button" class="search-hint" data-q="снять жильё"><i class="fas fa-house"></i>Снять жильё</button>
+                <div class="search-hints" aria-label="Например">
+                    <button type="button" class="search-hint" data-q="погулять">погулять</button>
+                    <button type="button" class="search-hint" data-q="покататься">покататься</button>
+                    <button type="button" class="search-hint" data-q="снять жильё">снять жильё</button>
+                </div>
             </div>
 
             <div class="group-grid">
@@ -170,7 +170,7 @@
             </div>
 
             <div class="today-head">
-                <img class="today-palm" src="images/palm.png?v=1" alt="" width="52" height="52" decoding="async">
+                <img class="today-palm" src="images/palm.png?v=1" alt="" width="44" height="44" decoding="async">
                 <div class="today-titles">
                     <h2 class="today-title">Чем заняться сегодня?</h2>
                     <p class="today-sub">Идеи для отдыха, поездок и новых знакомств</p>
@@ -178,9 +178,9 @@
             </div>
             <div class="today-feed" id="todayFeed"></div>
 
-            <button type="button" class="create-plate" onclick="openDvizScreen('dviz')">
+            <button type="button" class="create-plate" onclick="openDvizScreen('svc')">
                 <span class="cp-bolt"><i class="fas fa-bolt"></i></span>
-                <span class="cp-text"><b>Создай свою активность</b><small>Позови людей на пляж, в горы или на закат и найди компанию на сегодня</small></span>
+                <span class="cp-text"><b>Создай свою активность</b><small>Расскажи о своей услуге</small></span>
                 <i class="fas fa-arrow-right cp-go"></i>
             </button>
         </section>
@@ -262,7 +262,7 @@
 <script src="reviews.js?v=6"></script>
 <script src="services.js?v=26"></script>
 <script src="dviz.js?v=25"></script>
-<script src="today.js?v=1"></script>
+<script src="today.js?v=2"></script>
 <script src="stats.js?v=2"></script>
 <script src="dmquick.js?v=3"></script>
 <script src="msgtap.js?v=1"></script>

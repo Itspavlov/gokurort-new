@@ -49,7 +49,7 @@ function tfItems() {
 function tfCardHTML(x) {
     const e = escapeHtml;
     return `<button type="button" class="tf-card tf-g${x.g}" data-tf="${x.kind}" data-id="${e(String(x.id))}">
-        <span class="tf-bg">${x.img ? `<img src="${e(x.img)}" alt="" decoding="async">` : `<i class="fas ${x.icon}"></i>`}</span>
+        <span class="tf-bg">${x.img ? `<img src="${e(x.img)}" alt="" decoding="async" data-hi>` : `<i class="fas ${x.icon}"></i>`}</span>
         <span class="tf-ico"><i class="fas ${x.icon}"></i></span>
         ${x.pinned ? '<span class="tf-pin"><i class="fas fa-thumbtack"></i></span>' : ''}
         <span class="tf-txt"><em>${e(x.tag)}</em><b>${e(x.title)}</b>${x.sub ? `<small>${e(x.sub)}</small>` : ''}</span>
@@ -67,6 +67,7 @@ renderFeatured = function () {
     list.innerHTML = items.length ? items.map(tfCardHTML).join('')
         : TF_IDEAS.map(x => `<button type="button" class="tf-card tf-idea tf-g${x.g}" onclick="${x.go}"><span class="tf-bg"><i class="fas ${x.i}"></i></span>
             <span class="tf-ico"><i class="fas ${x.i}"></i></span><span class="tf-txt"><b>${escapeHtml(x.t)}</b><small>${escapeHtml(x.s)}</small></span></button>`).join('');
+    tfWatch();
     tfLoad();
 };
 
@@ -81,6 +82,40 @@ function tfLoad(force) {
         tfReady = !!((a && a.ok) || (d && d.ok) || (s && s.ok));
         tfAt = Date.now();
     }).finally(() => { tfBusy = false; renderFeatured(); });
+}
+
+// Обложка в ленте — уменьшенная копия. Плитка, которая задержалась на экране, меняет её на полное фото (без мигания).
+const tfHi = {};      // 'kind:id' → адрес полного фото
+const tfHiPath = { afisha: (d) => d && d.item && d.item.image, svc: (d) => d && d.service && d.service.photos && d.service.photos[0], dviz: (d) => d && d.event && d.event.photos && d.event.photos[0] };
+const tfHiUrl = { afisha: '/api/afisha/', svc: '/api/services/', dviz: '/api/dviz/' };
+function tfUpgrade(card) {
+    const img = card.querySelector('img[data-hi]');
+    if (!img || card.dataset.hi) return;
+    const kind = card.dataset.tf, id = card.dataset.id, key = kind + ':' + id;
+    const apply = (src) => {
+        const pre = new Image(); pre.src = src;
+        const swap = () => { if (img.isConnected && img.src !== src) img.src = src; };
+        if (pre.decode) pre.decode().then(swap, swap); else pre.onload = swap;
+    };
+    card.dataset.hi = '1';
+    if (tfHi[key]) { apply(tfHi[key]); return; }
+    fetch(SERVER_URL + tfHiUrl[kind] + encodeURIComponent(id)).then(r => r.json()).then((d) => {
+        const src = tfHiPath[kind](d);
+        if (typeof src === 'string' && /^(data:image\/|https?:)/.test(src)) { tfHi[key] = src; apply(src); }
+    }).catch(() => { card.dataset.hi = ''; });
+}
+const tfTimers = new Map();
+const tfIO = typeof IntersectionObserver === 'function' ? new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+        const c = en.target;
+        if (!en.isIntersecting) { clearTimeout(tfTimers.get(c)); tfTimers.delete(c); return; }
+        if (tfTimers.has(c)) return;
+        tfTimers.set(c, setTimeout(() => { tfTimers.delete(c); tfIO.unobserve(c); tfUpgrade(c); }, 400));
+    });
+}, { root: null, threshold: 0.6 }) : null;
+function tfWatch() {
+    if (!tfIO) return;
+    document.querySelectorAll('#todayFeed .tf-card[data-tf]').forEach((c) => { if (!c.dataset.hi) tfIO.observe(c); });
 }
 
 // нажатие на плитку
