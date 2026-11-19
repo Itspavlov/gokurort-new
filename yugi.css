@@ -2261,3 +2261,14 @@ p.pub-act { text-align: center; }
 .tf-nophoto.tf-s-dunes { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 178 126' preserveAspectRatio='xMidYMax slice'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.5' cy='.5' r='.5'%3E%3Cstop offset='0' stop-color='%23FFF3C4'/%3E%3Cstop offset='.55' stop-color='%23FFD27A' stop-opacity='.9'/%3E%3Cstop offset='1' stop-color='%23FFB35C' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='140' cy='74' r='34' fill='url%28%23g%29'/%3E%3Ccircle cx='140' cy='74' r='10' fill='%23FFF1C2'/%3E%3Cpath d='M0 98Q56 70 112 94T178 90V126H0Z' fill='%23fff' fill-opacity='.15'/%3E%3Cpath d='M0 112Q62 90 124 108T178 104V126H0Z' fill='%23fff' fill-opacity='.25'/%3E%3C/svg%3E"), var(--tf-grad, none); }
 
 .search-pill input::placeholder { font-size: 13px; text-overflow: ellipsis; }
+
+/* ===== v108: название под карточкой, на карточке только цена и место ===== */
+.tf-item { flex: none; width: 178px; display: flex; flex-direction: column; gap: 8px; padding: 0; border: 0; background: none; text-align: left; color: var(--text); font: inherit; cursor: pointer; scroll-snap-align: start; -webkit-tap-highlight-color: transparent; }
+.tf-item:active .tf-card { transform: scale(.97); }
+.tf-item .tf-card { width: 100%; height: 126px; justify-content: flex-end; scroll-snap-align: none; pointer-events: none; transition: transform .15s; }
+.tf-item .tf-card::after { background: linear-gradient(180deg, rgba(8,8,26,0) 45%, rgba(8,8,26,.55) 100%); }
+.tf-item .tf-nophoto::after { display: none; }
+.tf-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; min-width: 0; }
+.tf-chip { font-style: normal; font-size: 11.5px; font-weight: 800; line-height: 1; padding: 6px 10px; border-radius: 999px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; background: rgba(10,18,40,.48); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.22); }
+.tf-chip:first-child:not(:last-child) { background: var(--sun, linear-gradient(135deg,#FF9A5C,#FFB35C)); color: #3A1406; border-color: transparent; }
+.tf-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: 0 4px; font-family: var(--font-display); font-size: 14px; font-weight: 800; line-height: 1.2; letter-spacing: -.2px; color: var(--text); }
