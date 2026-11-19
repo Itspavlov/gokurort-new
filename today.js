@@ -29,15 +29,15 @@ function tfItems() {
     tfAfisha.forEach((a, n) => {
         const k = TF_KIND[a.kind] || TF_KIND.event;
         out.push({ key: 'a' + a.id, kind: 'afisha', id: a.id, ts: a.updated || a.created || 0, pinned: !!a.pinned, title: a.title, tag: k[0], icon: k[1],
-            c1: a.when ? dvWhen(a.when) : '', c2: a.place || '', img: a.thumb || '', g: n % 4, scene: TF_SCENE_AF[a.kind] || 'sun' });
+            c1: a.when ? dvWhen(a.when) : '', c2: a.place || '', img: a.thumb || '', wide: true, g: n % 4, scene: TF_SCENE_AF[a.kind] || 'sun' });
     });
     const dv = (tfDviz.length ? tfDviz : (typeof dvFeed !== 'undefined' ? dvFeed : [])).slice(0, 6);
     dv.forEach((e, n) => out.push({ key: 'd' + e.id, kind: 'dviz', id: e.id, ts: e.created || 0, title: e.title, tag: 'Ищут компанию', icon: 'fa-user-group',
-        c1: e.when ? dvWhen(e.when) : '', c2: e.place || '', img: e.thumb || '', g: (n + 1) % 4, scene: 'sun' }));
+        c1: e.when ? dvWhen(e.when) : '', c2: e.place || '', img: e.thumbW || e.thumb || '', wide: !!e.thumbW, g: (n + 1) % 4, scene: 'sun' }));
     const sv = (tfSvc.length ? tfSvc : (typeof serviceFeed !== 'undefined' ? serviceFeed : [])).slice(0, 6);
     sv.forEach((s, n) => out.push({ key: 's' + s.id, kind: 'svc', id: s.id, ts: s.updated || s.created || 0, title: s.title,
         tag: (typeof SV_TAGS !== 'undefined' && SV_TAGS[s.tag]) || 'Услуга', icon: (typeof SV_ICONS !== 'undefined' && SV_ICONS[s.tag]) || 'fa-star',
-        c1: svPrice(s) || '', c2: s.city || '', img: s.thumb || '', g: (n + 3) % 4, scene: TF_SCENE_SV[s.tag] || 'waves' }));
+        c1: svPrice(s) || '', c2: s.city || '', img: s.thumbW || s.thumb || '', wide: !!s.thumbW, g: (n + 3) % 4, scene: TF_SCENE_SV[s.tag] || 'waves' }));
     // закреплённое сверху, дальше свежее; чтобы лента не превратилась в один вид, чередуем виды
     const pinned = out.filter(x => x.pinned).sort((a, b) => b.ts - a.ts);
     const rest = out.filter(x => !x.pinned).sort((a, b) => b.ts - a.ts);
@@ -55,7 +55,7 @@ function tfCardHTML(x) {
     const chips = [x.c2].filter(Boolean).map(t => `<i class="tf-chip">${e(t)}</i>`).join('');
     return `<button type="button" class="tf-item" data-tf="${x.kind}" data-id="${e(String(x.id))}">
         <span class="tf-card tf-g${x.g}${x.img ? '' : ' tf-nophoto tf-s-' + (x.scene || 'sun')}">
-            ${x.img ? `<span class="tf-bg"><img src="${e(x.img)}" alt="" decoding="async" data-hi></span>` : ''}
+            ${x.img ? `<span class="tf-bg"><img src="${e(x.img)}" alt="" decoding="async"${x.wide ? '' : ' data-hi'}></span>` : ''}
             ${chips ? `<span class="tf-chips">${chips}</span>` : ''}
         </span>
         <span class="tf-name">${e(x.title)}</span>
@@ -115,12 +115,12 @@ const tfIO = typeof IntersectionObserver === 'function' ? new IntersectionObserv
         const c = en.target;
         if (!en.isIntersecting) { clearTimeout(tfTimers.get(c)); tfTimers.delete(c); return; }
         if (tfTimers.has(c)) return;
-        tfTimers.set(c, setTimeout(() => { tfTimers.delete(c); tfIO.unobserve(c); tfUpgrade(c); }, 400));
+        tfTimers.set(c, setTimeout(() => { tfTimers.delete(c); tfIO.unobserve(c); tfUpgrade(c); }, 200));
     });
-}, { root: null, threshold: 0.6 }) : null;
+}, { root: null, threshold: 0.4, rootMargin: '0px 140px 0px 140px' }) : null;
 function tfWatch() {
     if (!tfIO) return;
-    document.querySelectorAll('#todayFeed .tf-item[data-tf]').forEach((c) => { if (!c.dataset.hi) tfIO.observe(c); });
+    document.querySelectorAll('#todayFeed .tf-item[data-tf]').forEach((c) => { if (!c.dataset.hi && c.querySelector('img[data-hi]')) tfIO.observe(c); });
 }
 
 // нажатие на плитку

@@ -2268,6 +2268,6 @@ p.pub-act { text-align: center; }
 .tf-item .tf-card { width: 100%; height: 126px; justify-content: flex-end; scroll-snap-align: none; pointer-events: none; transition: transform .15s; }
 .tf-item .tf-card::after { background: linear-gradient(180deg, rgba(8,8,26,0) 45%, rgba(8,8,26,.55) 100%); }
 .tf-item .tf-nophoto::after { display: none; }
-.tf-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; min-width: 0; }
-.tf-chip { font-style: normal; font-size: 11.5px; font-weight: 800; line-height: 1; padding: 6px 10px; border-radius: 999px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; background: rgba(10,18,40,.48); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.22); }
+.tf-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; min-width: 0; }
+.tf-chip { font-style: normal; font-size: 10.5px; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; background: rgba(10,18,40,.48); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.22); }
 .tf-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding: 0 4px; font-family: var(--font-display); font-size: 14px; font-weight: 800; line-height: 1.2; letter-spacing: -.2px; color: var(--text); }

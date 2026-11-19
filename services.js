@@ -242,6 +242,15 @@ async function svThumb(first) {
     return '';
 }
 
+// горизонтальная обложка для плиток на главной («Чем заняться сегодня?»): ≈ 178×126, с запасом под плотные экраны
+async function svThumbW(first) {
+    for (const [w, h, q] of [[480, 340, 0.76], [420, 297, 0.68], [360, 255, 0.6], [300, 212, 0.55]]) {
+        const out = await svCrop(first, w, h, q);
+        if (out.length <= 80000) return out;       // сервер принимает до 60 КБ (≈ 80 тыс. знаков base64)
+    }
+    return '';
+}
+
 // ---------- категории: поля формы под каждую ----------
 const SV_DUR = ['', '30 минут', '1 час', '1,5 часа', '2 часа', '3 часа', 'Полдня', 'Весь день'];
 const SV_FIELDS = {
@@ -486,7 +495,9 @@ function openServiceEditor(edit, after) {
                 err.textContent = ''; btn.disabled = true;
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
-                const body = { id: s.id, phone: v('#svPhone'), hidePhone: el.querySelector('#svHidePhone').checked, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, mapPhoto: picker.get() ? mapPhoto : '', text: fullText, photos, thumb };
+                let thumbW = '';
+                try { if (photos[0]) thumbW = await svThumbW(photos[0]); } catch (_) {}
+                const body = { id: s.id, thumbW, phone: v('#svPhone'), hidePhone: el.querySelector('#svHidePhone').checked, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, mapPhoto: picker.get() ? mapPhoto : '', text: fullText, photos, thumb };
                 try {
                     const { status, d } = await svApi('/api/services', { method: 'POST', headers: svAuth(), body: JSON.stringify(body) });
                     if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
