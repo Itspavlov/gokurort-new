@@ -14,26 +14,30 @@ const TF_KIND = {
 };
 // пока ничего не загрузилось (или лента пуста) — идеи-подсказки, они ведут в нужные разделы
 const TF_IDEAS = [
-    { t: 'Встреча на пляже', s: 'Найди компанию', i: 'fa-user-group', go: "openDvizScreen('dviz')", g: 2 },
-    { t: 'Прогулка на катере', s: 'Готовые услуги', i: 'fa-ship', go: "openDvizScreen('svc')", g: 3 },
-    { t: 'Джипы в горы', s: 'К водопадам', i: 'fa-truck-monster', go: "openDvizScreen('svc')", g: 1 },
-    { t: 'Закат у моря', s: 'Позови друзей', i: 'fa-sun', go: "openDvizScreen('dviz')", g: 0 }
+    { t: 'Встреча на пляже', s: 'Найди компанию', i: 'fa-user-group', go: "openDvizScreen('dviz')", g: 2, sc: 'sun' },
+    { t: 'Прогулка на катере', s: 'Готовые услуги', i: 'fa-ship', go: "openDvizScreen('svc')", g: 3, sc: 'waves' },
+    { t: 'Джипы в горы', s: 'К водопадам', i: 'fa-truck-monster', go: "openDvizScreen('svc')", g: 1, sc: 'mount' },
+    { t: 'Закат у моря', s: 'Позови друзей', i: 'fa-sun', go: "openDvizScreen('dviz')", g: 0, sc: 'sun' }
 ];
+
+// картинка-заставка для карточек без фото: у каждого вида своя сцена
+const TF_SCENE_AF = { event: 'sun', story: 'dunes', place: 'mount', news: 'sun' };
+const TF_SCENE_SV = { sea: 'waves', tours: 'mount', active: 'mount', kids: 'sun', show: 'sun', food: 'dunes', other: 'waves' };
 
 function tfItems() {
     const out = [];
     tfAfisha.forEach((a, n) => {
         const k = TF_KIND[a.kind] || TF_KIND.event;
         out.push({ key: 'a' + a.id, kind: 'afisha', id: a.id, ts: a.updated || a.created || 0, pinned: !!a.pinned, title: a.title, tag: k[0], icon: k[1],
-            sub: a.when ? dvWhen(a.when) : (a.place || ''), img: a.thumb || '', g: n % 4 });
+            sub: a.when ? dvWhen(a.when) : (a.place || ''), img: a.thumb || '', g: n % 4, scene: TF_SCENE_AF[a.kind] || 'sun' });
     });
     const dv = (tfDviz.length ? tfDviz : (typeof dvFeed !== 'undefined' ? dvFeed : [])).slice(0, 6);
     dv.forEach((e, n) => out.push({ key: 'd' + e.id, kind: 'dviz', id: e.id, ts: e.created || 0, title: e.title, tag: 'Ищут компанию', icon: 'fa-user-group',
-        sub: e.when ? dvWhen(e.when) : (e.place || ''), img: e.thumb || '', g: (n + 1) % 4 }));
+        sub: e.when ? dvWhen(e.when) : (e.place || ''), img: e.thumb || '', g: (n + 1) % 4, scene: 'sun' }));
     const sv = (tfSvc.length ? tfSvc : (typeof serviceFeed !== 'undefined' ? serviceFeed : [])).slice(0, 6);
     sv.forEach((s, n) => out.push({ key: 's' + s.id, kind: 'svc', id: s.id, ts: s.updated || s.created || 0, title: s.title,
         tag: (typeof SV_TAGS !== 'undefined' && SV_TAGS[s.tag]) || 'Услуга', icon: (typeof SV_ICONS !== 'undefined' && SV_ICONS[s.tag]) || 'fa-star',
-        sub: [svPrice(s), s.city].filter(Boolean).join(' · '), img: s.thumb || '', g: (n + 3) % 4 }));
+        sub: [svPrice(s), s.city].filter(Boolean).join(' · '), img: s.thumb || '', g: (n + 3) % 4, scene: TF_SCENE_SV[s.tag] || 'waves' }));
     // закреплённое сверху, дальше свежее; чтобы лента не превратилась в один вид, чередуем виды
     const pinned = out.filter(x => x.pinned).sort((a, b) => b.ts - a.ts);
     const rest = out.filter(x => !x.pinned).sort((a, b) => b.ts - a.ts);
@@ -48,11 +52,9 @@ function tfItems() {
 
 function tfCardHTML(x) {
     const e = escapeHtml;
-    return `<button type="button" class="tf-card tf-g${x.g}" data-tf="${x.kind}" data-id="${e(String(x.id))}">
-        <span class="tf-bg">${x.img ? `<img src="${e(x.img)}" alt="" decoding="async" data-hi>` : `<i class="fas ${x.icon}"></i>`}</span>
-        <span class="tf-ico"><i class="fas ${x.icon}"></i></span>
-        ${x.pinned ? '<span class="tf-pin"><i class="fas fa-thumbtack"></i></span>' : ''}
-        <span class="tf-txt"><em>${e(x.tag)}</em><b>${e(x.title)}</b>${x.sub ? `<small>${e(x.sub)}</small>` : ''}</span>
+    return `<button type="button" class="tf-card tf-g${x.g}${x.img ? '' : ' tf-nophoto tf-s-' + (x.scene || 'sun')}" data-tf="${x.kind}" data-id="${e(String(x.id))}">
+        ${x.img ? `<span class="tf-bg"><img src="${e(x.img)}" alt="" decoding="async" data-hi></span>` : ''}
+        <span class="tf-txt"><b>${e(x.title)}</b></span>
     </button>`;
 }
 
@@ -65,8 +67,7 @@ renderFeatured = function () {
     if (list.dataset.sig === sig && list.children.length) { tfLoad(); return; }
     list.dataset.sig = sig;
     list.innerHTML = items.length ? items.map(tfCardHTML).join('')
-        : TF_IDEAS.map(x => `<button type="button" class="tf-card tf-idea tf-g${x.g}" onclick="${x.go}"><span class="tf-bg"><i class="fas ${x.i}"></i></span>
-            <span class="tf-ico"><i class="fas ${x.i}"></i></span><span class="tf-txt"><b>${escapeHtml(x.t)}</b><small>${escapeHtml(x.s)}</small></span></button>`).join('');
+        : TF_IDEAS.map(x => `<button type="button" class="tf-card tf-idea tf-nophoto tf-s-${x.sc} tf-g${x.g}" onclick="${x.go}"><span class="tf-txt"><b>${escapeHtml(x.t)}</b></span></button>`).join('');
     tfWatch();
     tfLoad();
 };
@@ -150,14 +151,5 @@ function openAfishaView(id) {
         });
     }).catch(() => showToast('Нет связи с сервером'));
 }
-
-// подсказки под поиском: нажал — сразу в нужный раздел
-document.addEventListener('click', (ev) => {
-    const h = ev.target.closest && ev.target.closest('.search-hint[data-q]');
-    if (!h) return;
-    const input = document.getElementById('searchInput');
-    if (input) input.value = h.dataset.q;
-    runSearch();
-});
 
 renderFeatured();
