@@ -492,7 +492,7 @@ function openServiceEditor(edit, after) {
                 readFacts();
                 const fullText = svPackText(tag, facts, v('#svText'));
                 if (fullText.length > 800) { err.textContent = 'Слишком длинно: сократите описание'; return; }
-                err.textContent = ''; btn.disabled = true;
+                err.textContent = ''; btn.disabled = true; const btnLbl = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохраняю…'; const unlock = () => { btn.disabled = false; btn.innerHTML = btnLbl; };
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
                 let thumbW = '';
@@ -500,14 +500,14 @@ function openServiceEditor(edit, after) {
                 const body = { id: s.id, thumbW, phone: v('#svPhone'), hidePhone: el.querySelector('#svHidePhone').checked, title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), coords: picker.get() || null, mapPhoto: picker.get() ? mapPhoto : '', text: fullText, photos, thumb };
                 try {
                     const { status, d } = await svApi('/api/services', { method: 'POST', headers: svAuth(), body: JSON.stringify(body) });
-                    if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
-                    if (!d || !d.ok) { err.textContent = (d && d.message) || 'Не удалось сохранить'; btn.disabled = false; return; }
+                    if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; unlock(); return; }
+                    if (!d || !d.ok) { err.textContent = (d && d.message) || 'Не удалось сохранить'; unlock(); return; }
                     closeSheet();
                     showToast(d.held ? d.message : (edit ? 'Карточка обновлена' : 'Карточка опубликована'));
                     afterServiceChange();
                     after && after(d.service);
                     if (!edit && !d.held && typeof pubShowService === 'function') setTimeout(() => pubShowService(d.service), 120);
-                } catch (_) { err.textContent = 'Нет связи с сервером'; btn.disabled = false; }
+                } catch (_) { err.textContent = 'Нет связи с сервером'; unlock(); }
             });
         });
     });

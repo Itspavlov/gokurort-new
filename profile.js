@@ -77,7 +77,7 @@ function attachSheetSwipe(el) {
         } else { panel.style.transform = ''; el.style.opacity = ''; }
     };
     panel.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1 || e.target.closest('input, textarea, select, [data-noswipe], .cal, .cal-grid')) { state = -1; return; }
+        if (e.touches.length !== 1 || e.target.closest('input, textarea, select, [data-noswipe], .cal, .cal-grid, .primary-btn, .ghost-btn')) { state = -1; return; }   // кнопки внутри шторки тоже не тянем: лёгкий сдвиг пальца отменял нажатие
         const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dy = 0; t0 = Date.now(); state = 0;
         fromHead = !!e.target.closest('.sheet-grab, .sheet-head');
     }, { passive: true });
@@ -106,6 +106,24 @@ function attachSheetSwipe(el) {
     panel.addEventListener('touchend', end);
     panel.addEventListener('touchcancel', end);
 }
+
+// Кнопка в шторке при открытой клавиатуре: первое касание закрывало клавиатуру, шторка перестраивалась, и нажатие терялось
+// (приходилось жать по два-три раза). Срабатываем в момент отпускания пальца, до того как клавиатура уйдёт.
+(function () {
+    let fastAt = 0;
+    const sel = '#sheet .primary-btn, #sheet .ghost-btn.wide-btn';
+    document.addEventListener('pointerup', (e) => {
+        if (e.pointerType === 'mouse') return;
+        const b = e.target.closest && e.target.closest(sel);
+        const ae = document.activeElement;
+        if (!b || b.disabled || !ae || !/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+        fastAt = Date.now();
+        b.click();
+    }, true);
+    document.addEventListener('click', (e) => {
+        if (e.isTrusted && Date.now() - fastAt < 800 && e.target.closest && e.target.closest(sel)) { fastAt = 0; e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+})();
 
 function closeSheet() {
     const el = document.getElementById('sheet');

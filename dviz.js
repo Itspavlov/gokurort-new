@@ -800,7 +800,7 @@ function openDvizForm(opts) {
             btn.addEventListener('click', async () => {
                 const v = (id) => el.querySelector(id).value.trim();
                 if (!v('#dvTitle')) { err.textContent = 'Напишите, о чём поиск'; return; }
-                err.textContent = ''; btn.disabled = true;
+                err.textContent = ''; btn.disabled = true; const btnLbl = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Публикую…'; const unlock = () => { btn.disabled = false; btn.innerHTML = btnLbl; };
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
                 let thumbW = '';
@@ -808,13 +808,13 @@ function openDvizForm(opts) {
                 const body = { thumbW, title: v('#dvTitle'), text: v('#dvText'), when: v('#dvWhen'), max: v('#dvMax'), place: v('#dvPlace'), photos, thumb, coords: coords || undefined, attach: attach ? { id: attach.id } : undefined };
                 try {
                     const { status, d } = await svApi('/api/dviz', { method: 'POST', headers: dvAuthed(), body: JSON.stringify(body) });
-                    if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; btn.disabled = false; return; }
-                    if (!d || !d.ok) { err.textContent = (d && d.message) || 'Не удалось опубликовать'; btn.disabled = false; return; }
+                    if (status === 401) { clearSession(); err.textContent = 'Сессия истекла. Войдите снова.'; unlock(); return; }
+                    if (!d || !d.ok) { err.textContent = (d && d.message) || 'Не удалось опубликовать'; unlock(); return; }
                     closeSheet();
                     showToast('Движ опубликован!');
                     window._reqSecOverride = '';
                     if (document.getElementById('dvFeed')) { loadDviz(); const f = document.getElementById('dvFeed'); if (f) f.scrollTop = 0; } else openDvizScreen('dviz');
-                } catch (_) { err.textContent = 'Нет связи с сервером'; btn.disabled = false; }
+                } catch (_) { err.textContent = 'Нет связи с сервером'; unlock(); }
             });
         });
     });

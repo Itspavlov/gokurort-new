@@ -8,7 +8,8 @@
 // Закреплённое в афише стоит первым, остальное — по свежести.
 // ============================================
 let tfAfisha = [], tfDviz = [], tfSvc = [], tfAt = 0, tfBusy = false, tfReady = false;
-const TF_TTL = 60 * 1000;
+const TF_TTL = 20 * 1000;
+let tfAgain = false;
 const TF_KIND = {
     event: ['Событие', 'fa-ticket'], story: ['История', 'fa-book-open'], place: ['Интересное место', 'fa-mountain-sun'], news: ['Новость', 'fa-newspaper']
 };
@@ -77,7 +78,8 @@ renderFeatured = function () {
 };
 
 function tfLoad(force) {
-    if (tfBusy || (!force && tfReady && Date.now() - tfAt < TF_TTL)) return;
+    if (tfBusy) { if (force) tfAgain = true; return; }
+    if (!force && tfReady && Date.now() - tfAt < TF_TTL) return;
     tfBusy = true;
     const get = (p) => fetch(SERVER_URL + p).then(r => r.json()).catch(() => null);
     Promise.all([get('/api/afisha'), get('/api/dviz'), get('/api/services?limit=12')]).then(([a, d, s]) => {
@@ -86,7 +88,7 @@ function tfLoad(force) {
         if (s && s.ok) tfSvc = s.services || [];
         tfReady = !!((a && a.ok) || (d && d.ok) || (s && s.ok));
         tfAt = Date.now();
-    }).finally(() => { tfBusy = false; renderFeatured(); });
+    }).finally(() => { tfBusy = false; renderFeatured(); if (tfAgain) { tfAgain = false; tfLoad(true); } });
 }
 
 // Обложка в ленте — уменьшенная копия. Плитка, которая задержалась на экране, меняет её на полное фото (без мигания).
@@ -157,3 +159,21 @@ function openAfishaView(id) {
 }
 
 renderFeatured();
+
+// Лента на главной сразу узнаёт о публикациях, правках и удалениях (раньше новое появлялось только через минуту или после выхода-входа)
+function tfInvalidate() {
+    tfAt = 0;
+    const home = document.getElementById('tab-search');
+    if (home && home.style.display !== 'none') tfLoad(true);
+}
+(function () {
+    const wrap = (name) => {
+        const f = window[name];
+        if (typeof f !== 'function') return;
+        window[name] = function () { const r = f.apply(this, arguments); try { tfInvalidate(); } catch (_) {} return r; };
+    };
+    wrap('afterServiceChange');
+    wrap('loadDviz');
+    const sw = window.switchTab;
+    if (typeof sw === 'function') window.switchTab = function (tab) { const r = sw.apply(this, arguments); if (tab === 'search') { try { renderFeatured(); } catch (_) {} } return r; };
+})();
