@@ -213,6 +213,10 @@ function paintPubs() {
         const hasMatch = typeof matchReqs !== 'undefined' && matchReqs.length;
         h += `<div class="pf-menu pub-match"><button type="button" class="pf-row" id="rowMatch" onclick="openMatchingSheet()" ${hasMatch ? '' : 'hidden'}><i class="fas fa-users"></i><span>Подходящие арендаторы</span><em id="rowMatchCount" ${hasMatch ? '' : 'hidden'}>${hasMatch ? matchReqs.length : 0}</em><i class="fas fa-chevron-right pf-go"></i></button></div>`;
     }
+    // раздел обновляется несколько раз подряд (память, объявления, запросы, услуги, движ): если разметка не изменилась,
+    // ничего не трогаем, иначе все карточки и фото на долю секунды пропадают и появляются заново (мерцание)
+    if (body._h === h && body.children.length) return;
+    body._h = h;
     body.innerHTML = h;
 }
 
