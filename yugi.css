@@ -2232,7 +2232,7 @@ p.pub-act { text-align: center; }
 .today-title { font-size: 17px; letter-spacing: -.3px; }
 .today-sub { font-size: 11.5px; margin-top: 1px; }
 
-.today-feed { gap: 10px; padding: 2px 18px 6px; }
+.today-feed { gap: 16px; padding: 2px 18px 8px; }
 .tf-card { width: 128px; height: 160px; border-radius: 18px; }
 .tf-card::after { background: linear-gradient(180deg, rgba(8,8,26,.16) 0%, rgba(8,8,26,0) 34%, rgba(8,8,26,.18) 52%, rgba(8,8,26,.84) 100%); }
 
