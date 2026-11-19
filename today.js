@@ -52,7 +52,7 @@ function tfItems() {
 
 function tfCardHTML(x) {
     const e = escapeHtml;
-    const chips = [x.c1, x.c2].filter(Boolean).map(t => `<i class="tf-chip">${e(t)}</i>`).join('');
+    const chips = [x.c2].filter(Boolean).map(t => `<i class="tf-chip">${e(t)}</i>`).join('');
     return `<button type="button" class="tf-item" data-tf="${x.kind}" data-id="${e(String(x.id))}">
         <span class="tf-card tf-g${x.g}${x.img ? '' : ' tf-nophoto tf-s-' + (x.scene || 'sun')}">
             ${x.img ? `<span class="tf-bg"><img src="${e(x.img)}" alt="" decoding="async" data-hi></span>` : ''}
