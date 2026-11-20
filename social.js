@@ -228,11 +228,15 @@ function socketAsk(event, data, cb) {
 let currentDm = null;
 
 function startDm(ownerName, ad, prefill) {
+    // чат открыт из ленты «Готовых услуг» — стрелка «назад» вернёт в ленту, а не во «Сообщения»
+    const backToSvc = !!(window._svFrom && ad && String(ad.id).startsWith('svc_'));
+    window._svFrom = false;
     ensureLogin(() => {
         if (ad && typeof closeListing === 'function') closeListing();
         whenSocketReady(() => {
             socketAsk('dm-open', { ownerName, adId: String(ad.id), adTitle: ad.title }, (res) => {
                 if (!res.ok) { showToast(res.message || 'Не удалось открыть диалог'); return; }
+                window._dmReturnNext = backToSvc;
                 openDmChat(res.conv, prefill);
             });
         });
@@ -266,6 +270,8 @@ function renderDmMessage(m) {
 }
 
 function openDmChat(conv, prefill, messages) {
+    window._dmReturn = window._dmReturnNext ? 'svc' : null;
+    window._dmReturnNext = false;
     if (socket && currentRoom) socket.emit('leave-room', currentRoom);
     currentRoom = null;
     currentGroup = null;
@@ -322,6 +328,8 @@ function closeDmChat() {
     currentDm = null;
     const screen = document.getElementById('group-screen');
     if (screen) screen.style.display = 'none';
+    const back = window._dmReturn; window._dmReturn = null;
+    if (back === 'svc' && typeof openDvizScreen === 'function') { openDvizScreen('svc'); return; }
     switchTab('messages', false);
 }
 

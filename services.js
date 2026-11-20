@@ -48,7 +48,7 @@ function serviceFeedHTML(s) {
     const btns = mine
         ? `<button type="button" class="sv-cta" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i><span>Изменить</span></button>`
         : `<button type="button" class="main sv-cta" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="far fa-comment-dots"></i><span>Написать</span></button>`
-          + (s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : '')
+          + (s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : `<span class="sv-cta call off" role="button" aria-disabled="true" aria-label="Номер не указан"><i class="fas fa-phone-slash"></i><span>Номер не указан</span></span>`)
           + (s.coords ? `<button type="button" class="sv-cta map" data-sv="map" data-id="${e(s.id)}" aria-label="Карта"><i class="fas fa-location-dot"></i><span>Карта</span></button>` : '');
     const fav = typeof favIds !== 'undefined' && favIds.has(s.id);
     const heart = mine ? '' : `<button type="button" class="card-fav sv-heart ${fav ? 'on' : ''}" data-sv="fav" data-fav="${e(s.id)}" data-id="${e(s.id)}" aria-pressed="${fav}" aria-label="В избранное"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>`;
@@ -58,7 +58,7 @@ function serviceFeedHTML(s) {
         : '<span class="sv-t-price ask"><small>Цена договорная</small></span>';
     return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
         <div class="sv-t-bg">${svSlidesHTML(s)}</div>
-        <div class="sv-t-top${mine ? '' : ' has-fav'}"><span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
+        <div class="sv-t-top${mine ? '' : ' has-fav'}"><span class="sv-t-who"${mine ? '' : ` data-sv="who" data-id="${e(s.id)}" data-owner="${e(s.ownerId || '')}" data-name="${e(s.ownerName || '')}"`}><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
             <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>
             ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${s.photoCount}</span></em>` : ''}</div>
         ${heart}
@@ -186,6 +186,7 @@ function openServiceView(id) {
 }
 
 function writeAboutService(id, title, ownerName) {
+    window._svFrom = !!document.getElementById('dvSvcGrid');   // писали из ленты услуг — «назад» вернёт в неё
     loginRequired(() => startDm(ownerName, { id: 'svc_' + id, title: 'Развлечение: ' + title }, `Здравствуйте! Интересует «${title}». `));
 }
 
@@ -620,6 +621,7 @@ document.addEventListener('click', (ev) => {
     if (sv) {
         const id = sv.dataset.id, act = sv.dataset.sv;
         if (act === 'call') return;          // обычная ссылка tel: — звонок идёт сам
+        if (act === 'who') { ev.preventDefault(); if (typeof openUserProfile === 'function') openUserProfile({ id: sv.dataset.owner, name: sv.dataset.name }); return; }
         if (act === 'fav') { ev.preventDefault(); if (typeof toggleCardFav === 'function') toggleCardFav(id, sv); return; }
         const known = () => myServices.find(x => x.id === id) || serviceFeed.find(x => x.id === id);
         if (act === 'view') openServiceView(id);
