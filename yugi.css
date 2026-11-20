@@ -2609,3 +2609,23 @@ html.on-home-top { background-color: var(--hero-top); }
 .rq-pay { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
 .rq-pay button { height: 42px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 700 13.5px var(--font); cursor: pointer; }
 .rq-pay button.on { background: var(--sea); border-color: var(--sea); color: var(--on-sea, #fff); }
+
+/* ===== v118: «Работа» и «Поездки» — как раньше (плитка + панель с растушёвкой), но вместо картинки белая заливка; цвет и значки меняются вместе с темой ===== */
+:root { --rqp-base: color-mix(in srgb, var(--bg) 90%, #fff 10%); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) { --rqp-base: #fff; }
+.sv-cell.rq-sv.rq-plain, .sv-cell.rq-sv.rq-plain .sv-panel, .sv-cell.rq-sv.rq-plain .sv-panel::before { background: var(--rqp-base); }
+.sv-cell.rq-sv.rq-plain .sv-tile { height: 80px; background: linear-gradient(180deg, color-mix(in srgb, var(--sea) 13%, var(--rqp-base)) 0%, var(--rqp-base) 100%); border-radius: 23px 23px 0 0; }
+.rq-plain .sv-tile::after { display: none; }
+.rq-plain .sv-t-top { justify-content: space-between; align-items: center; padding: 10px 10px 0; }
+.rq-plain .rq-ico { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); font-size: 28px; color: var(--text); opacity: .85; pointer-events: none; }
+.rq-plain .sv-t-who { background: var(--glass-strong); border: 1px solid var(--glass-border); color: var(--text); -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: auto; cursor: pointer; margin-left: auto; }
+.rq-plain .sv-t-by b { color: var(--text); }
+.rq-plain .sv-t-by .pf-check { color: var(--sea); }
+.sv-cell.rq-sv.rq-plain .sv-panel { margin-top: -14px; padding-top: 4px; }
+.sv-cell.rq-sv.rq-plain .sv-panel::before { height: 30px; }
+.rq-plain .rq-kind { align-self: center; }
+.rq-plain .sv-t-price { align-items: flex-end; text-align: right; }
+.rq-plain .sv-t-price b { font-size: 15px; white-space: normal; }
+.rq-plain .sv-t-btns .sv-cta.ico { flex: 0 0 auto; width: auto; padding: 0 12px; gap: 5px; }
+.rq-plain .sv-t-btns .sv-cta.ico b { font-size: 12px; }
+.rq-plain .sv-t-btns .sv-cta.call.off { flex: 1.5 1 0; opacity: .5; cursor: default; font-size: 12px; font-weight: 600; pointer-events: none; }

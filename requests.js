@@ -149,6 +149,7 @@ document.addEventListener('scroll', (ev) => {
 }, { capture: true, passive: true });
 
 // Карточки «Работа» и «Поездки»: сплошная заливка своего цвета и тень, чтобы каждая выделялась; без картинок
+const RQ_ICONS = { work: 'fa-briefcase', trips: 'fa-car-side', services: 'fa-champagne-glasses' };
 const RQ_COLORS = ['#2F7DE1', '#E8643F', '#12A8A8', '#7C5CFF', '#C2417A', '#25A85A', '#D9822B', '#3F5BD9'];
 const rqColor = (id) => { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return RQ_COLORS[h % RQ_COLORS.length]; };
 const PAY_LABELS = { daily: 'ежедневно', weekly: 'раз в неделю', biweekly: 'раз в две недели', monthly: 'раз в месяц' };
@@ -172,26 +173,30 @@ function cardHTML(r) {
     let price = work ? rqSalary(r) : '';
     if (!price && r.budget) price = `${seek && !work ? 'до ' : ''}${rubFmt(r.budget)} ₽`;
     const pay = work && !seek && r.payPeriod && PAY_LABELS[r.payPeriod] ? `Выплата ${PAY_LABELS[r.payPeriod]}` : '';
-    const priceHTML = price ? `<div class="rs-price"><b>${e(price)}</b>${pay ? `<small>${e(pay)}</small>` : ''}</div>`
-        : (r.negotiable ? `<div class="rs-price"><small>${work ? 'Оплата договорная' : 'Цена договорная'}</small>${pay ? `<small>${e(pay)}</small>` : ''}</div>` : (pay ? `<div class="rs-price"><small>${e(pay)}</small></div>` : ''));
-    const delBtn = `<button type="button" class="rs-btn req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
-    const call = r.phone ? `<a class="rs-btn call" href="tel:${e(r.phone)}" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>`
-        : (work ? `<span class="rs-btn call off" role="button" aria-disabled="true" aria-label="Номер не указан"><i class="fas fa-phone-slash"></i><span>Номер не указан</span></span>` : '');
+    const priceHTML = price ? `<span class="sv-t-price"><b>${e(price)}</b>${pay ? `<small>${e(pay)}</small>` : ''}</span>`
+        : `<span class="sv-t-price ask"><small>${r.negotiable ? (work ? 'Оплата договорная' : 'Цена договорная') : ''}</small>${pay ? `<small>${e(pay)}</small>` : ''}</span>`;
+    const delBtn = `<button type="button" class="sv-cta req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
+    const call = r.phone ? `<a class="sv-cta call" href="tel:${e(r.phone)}" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>`
+        : (work ? `<span class="sv-cta call off" role="button" aria-disabled="true" aria-label="Номер не указан"><i class="fas fa-phone-slash"></i><span>Номер не указан</span></span>` : '');
     const btns = !act ? (r.mine ? delBtn : '') : (r.mine
-        ? `<button type="button" class="rs-btn" data-act="edit"><i class="fas fa-pen"></i><span>Изменить</span></button><button type="button" class="rs-btn" data-act="closed"><span>Закрыть</span></button>` + delBtn
-        : `<button type="button" class="rs-btn main" data-act="write-dm"><i class="far fa-comment-dots"></i><span>Написать</span></button>` + call
-          + (ph.length ? `<button type="button" class="rs-btn ico" data-ph-open aria-label="Фото"><i class="fas fa-images"></i><b>${ph.length}</b></button>` : '')
+        ? `<button type="button" class="sv-cta" data-act="edit"><i class="fas fa-pen"></i><span>Изменить</span></button><button type="button" class="sv-cta" data-act="closed"><span>Закрыть</span></button>` + delBtn
+        : `<button type="button" class="main sv-cta" data-act="write-dm"><i class="far fa-comment-dots"></i><span>Написать</span></button>` + call
+          + (ph.length ? `<button type="button" class="sv-cta ico" data-ph-open aria-label="Фото"><i class="fas fa-images"></i><b>${ph.length}</b></button>` : '')
           + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
     const ownerName = r.mine ? 'Вы' : r.ownerName;
-    return `<div class="req-card rq-solid card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" style="--rc:${rqColor(r.id)}" data-rid="${e(r.id)}">
-        <div class="rs-top"><span class="rs-kind${act ? '' : ' st'}">${e(kind)}</span>
-            <span class="rs-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></div>
-        <div class="rs-title">${e(r.title || '')}</div>
-        ${where ? `<div class="rs-meta">${where}</div>` : ''}
-        ${priceHTML}
-        ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
-        ${btns ? `<div class="rs-btns">${btns}</div>` : ''}
-    </div>`;
+    return `<div class="sv-cell req-card rq-sv rq-plain card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
+        <div class="sv-tile rq-tile">
+            <i class="fas ${RQ_ICONS[r.section] || 'fa-star'} rq-ico"></i>
+            <div class="sv-t-top"><span class="rq-kind${act ? (seek ? ' seek' : ' offer') : ' st'}">${e(kind)}</span>
+                <span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span>
+                    <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span></div>
+        </div>
+        <div class="sv-panel">
+            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b></div>
+            <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${priceHTML}</div>
+            ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
+            ${btns ? `<span class="sv-t-btns">${btns}</span>` : ''}
+        </div></div>`;
 }
 
 function reqCardHTML(r, opts = {}) {
