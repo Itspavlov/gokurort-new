@@ -11,7 +11,7 @@ const PUB_CHIPS = [
     ['services', 'Развлечения', 'fa-sailboat'],
     ['dviz', 'Поиски компаний', 'fa-champagne-glasses'],
     ['fav', 'Избранное', 'fa-heart']
-];
+].filter(c => c[0] !== 'dviz' || window.FEATURE_DVIZ !== false);
 let pubChip = 'housing';
 // у каждого раздела две вкладки: ads — объявления, req — запросы (у «Развлечений» вторая — поиски компании)
 let pubTab = { housing: 'ads', work: 'ads', trips: 'ads', services: 'ads' };
@@ -73,7 +73,7 @@ function renderMyPubs() {
         root.innerHTML = `<div class="pf-login"><span>Войдите, чтобы видеть свои объявления, запросы и карточки</span><button class="primary-btn" onclick="openAuthSheet(null,'login')">Войти</button></div>`;
         return;
     }
-    root.innerHTML = `<div class="cat-chips-wrap pub-chips-wrap"><div class="cat-chips pub-chips" role="tablist" aria-label="Раздел">${PUB_CHIPS.map(([k, l, ic]) =>
+    root.innerHTML = `<div class="cat-chips-wrap pub-chips-wrap"><div class="cat-chips pub-chips" style="--pcn:${PUB_CHIPS.length}" role="tablist" aria-label="Раздел">${PUB_CHIPS.map(([k, l, ic]) =>
         `<button type="button" role="tab" class="cat-chip ${pubChip === k ? 'on' : ''}" data-pc="${k}" aria-selected="${pubChip === k}"><i class="fas ${ic}"></i><span>${l}</span><b hidden></b></button>`).join('')}</div></div>
         <div id="pubBody" class="pub-body"></div>`;
     paintPubs();

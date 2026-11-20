@@ -251,7 +251,7 @@ function dvPaneHTML() {
     return '<div class="dv-feed" id="dvFeed"><div class="dv-empty"><i class="fas fa-spinner fa-spin"></i><b>Загружаю…</b></div></div>';
 }
 function dvSetTab(tab) {
-    dvTab = tab === 'svc' ? 'svc' : 'dviz';
+    dvTab = tab === 'svc' || window.FEATURE_DVIZ === false ? 'svc' : 'dviz';
     const scr = document.getElementById('group-screen');
     if (!scr) return;
     scr.querySelectorAll('.dv-tab').forEach(b => { const on = b.dataset.dvt === dvTab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
@@ -269,7 +269,7 @@ function dvTour(force) {
     if (dvTab === 'svc') {
         runTour('dv-svc2', [
             helpStep(),
-            { sel: '.dv-tab[data-dvt="svc"]', pulse: true, img: 'images/tip-services.jpg?v=1', imgAlt: 'Пример карточки морской прогулки', title: 'Готовые услуги', text: 'Здесь организаторы размещают морские прогулки, экскурсии, джип-туры и другие развлечения: фото, цена и кнопка «Написать». Листайте карточки, выбирайте категорию сверху. Ищете компанию на отдых? Смотрите вкладку «Сейчас ищут».' },
+            { sel: '.dv-tab[data-dvt="svc"]', pulse: true, img: 'images/tip-services.jpg?v=1', imgAlt: 'Пример карточки морской прогулки', title: 'Готовые услуги', text: 'Здесь организаторы размещают морские прогулки, экскурсии, джип-туры и другие развлечения: фото, цена и кнопка «Написать». Листайте карточки, выбирайте категорию сверху. ' + (window.FEATURE_DVIZ === false ? '' : 'Ищете компанию на отдых? Смотрите вкладку «Сейчас ищут».') },
             { sel: '.dv-svc-add', title: 'Кнопка «Разместить услугу»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
         ], force);
     } else {
@@ -290,19 +290,20 @@ function openDvizScreen(tab) {
         screen.id = 'group-screen'; screen.className = 'group-screen';
         document.getElementById('appMain').appendChild(screen);
     }
-    dvTab = tab === 'svc' ? 'svc' : 'dviz';
+    const dvOn = window.FEATURE_DVIZ !== false;
+    dvTab = tab === 'svc' || !dvOn ? 'svc' : 'dviz';
     screen.innerHTML = `
         <div class="chat-header room-head">
             <button class="chat-back-btn" onclick="closeGroup()" aria-label="Назад"><i class="fas fa-arrow-left"></i></button>
             <div class="chat-header-info">
-                <div class="chat-header-title">Развлечения и поиск друзей</div>
-                <div class="chat-header-subtitle">найди компанию на отдых</div>
+                <div class="chat-header-title">${dvOn ? 'Развлечения и поиск друзей' : 'Развлечения'}</div>
+                <div class="chat-header-subtitle">${dvOn ? 'найди компанию на отдых' : 'морские прогулки, экскурсии и др.'}</div>
             </div>
             <button type="button" class="chat-header-btn chat-help-btn" onclick="dvTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>
         </div>
         <div class="seek-bar dv-tabs"><div class="seek-tabs" role="tablist" aria-label="Раздел">
             <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="svc"><span>Готовые услуги</span><b>морские прогулки, экскурсии и др.</b></button>
-            <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Сейчас ищут</span><b>компанию на отдых</b></button>
+            ${dvOn ? '<button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Сейчас ищут</span><b>компанию на отдых</b></button>' : ''}
         </div></div>
         <div class="dv-pane" id="dvPane"></div>
         <div class="cards-dock dv-dock" id="dvDock"></div>`;

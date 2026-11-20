@@ -50,7 +50,7 @@
     <!-- Стили -->
     <link rel="stylesheet" href="styles.css?v=2d">
     <link rel="stylesheet" href="features.css?v=3">
-    <link rel="stylesheet" href="yugi.css?v=140">
+    <link rel="stylesheet" href="yugi.css?v=141">
     <link rel="stylesheet" href="create-plate.css?v=3">
     <link rel="stylesheet" href="cardprev.css?v=1">
     <link rel="stylesheet" href="desktop.css?v=2">
@@ -244,7 +244,7 @@
 <script src="route.js?v=3"></script>
 <script src="profile.js?v=29"></script>
     <script src="social.js?v=25"></script>
-<script src="onboard.js?v=1"></script>
+<script src="onboard.js?v=2"></script>
     <script src="avatars.js?v=1"></script>
     <script src="notify.js?v=3"></script>
 <script src="circles.js?v=4"></script>
@@ -255,8 +255,10 @@
 <script src="dmtools.js?v=1"></script>
 <script src="reviews.js?v=6"></script>
 <script src="services.js?v=30"></script>
-<script src="dviz.js?v=28"></script>
-<script src="today.js?v=8"></script>
+<script>window.FEATURE_DVIZ = false; /* «Сейчас ищут» (поиск компании): true вернёт раздел */
+if (!window.FEATURE_DVIZ) { const c = document.querySelector('.gc-services'); if (c) { c.querySelector('.group-title').textContent = 'Развлечения'; c.querySelector('.group-desc').textContent = 'Прогулки и экскурсии'; } }</script>
+<script src="dviz.js?v=29"></script>
+<script src="today.js?v=9"></script>
 <script src="hero.js?v=4"></script>
 <script src="cardprev.js?v=1"></script>
 <script src="stats.js?v=2"></script>
@@ -266,7 +268,7 @@
 <script src="filters.js?v=19"></script>
 <script src="keyboard.js?v=2"></script>
 <script src="weather.js?v=1"></script>
-<script src="publications.js?v=10"></script>
+<script src="publications.js?v=11"></script>
 <script src="friends.js?v=1"></script>
 <script src="legal-config.js?v=1"></script>
 <script src="safety.js?v=3"></script>

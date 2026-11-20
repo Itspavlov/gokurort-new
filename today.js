@@ -14,12 +14,15 @@ const TF_KIND = {
     event: ['Событие', 'fa-ticket'], story: ['История', 'fa-book-open'], place: ['Интересное место', 'fa-mountain-sun'], news: ['Новость', 'fa-newspaper']
 };
 // пока ничего не загрузилось (или лента пуста) — идеи-подсказки, они ведут в нужные разделы
-const TF_IDEAS = [
+const TF_IDEAS_ALL = [
     { t: 'Встреча на пляже', s: 'Найди компанию', i: 'fa-user-group', go: "openDvizScreen('dviz')", g: 2, sc: 'sun' },
     { t: 'Прогулка на катере', s: 'Готовые услуги', i: 'fa-ship', go: "openDvizScreen('svc')", g: 3, sc: 'waves' },
     { t: 'Джипы в горы', s: 'К водопадам', i: 'fa-truck-monster', go: "openDvizScreen('svc')", g: 1, sc: 'mount' },
     { t: 'Закат у моря', s: 'Позови друзей', i: 'fa-sun', go: "openDvizScreen('dviz')", g: 0, sc: 'sun' }
 ];
+
+// «Сейчас ищут» скрыт — идеи и карточки поиска компании не показываем
+const TF_IDEAS = TF_IDEAS_ALL.filter(i => window.FEATURE_DVIZ !== false || !/'dviz'/.test(i.go));
 
 // картинка-заставка для карточек без фото: у каждого вида своя сцена
 const TF_SCENE_AF = { event: 'sun', story: 'dunes', place: 'mount', news: 'sun' };
@@ -32,7 +35,7 @@ function tfItems() {
         out.push({ key: 'a' + a.id, kind: 'afisha', id: a.id, ts: a.updated || a.created || 0, pinned: !!a.pinned, title: a.title, tag: k[0], icon: k[1],
             c1: a.when ? dvWhen(a.when) : '', c2: a.place || '', img: a.thumb || '', wide: true, g: n % 4, scene: TF_SCENE_AF[a.kind] || 'sun' });
     });
-    const dv = (tfDviz.length ? tfDviz : (typeof dvFeed !== 'undefined' ? dvFeed : [])).slice(0, 6);
+    const dv = window.FEATURE_DVIZ === false ? [] : (tfDviz.length ? tfDviz : (typeof dvFeed !== 'undefined' ? dvFeed : [])).slice(0, 6);
     dv.forEach((e, n) => out.push({ key: 'd' + e.id, kind: 'dviz', id: e.id, ts: e.created || 0, title: e.title, tag: 'Ищут компанию', icon: 'fa-user-group',
         c1: e.when ? dvWhen(e.when) : '', c2: e.place || '', img: e.thumbW || e.thumb || '', wide: !!e.thumbW, g: (n + 1) % 4, scene: 'sun' }));
     const sv = (tfSvc.length ? tfSvc : (typeof serviceFeed !== 'undefined' ? serviceFeed : [])).slice(0, 6);
