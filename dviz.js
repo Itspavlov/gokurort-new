@@ -295,16 +295,12 @@ function openDvizScreen(tab) {
     screen.innerHTML = `
         <div class="chat-header room-head">
             <button class="chat-back-btn" onclick="closeGroup()" aria-label="Назад"><i class="fas fa-arrow-left"></i></button>
-            <div class="chat-header-info">
-                <div class="chat-header-title">${dvOn ? 'Развлечения и поиск друзей' : 'Развлечения'}</div>
-                <div class="chat-header-subtitle">${dvOn ? 'найди компанию на отдых' : 'морские прогулки, экскурсии и др.'}</div>
-            </div>
-            <button type="button" class="chat-header-btn chat-help-btn" onclick="dvTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>
-        </div>
-        <div class="seek-bar dv-tabs"><div class="seek-tabs" role="tablist" aria-label="Раздел">
+            <div class="seek-bar dv-tabs"><div class="seek-tabs" role="tablist" aria-label="Раздел">
             <button type="button" role="tab" class="seek-tab dv-tab" data-dvt="svc"><span>Готовые услуги</span><b>морские прогулки, экскурсии и др.</b></button>
             ${dvOn ? '<button type="button" role="tab" class="seek-tab dv-tab" data-dvt="dviz"><span>Сейчас ищут</span><b>компанию на отдых</b></button>' : ''}
         </div></div>
+            <button type="button" class="chat-header-btn chat-help-btn" onclick="dvTour(true)" aria-label="Подсказки"><i class="fas fa-question"></i></button>
+        </div>
         <div class="dv-pane" id="dvPane"></div>
         <div class="cards-dock dv-dock" id="dvDock"></div>`;
     screen.style.display = 'flex';
@@ -825,4 +821,10 @@ function openDvizForm(opts) {
             });
         });
     });
+}
+
+// сердечки на карточках готовых услуг: подтягиваем избранное при входе в раздел
+if (typeof loadFavIds === 'function') {
+    const _openDvizFav = openDvizScreen;
+    openDvizScreen = function () { const r = _openDvizFav.apply(this, arguments); if (getToken()) setTimeout(() => loadFavIds(paintCardFavs), 300); return r; };
 }

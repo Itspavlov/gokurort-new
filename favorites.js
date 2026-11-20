@@ -81,20 +81,21 @@ function recentCardHTML(l) {
         <b>${e(l.title)}</b><small>${e(l.price || '')}</small>${l.location ? `<small class="rc-loc">${e(l.location)}</small>` : ''}</button>`;
 }
 
-let favList = [];
+let favList = [], favSvc = [];
 function paintFavSections() {
     const fav = document.getElementById('favBox'), rec = document.getElementById('recentBox');
-    if (fav) fav.innerHTML = favList.length ? favList.map(l => favCardHTML(l, true)).join('')
+    const svBlock = favSvc.length && typeof serviceFeedHTML === 'function' ? `<div class="opt-sec fav-svc-h">Услуги: ${favSvc.length}</div><div class="fav-svc sv-grid">${favSvc.map(serviceFeedHTML).join('')}</div>` : '';
+    if (fav) fav.innerHTML = favList.length || favSvc.length ? (favList.length ? favList.map(l => favCardHTML(l, true)).join('') : '') + svBlock
         : `<div class="req-empty"><i class="fas fa-heart"></i><b>Пока пусто</b><span>${getToken() ? 'Нажмите «В избранное» в карточке жилья, чтобы вернуться к нему позже.' : 'Войдите в аккаунт, чтобы сохранять жильё в избранное.'}</span></div>`;
-    const secF = document.getElementById('favHead'); if (secF) secF.textContent = 'Избранное' + (favList.length ? ': ' + favList.length : '');
+    const secF = document.getElementById('favHead'); if (secF) secF.textContent = 'Избранное' + (favList.length + favSvc.length ? ': ' + (favList.length + favSvc.length) : '');
     const r = getRecent();
     if (rec) { rec.innerHTML = r.map(recentCardHTML).join(''); const s = document.getElementById('recentSec'); if (s) s.hidden = !r.length; }
 }
 
 function refreshFavSections() {
     if (!document.getElementById('favBox')) return;
-    if (!getToken()) { favList = []; paintFavSections(); return; }
-    favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; paintFavSections(); if (document.getElementById('pubBody') && typeof paintPubs === 'function') paintPubs(); } }).catch(() => {});
+    if (!getToken()) { favList = []; favSvc = []; paintFavSections(); return; }
+    favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; favSvc = d.services || []; paintFavSections(); if (document.getElementById('pubBody') && typeof paintPubs === 'function') paintPubs(); } }).catch(() => {});
 }
 
 // ---------- окно «Избранное» (сердечко в шапке) ----------
@@ -156,6 +157,7 @@ function toggleCardFav(id, btn) {
         const on = !favIds.has(id);
         if (on) favIds.add(id); else favIds.delete(id);
         paintCardFavs();
+        if (on && !document.getElementById('roomPubBtn')) showToast('Добавлено в избранное');
         if (on && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); flyHeartToFav(btn); }
         favApi('/api/favorites', { id, on }).then(d => {
             if (!d.ok) { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast(d.message || 'Не удалось сохранить'); }

@@ -39,31 +39,34 @@ function serviceCardHTML(s, mine) {
 }
 
 // в ленте раздела: плитка 2 в ряд — фото на весь фон, сверху автор, снизу название, цена и кнопка «Написать»
+function svRevWord(n) { const m10 = n % 10, m100 = n % 100; return n + ' ' + (m10 === 1 && m100 !== 11 ? 'отзыв' : (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'отзыва' : 'отзывов')); }
+
 function serviceFeedHTML(s) {
     const e = escapeHtml;
     const acc = typeof getAccount === 'function' ? getAccount() : null;
     const mine = !!(acc && acc.id === s.ownerId);
-    const price = s.price ? Number(s.price).toLocaleString('ru-RU') + ' ₽' : 'Договорная';
     const btns = mine
         ? `<button type="button" class="sv-cta" data-sv="edit" data-id="${e(s.id)}" aria-label="Изменить"><i class="fas fa-pen"></i><span>Изменить</span></button>`
-        : `<button type="button" class="main sv-cta" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="fas fa-paper-plane"></i><span>Написать</span></button>`
-          + (s.coords ? `<button type="button" class="sv-cta map" data-sv="map" data-id="${e(s.id)}" aria-label="Карта"><i class="fas fa-map-location-dot"></i><span>Карта</span></button>` : '')
-          + (s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : '');
-    const priceTxt = s.price ? Number(s.price).toLocaleString('ru-RU') + ' ₽' : 'Цена договорная';
+        : `<button type="button" class="main sv-cta" data-sv="write" data-id="${e(s.id)}" aria-label="Написать"><i class="far fa-comment-dots"></i><span>Написать</span></button>`
+          + (s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : '')
+          + (s.coords ? `<button type="button" class="sv-cta map" data-sv="map" data-id="${e(s.id)}" aria-label="Карта"><i class="fas fa-location-dot"></i><span>Карта</span></button>` : '');
+    const fav = typeof favIds !== 'undefined' && favIds.has(s.id);
+    const heart = mine ? '' : `<button type="button" class="card-fav sv-heart ${fav ? 'on' : ''}" data-sv="fav" data-fav="${e(s.id)}" data-id="${e(s.id)}" aria-pressed="${fav}" aria-label="В избранное"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>`;
+    const rate = s.rating ? `<span class="sv-rate"><i class="fas fa-star"></i><b>${String(s.rating).replace('.', ',')}</b>${s.reviews ? `<small>(${svRevWord(s.reviews)})</small>` : ''}</span>` : '';
+    const price = s.price
+        ? `<span class="sv-t-price"><b>${e(Number(s.price).toLocaleString('ru-RU'))} ₽</b>${s.unit ? `<small>${e(s.unit)}</small>` : ''}</span>`
+        : '<span class="sv-t-price ask"><small>Цена договорная</small></span>';
     return `<div class="sv-cell"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}" data-sv="view" data-id="${e(s.id)}">
         <div class="sv-t-bg">${svSlidesHTML(s)}</div>
-        <div class="sv-t-top"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
-            <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b><small>${fmtAgo(s.updated || s.created)}</small></span>
+        <div class="sv-t-top${mine ? '' : ' has-fav'}"><span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
+            <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>
             ${s.photoCount > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${s.photoCount}</span></em>` : ''}</div>
-        <div class="sv-t-bottom"><span class="sv-t-tag"><i class="fas ${SV_ICONS[s.tag] || 'fa-star'}"></i>${e(SV_TAGS[s.tag] || '')}</span></div>
+        ${heart}
         </div>
         <div class="sv-panel" data-sv="view" data-id="${e(s.id)}">
-            <div class="sv-i-main"><b class="sv-t-title">${e(s.title)}</b>
-                ${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : ''}
-            </div>
+            <div class="sv-row1"><b class="sv-t-title">${e(s.title)}</b>${rate}</div>
+            <div class="sv-row2">${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : '<span></span>'}${price}</div>
             <span class="sv-t-btns">${btns}</span>
-            <div class="sv-t-foot2"><span class="sv-pill price${s.price ? '' : ' ask'}"><i class="fas fa-ruble-sign"></i><b>${e(priceTxt)}</b>${s.price && s.unit ? `<small>${e(s.unit)}</small>` : ''}</span>
-                ${s.verified ? '<span class="sv-pill ok"><i class="fas fa-circle-check"></i>Проверено</span>' : ''}</div>
         </div></div>`;
 }
 
@@ -617,6 +620,7 @@ document.addEventListener('click', (ev) => {
     if (sv) {
         const id = sv.dataset.id, act = sv.dataset.sv;
         if (act === 'call') return;          // обычная ссылка tel: — звонок идёт сам
+        if (act === 'fav') { ev.preventDefault(); if (typeof toggleCardFav === 'function') toggleCardFav(id, sv); return; }
         const known = () => myServices.find(x => x.id === id) || serviceFeed.find(x => x.id === id);
         if (act === 'view') openServiceView(id);
         else if (act === 'new') { closeSheet(); openServiceEditor(); }
