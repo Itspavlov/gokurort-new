@@ -2420,3 +2420,9 @@ html.on-home-top { background-color: var(--hero-top); }
 .pub-chips .cat-chip i { font-size: 18px; }
 .pub-chips .cat-chip[data-pc="fav"] i { color: #FF5A6E; }
 .pub-chips .cat-chip[data-pc="fav"].on i { color: #B01234; }
+/* стрелка «назад в ленту» в «Моих публикациях», если пришли из жилья */
+.pub-titlerow { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.pub-titlerow .page-title { margin: 0; min-width: 0; }
+.pub-back { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255,255,255,.14)); color: var(--text); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
+.pub-back[hidden] { display: none; }
+.pub-back:active { transform: scale(.9); }

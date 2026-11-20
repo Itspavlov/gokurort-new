@@ -302,7 +302,7 @@ document.addEventListener('click', (ev) => {
     if (ev.target.closest('#favBox') && typeof onFavClick === 'function') onFavClick(ev);
 });
 // Переход из уведомления: «Мои публикации», нужный раздел и вкладка
-function pubGoto(chip, tab) {
+function pubGoto(chip, tab, fromRoom) {
     if (PUB_CHIPS.some(x => x[0] === chip)) {
         pubChip = chip;
         if (tab === 'ads' || tab === 'req') pubTab[chip] = tab;
@@ -311,7 +311,23 @@ function pubGoto(chip, tab) {
     if (typeof closeSheet === 'function') closeSheet();
     switchTab('mypubs');
     if (document.getElementById('pubRoot')) renderMyPubs();
+    // пришли из ленты жилья: сверху стрелка «назад в ленту»; через нижнюю панель её нет
+    pubBackRoom = fromRoom || '';
+    pubPaintBack();
 }
+
+let pubBackRoom = '';
+function pubPaintBack() { const b = document.getElementById('pubBack'); if (b) b.hidden = !pubBackRoom; }
+if (typeof switchTab === 'function') {
+    const _swPub = switchTab;
+    switchTab = function () { pubBackRoom = ''; const r = _swPub.apply(this, arguments); pubPaintBack(); return r; };
+}
+document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('#pubBack')) return;
+    const room = pubBackRoom; pubBackRoom = ''; pubPaintBack();
+    switchTab('search', false);
+    if (room && typeof openGroup === 'function') openGroup(room);
+});
 
 // ---------- обновления из других модулей ----------
 if (typeof renderProfile === 'function') {

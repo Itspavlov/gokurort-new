@@ -352,7 +352,7 @@ function setupFilters() {
     tools.innerHTML = '<button type="button" class="chat-header-btn room-pub-btn" id="roomPubBtn" aria-label="Мои публикации"><i class="fas fa-clipboard-list"></i><span>Мои публикации</span></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
     if (help) tools.appendChild(help);
     head.appendChild(tools);
-    tools.querySelector('#roomPubBtn').onclick = () => { if (typeof closeGroup === 'function') closeGroup(); if (typeof pubGoto === 'function') pubGoto('housing', 'ads'); else switchTab('mypubs'); };
+    tools.querySelector('#roomPubBtn').onclick = () => { const from = currentRoom; if (typeof closeGroup === 'function') closeGroup(); if (typeof pubGoto === 'function') pubGoto('housing', 'ads', from); else switchTab('mypubs'); };
     const fb = document.getElementById('filtBtn'); if (fb) fb.onclick = openFilterSheet;
     tools.querySelector('#mapBtn').onclick = openAdMap;
     const wrap = document.querySelector('#group-screen .cat-chips-wrap');
