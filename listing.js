@@ -257,7 +257,6 @@ function openListing(adId) {
                 ${gallery}
                 <button class="gallery-back" onclick="closeListing()" aria-label="Назад"><i class="fas fa-arrow-left"></i></button>
                 ${photos.length > 1 ? `<div class="gallery-count" id="galleryCount">1 / ${photos.length}</div>` : ''}
-                ${ad.walk && ad.walk.id ? `<button class="gallery-walk" onclick="openWalk(findAd(${JSON.stringify(String(ad.id)).replace(/"/g, '&quot;')}).walk, 'Прогулка · ' + findAd(${JSON.stringify(String(ad.id)).replace(/"/g, '&quot;')}).title)"><i class="fas fa-person-walking"></i> Пройтись по территории</button>` : ''}
                 ${ad.isUrgent ? '<div class="ad-badge ad-badge-urgent gallery-badge">Срочно</div>' : ''}
             </div>
 
