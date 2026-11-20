@@ -48,10 +48,10 @@
 
 /* нижняя панель: без цветной подсветки, пузырь остаётся */
 .nav-item.active .nav-icon { color: inherit; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .nav-item.active .nav-icon { color: inherit; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .nav-item.active .nav-icon { color: inherit; }
 .nav-item.active { color: var(--text); }
 .nav-indicator::before { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 4px 14px rgba(0, 0, 0, .25); background: rgba(255, 255, 255, .16); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .nav-indicator::before { background: rgba(0, 0, 0, .07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 14px rgba(0, 0, 0, .12); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .nav-indicator::before { background: rgba(0, 0, 0, .07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 14px rgba(0, 0, 0, .12); }
 
 @media (max-width: 360px) { .hero-title { font-size: 34px; } }
 
@@ -82,7 +82,7 @@
 .tip-btn { height: 38px; padding: 0 18px; border-radius: 19px; border: 0; background: var(--sun); color: #3A1406; font: 800 14px var(--font); cursor: pointer; }
 .tip-btn.ghost { background: rgba(255, 255, 255, .12); color: #F4F8FF; }
 .tip-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(236, 243, 255, .6); cursor: pointer; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .tip, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .tip::before { background: #1B2740; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .tip, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .tip::before { background: #1B2740; }
 @media (prefers-reduced-motion: reduce) { .tip, .tip-spot { transition: opacity .15s; } }
 
 /* ===== видеокружки ===== */
@@ -229,7 +229,7 @@
 
 /* ===== избранное ===== */
 /* ===== v8: шапка без рамки, компактный профиль ===== */
-.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header {
+.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .app-header {
     margin: 0; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 14px; border-radius: 0; border: 0; box-shadow: none;
     -webkit-backdrop-filter: none; backdrop-filter: none;
     background: linear-gradient(to bottom, var(--bg) 64%, transparent);
@@ -478,7 +478,7 @@
 .pf-row.theme-card { flex-direction: column; align-items: stretch; gap: 0; padding: 12px 14px 14px; }
 .theme-card .tc-h { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font: 600 15px var(--font); }
 .theme-card .tc-h > i { width: 20px; text-align: center; color: var(--sea); }
-.theme-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.theme-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .th-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 2px 8px; border-radius: 14px; border: 2px solid transparent; background: none; color: var(--text-secondary); font: 700 11.5px var(--font); cursor: pointer; }
 .th-card.on { border-color: var(--accent); color: var(--text); }
 .th-sw { position: relative; width: 100%; max-width: 64px; aspect-ratio: 3 / 4; border-radius: 12px; border: 1px solid rgba(128,128,128,.35); overflow: hidden; }
@@ -1429,7 +1429,7 @@ html :not(.bottom-nav-inner):not(.toast):not(.vr-overlay):not(.msg-menu-overlay)
 html *::before, html *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 :root, [data-theme] { --bar: rgba(8, 16, 30, .9); }
 [data-theme="dusk"] { --bar: rgba(18, 18, 22, .94); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) { --bar: var(--glass-strong); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) { --bar: var(--glass-strong); }
 .chat-header, .chat-input-wrapper, .cards-dock, .reply-bar, .listing-actions { background: var(--bar) !important; }
 
 /* v68: «Мои друзья» */
@@ -1452,7 +1452,7 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 
 /* ===== v69: без тёмной полосы под шапкой; «Мои публикации»: разделы в один ряд со скроллом, статус объявления, строка лимита ===== */
 /* шапка уезжает вместе со страницей и без фона: под ней нет тёмной полосы, плитки не обрезаются рамкой */
-.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header { position: relative; z-index: 100; background: none !important; }
+.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .app-header { position: relative; z-index: 100; background: none !important; }
 
 /* разделы одним рядом, листается вбок; цифры внутри кнопки, не обрезаются */
 .pub-chips-wrap { margin: 0 -18px 12px; }
@@ -1482,7 +1482,7 @@ html *::before, html *::after { -webkit-backdrop-filter: none !important; backdr
 /* v71: в комнатах (жильё, работа…) за кнопками «назад», «карта», «сердце» нет тёмной подложки: общее правило для шапок чата её возвращало */
 .chat-header.room-head { background: none !important; border: 0 !important; box-shadow: none !important; }
 /* логотип чуть ниже: размытие строки состояния в iOS не заходит на надпись */
-.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
+.app-header, :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .app-header { padding-top: calc(18px + env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
 
 /* v72: верхний край фото растворяется в небе над ним, чтобы линии края не было видно */
 .hero-photo { -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 90px); mask-image: linear-gradient(180deg, transparent 0, #000 90px); }
@@ -1747,8 +1747,8 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
     background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, .85) 50%, rgba(255, 255, 255, 0) 100%); animation: coinGlint 3.6s ease-in-out infinite; }
 .dv-svc-add:active { transform: scale(.97); }
 @media (prefers-reduced-motion: reduce) { .dv-svc-add::after { animation: none; } }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .45); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .own-del:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .5); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .45); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .own-del:not(.sure) { color: #C9252C; background: rgba(229, 72, 77, .08); border-color: rgba(201, 37, 44, .5); }
 
 /* ===== v86: бейдж проверки в углу, полоска хозяина на карточке жилья, реакции под объявлением убраны ===== */
 .ad-badges { position: absolute; top: 10px; left: 10px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
@@ -1777,7 +1777,7 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 #chatMessages.cards:has(.chat-message-ad) .ad-ow-mark { width: 17px; height: 17px; border-radius: 6px; font-size: 9px; }
 #chatMessages.cards:has(.chat-message-ad) .ad-badges { top: 7px; left: 7px; }
 .chat-message-ad .chat-reactions { display: none; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .ad-owner { background: rgba(255, 255, 255, .55); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .ad-owner { background: rgba(255, 255, 255, .55); }
 
 .vbadge.big { height: 24px; padding: 0 10px; font-size: 12px; border-radius: 12px; }
 .vbadge.big i { font-size: 10px; }
@@ -1785,7 +1785,7 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .unver-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; padding: 11px 13px; border-radius: 14px; background: rgba(242, 138, 30, .14); border: 1px solid rgba(242, 138, 30, .5); color: var(--text); font: 700 13.5px/1.35 var(--font); }
 .unver-note i { flex: none; color: #FFA23E; margin-top: 2px; }
 .unver-note.dm-warn { margin: 0; border-radius: 0; border-width: 0 0 1px; flex: none; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .unver-note i { color: #C25E00; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .unver-note i { color: #C25E00; }
 
 /* верификация в профиле */
 .vf-card { display: block; }
@@ -1805,8 +1805,8 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .vf-st.ok { color: #fff; background: #1FAE63; height: 24px; padding: 0 10px; border-radius: 12px; }
 .vf-st.ok i { font-size: 10px; }
 .vf-soon { margin: 10px 0 0; font: 600 12px/1.4 var(--font); color: var(--text-secondary); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .vf-row { background: rgba(255, 255, 255, .6); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .vf-row.ok { background: rgba(31, 174, 99, .12); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .vf-row { background: rgba(255, 255, 255, .6); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .vf-row.ok { background: rgba(31, 174, 99, .12); }
 .ad-ow-info .rv-s { display: none; }
 @media (max-width: 420px) { .ad-ow-info .rv-f { display: none; } .ad-ow-info .rv-s { display: inline; } }
 
@@ -1817,7 +1817,7 @@ html.lite-bf .msg-menu-overlay { background: rgba(2, 8, 20, .66) !important; }
 .ad-owner span { color: var(--text-secondary); font-weight: 600; }
 .ad-owner.none i { color: var(--text-muted, #8a96a8); }
 .ad-owner.none span { font-weight: 600; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .ad-owner { background: none; }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .ad-owner { background: none; }
 
 /* ===== v88: «Верификация» — строка в профиле и отдельное окно ===== */
 .vf-body { padding: 2px 2px 8px; }
@@ -2281,3 +2281,52 @@ p.pub-act { text-align: center; }
 .hero-tag { text-shadow: 0 1px 2px rgba(0, 0, 0, .7), 0 1px 12px rgba(0, 0, 0, .6); }
 /* курсивная «Т» выступает за рамку слова, а градиентная заливка обрезает по рамке — даём запас справа, не сдвигая вёрстку */
 .hero-caps em { padding-right: .16em; margin-right: -.16em; }
+
+/* ===== v110: шапка уходит за верх экрана, карточки «Чем заняться» с названием на фото и «подглядывающей» третьей, светлая тема «Светлый вечер» ===== */
+:root { --hx: 150px; --tf-w: clamp(138px, calc((100vw - 92px) / 2), 176px); }
+/* фото шапки продолжается выше экрана: верхняя полоса зеркально повторяет небо, края картинки не видно */
+.hero-scene { top: calc(-92px - var(--hx)); height: calc(372px + var(--hx)); }
+.hero-stage { top: var(--hx); }
+.hero-photo { -webkit-mask-image: none; mask-image: none; }
+.hero-mirror { position: absolute; left: 0; bottom: 100%; width: 100%; height: var(--hx); object-fit: cover; object-position: top; transform: scaleY(-1); display: block; pointer-events: none; }
+.hero-scene::after { top: var(--hx); }
+.hero-scene::before { top: calc(168px + var(--hx)); }
+html.lite-im .hero-mirror { display: none !important; }
+
+/* «Чем заняться сегодня?»: больше воздуха под заголовком, у карточек название лежит на фото без места; справа виден край следующей карточки */
+.today-head { margin: 40px 2px 22px; }
+.today-feed { gap: 14px; padding: 16px 18px 28px; margin-top: -10px; margin-bottom: -14px; scroll-padding-left: 18px; }
+.tf-item .tf-card { box-shadow: 0 8px 18px rgba(5, 12, 30, .26); }
+.tf-item { width: var(--tf-w); }
+.tf-item .tf-card { height: calc(var(--tf-w) * .82); border-radius: 20px; }
+.tf-item .tf-card::after, .tf-item .tf-nophoto::after { display: block; background: linear-gradient(180deg, rgba(8, 8, 26, 0) 34%, rgba(8, 8, 26, .72) 100%); }
+.tf-item .tf-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 11px 10px; color: #fff; font-size: 14px; line-height: 1.18; text-shadow: 0 1px 8px rgba(0, 0, 0, .55); -webkit-line-clamp: 2; }
+
+/* плашка «Создай свою активность»: края растушёваны, без тени — как часть экрана, а не наклейка */
+.create-plate { margin: 32px auto 10px; filter: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 15%, #000 85%, transparent 100%), linear-gradient(180deg, transparent 0, #000 24%, #000 76%, transparent 100%);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent 0, #000 15%, #000 85%, transparent 100%), linear-gradient(180deg, transparent 0, #000 24%, #000 76%, transparent 100%); mask-composite: intersect; }
+
+/* тема «Светлый вечер»: светлая версия «Вечера» — бледная сине-сиреневая основа и тёплый оранжевый акцент */
+:root[data-theme="eve"] {
+    --sun-1: #F2823A; --sun-2: #FFB680; --sea: #3F5FA8; --sun: linear-gradient(135deg, #F2823A 0%, #FFB680 100%); --accent: #D9621E;
+    --bg: #EEF1FA; --hero-top: #007cd4;
+    --mesh: radial-gradient(520px 420px at 105% 0%, rgba(255, 200, 164, 0.55), transparent 70%), radial-gradient(480px 480px at -10% 45%, rgba(176, 190, 238, 0.55), transparent 70%), #EEF1FA;
+    --blob-a: rgba(255, 200, 164, 0.5); --blob-b: rgba(176, 190, 238, 0.5);
+    --glass: rgba(255, 255, 255, 0.8); --glass-strong: rgba(255, 255, 255, 0.96); --glass-border: #D5DBEE;
+    --glass-hi: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    --shadow: 0 12px 30px rgba(40, 56, 110, 0.16);
+    --text: #16213D; --text-secondary: rgba(22, 33, 61, 0.76); --text-muted: rgba(22, 33, 61, 0.55);
+    --on-sea: #fff; --on-accent: #fff;
+    --font: 'Nunito', -apple-system, 'Segoe UI', sans-serif; --font-display: 'Nunito', -apple-system, 'Segoe UI', sans-serif;
+    --rq-bg: linear-gradient(150deg, #E8ECFA 0%, #D6DDF4 100%); --rq-border: #BAC5E8; --rq-on: #1F9D55; --rq-ring: #fff;
+    --dv-cloud: #E1E6F7; --dv-cloud-line: #BAC5E8;
+}
+:is([data-theme="eve"]) .dock-btn.seek { background: linear-gradient(135deg, #FFB680 0%, #F2823A 100%); color: #2B1300; box-shadow: 0 4px 14px rgba(242, 130, 58, .35); }
+:root[data-theme="eve"] .group-photo { filter: saturate(1.02) brightness(1.02) contrast(.98); }
+:root[data-theme="eve"] .group-card::after { background: linear-gradient(90deg, rgba(20, 30, 70, .5) 0%, rgba(20, 30, 70, 0) 62%), linear-gradient(180deg, rgba(20, 30, 70, 0) 42%, rgba(20, 30, 70, .55) 100%); }
+:root[data-theme="eve"] .group-card.gc-dating.strip::after { background: linear-gradient(90deg, rgba(20, 30, 70, .66) 0%, rgba(20, 30, 70, .3) 55%, rgba(20, 30, 70, 0) 100%); }
+:root[data-theme="eve"] :is(.gc-housing, .gc-work, .gc-trips, .gc-services) { background: linear-gradient(150deg, #9DB0EC 0%, #6177C8 60%, #34468E 100%); }
+:root[data-theme="eve"] .req-card.rq2 .req-actions button:not(.main) { background: rgba(255, 255, 255, .6); }
+:root[data-theme="eve"] .req-card.rq2 .req-kind, :root[data-theme="eve"] .req-card.rq2 .req-status { background: rgba(255, 255, 255, .65); }
+:root[data-theme="eve"] .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C0262D; background: rgba(229, 72, 77, .1); }

@@ -4,7 +4,7 @@
     'use strict';
     var KEY = 'yy-hero';
     var q = function (s) { return document.querySelector(s); };
-    var t1 = q('.hero-title span'), t2 = q('.hero-title em'), tag = q('.hero-tag'), place = q('.hero-place span'), photo = q('.hero-photo'), stage = q('.hero-stage');
+    var t1 = q('.hero-title span'), t2 = q('.hero-title em'), tag = q('.hero-tag'), place = q('.hero-place span'), photo = q('.hero-photo'), mirror = q('.hero-mirror'), stage = q('.hero-stage');
     if (!t1 || !t2 || !tag || !place) return;
     var DEF = { title1: t1.textContent, title2: t2.textContent, tag: tag.textContent, place: place.textContent, photo: photo ? photo.getAttribute('src') : '' };
     var cur = '';
@@ -18,13 +18,13 @@
         place.textContent = h.place || DEF.place;
         if (photo) {
             var src = h.photo && typeof h.photo === 'string' && h.photo.indexOf('/api/site/hero') === 0 ? SERVER_URL + h.photo : DEF.photo;
-            if (src !== cur) { cur = src; photo.src = src; }
+            if (src !== cur) { cur = src; photo.src = src; if (mirror) mirror.src = src; }
             if (stage) stage.classList.toggle('hero-custom', src !== DEF.photo);
         }
     }
     if (photo) {
         photo.onerror = function () {          // вместо встроенного: упало своё фото — вернём стандартное, упало и оно — убираем кадр, как раньше
-            if (cur && cur !== DEF.photo) { cur = DEF.photo; photo.src = DEF.photo; if (stage) stage.classList.remove('hero-custom'); }
+            if (cur && cur !== DEF.photo) { cur = DEF.photo; photo.src = DEF.photo; if (mirror) mirror.src = DEF.photo; if (stage) stage.classList.remove('hero-custom'); }
             else if (photo.parentNode && photo.parentNode.parentNode) photo.parentNode.remove();
         };
     }

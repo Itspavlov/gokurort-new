@@ -47,7 +47,7 @@
     --transition: all 0.22s var(--ease);
 }
 
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) {
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) {
     --bg: #E9F5F7;
     --mesh:
         radial-gradient(560px 460px at 105% 0%, rgba(255, 170, 130, 0.65), transparent 70%),
@@ -145,7 +145,7 @@ button { font-family: inherit; }
     background: var(--panel-dark, rgba(8, 18, 32, 0.62));
 }
 
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .app-header { background: rgba(255, 255, 255, 0.78); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .app-header { background: rgba(255, 255, 255, 0.78); }
 
 .app-logo { display: flex; align-items: center; gap: 10px; }
 
@@ -397,7 +397,7 @@ button { font-family: inherit; }
 .ad-card-body { padding: 12px 14px 14px; }
 
 .ad-card-price { font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: -0.4px; color: var(--sun-2); margin-bottom: 3px; }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .ad-card-price { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .ad-card-price { color: var(--accent); }
 
 .ad-card-title { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 
@@ -458,7 +458,7 @@ button { font-family: inherit; }
     background: var(--panel-dark, rgba(8, 18, 32, 0.62));
 }
 
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .bottom-nav-inner { background: rgba(255, 255, 255, 0.78); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .bottom-nav-inner { background: rgba(255, 255, 255, 0.78); }
 
 .nav-indicator {
     position: absolute;
@@ -515,7 +515,7 @@ button { font-family: inherit; }
 .nav-item.active { color: var(--text); font-weight: 700; }
 
 .nav-item.active .nav-icon { color: var(--sun-2); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .nav-item.active .nav-icon { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .nav-item.active .nav-icon { color: var(--accent); }
 
 .nav-icon { font-size: 19px; height: 22px; display: flex; align-items: center; justify-content: center; transition: color 0.3s ease; }
 
@@ -719,7 +719,7 @@ button { font-family: inherit; }
 .chat-ad-title { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; margin-bottom: 2px; }
 
 .chat-ad-price { font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; color: var(--sun-2); }
-:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"]) .chat-ad-price { color: var(--accent); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) .chat-ad-price { color: var(--accent); }
 
 .chat-ad-location { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 
