@@ -799,6 +799,7 @@ function renderHousingMessage(ad) {
                         ${sl.html}
                         ${adBadgesHTML(ad)}
                         ${remote && !ad.mine ? `<button type="button" class="card-fav ${fav ? 'on' : ''}" data-fav="${id}" aria-pressed="${!!fav}" aria-label="В избранное" onclick="event.stopPropagation();toggleCardFav('${id}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : ''}
+                        ${ad.walk && ad.walk.id ? '<span class="walk-badge"><i class="fas fa-person-walking"></i> Прогулка</span>' : ''}
                         ${sl.n ? `<span class="ph-count"><i class="fas fa-camera"></i><span><b class="cur">1</b>/${sl.n}</span></span>` : ''}
                     </div>
                     <div class="ad-info">

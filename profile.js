@@ -337,6 +337,8 @@ function openAdForm(editId) {
         type: 'rent',
         term: old && (old.terms || []).some(t => t && t.l === 'Срок аренды' && /длит/i.test(t.v)) ? 'long' : 'daily',
         photos: old ? [...(old.photos || [])] : [],
+        walk: old && old.walk ? { ...old.walk } : null,
+        walkLocal: '',
         amenities: new Set(old ? old.amenities : []),
         busy: new Set(old ? old.busy : []),
         coords: old && old.coords ? old.coords.slice() : MAP_DEFAULT.slice(),
@@ -377,6 +379,13 @@ function openAdForm(editId) {
                 <div class="photo-grid" id="fmPhotos"></div>
                 <input type="file" id="fmFile" accept="image/*" multiple hidden>
                 <div class="form-hint">До 8 фото. Первое станет обложкой.</div>
+            </div>
+
+            <div class="form-block">
+                <div class="form-h">Видео-прогулка <span class="form-opt">по желанию</span></div>
+                <div id="fmWalk"></div>
+                <input type="file" id="fmWalkFile" accept="video/*" hidden>
+                <div class="form-hint">Снимите видео, идя от калитки по территории (до 60 секунд). Гости смогут «пройтись» по нему стрелками, как по панораме.</div>
             </div>
 
             <div class="form-block">
@@ -434,6 +443,7 @@ function openAdForm(editId) {
     document.body.style.overflow = 'hidden';
 
     wireAdForm(screen);
+    if (typeof walkFormInit === 'function') walkFormInit(screen, formState);
     applyFormType(screen);
     renderFormPhotos();
     formCal = buildCalendar(document.getElementById('fmCal'), { busy: formState.busy, edit: true });
@@ -614,6 +624,7 @@ function saveAdForm() {
         description: val('fmDesc'),
         image: formState.photos[0] || '',
         photos: [...formState.photos],
+        walk: formState.walk ? { ...formState.walk } : null,
         date: 'Сегодня',
         time: p2(now.getHours()) + ':' + p2(now.getMinutes()),
         views: 0,
