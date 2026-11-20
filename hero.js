@@ -69,4 +69,23 @@
         var s = typeof socket !== 'undefined' ? socket : null;
         if (s && s !== hooked && typeof s.on === 'function') { hooked = s; s.on('site-changed', function () { refresh(true); }); }
     }, 3000);
+
+    // iOS красит область под часами «плашкой» цвета страницы, пока страница лежит ровно на нулевой отметке, и показывает фото под часами,
+    // как только она хоть чуть сдвинута. Поэтому держим страницу на 1 пикселе от верха: фото всегда уходит под часы.
+    var touching = false, nt = 0;
+    function nudge() {
+        var ts = document.getElementById('tab-search'), gs = document.getElementById('group-screen');
+        if (!ts || ts.style.display === 'none' || (gs && gs.style.display && gs.style.display !== 'none')) return;
+        if (document.hidden || touching || (window.scrollY || 0) >= 1 || document.documentElement.scrollHeight <= window.innerHeight + 4) return;
+        window.scrollTo(0, 1);
+    }
+    function nudgeSoon() { clearTimeout(nt); nt = setTimeout(nudge, 160); }
+    window.addEventListener('scroll', nudgeSoon, { passive: true });
+    window.addEventListener('touchstart', function () { touching = true; }, { passive: true });
+    window.addEventListener('touchend', function () { touching = false; nudgeSoon(); }, { passive: true });
+    window.addEventListener('touchcancel', function () { touching = false; nudgeSoon(); }, { passive: true });
+    window.addEventListener('pageshow', nudgeSoon);
+    window.addEventListener('load', nudgeSoon);
+    document.addEventListener('visibilitychange', nudgeSoon);
+    setTimeout(nudgeSoon, 600); setTimeout(nudgeSoon, 1800);
 })();
