@@ -2289,7 +2289,7 @@ p.pub-act { text-align: center; }
 .hero-stage { top: var(--hx); }
 .hero-photo { -webkit-mask-image: none; mask-image: none; }
 .hero-mirror { position: absolute; left: 0; bottom: 100%; width: 100%; height: var(--hx); object-fit: cover; object-position: top; transform: scaleY(-1); display: block; pointer-events: none; }
-.hero-scene::after { top: var(--hx); }
+.hero-scene::after { top: calc(var(--hx) - 70px); -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 70px); mask-image: linear-gradient(180deg, transparent 0, #000 70px); }
 .hero-scene::before { top: calc(168px + var(--hx)); }
 html.lite-im .hero-mirror { display: none !important; }
 
@@ -2333,3 +2333,7 @@ html.lite-im .hero-mirror { display: none !important; }
 
 /* верх экрана на главной: фон страницы того же цвета, что небо на фото, чтобы iOS не подмешивал светлую полосу под часами */
 html.on-home-top { background-color: var(--hero-top); }
+
+/* фото шапки теперь само продолжается выше экрана, поэтому плоская плашка под строкой состояния не нужна — именно она «отрезала» верх и пропадала при прокрутке */
+#topTint { display: none !important; }
+:root[data-theme="sky"] .hero-mirror { filter: saturate(1.05) brightness(1.1); }
