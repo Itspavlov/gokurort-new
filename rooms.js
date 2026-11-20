@@ -43,8 +43,8 @@ function housingCounts() {
 
 function housingChipsHTML(room) {
     const counts = housingCounts();
-    // вкладки «Все» нет: повторное нажатие на выбранный тип возвращает общую ленту
-    return `<div class="cat-chips-wrap"><div class="cat-chips" id="catChips" role="tablist" aria-label="Тип жилья">${HOUSING_CATS.filter(c => c.id !== 'all').map(c => `
+    // «Все» — общая лента; повторное нажатие на выбранный тип тоже возвращает её
+    return `<div class="cat-chips-wrap"><div class="cat-chips" id="catChips" role="tablist" aria-label="Тип жилья">${HOUSING_CATS.map(c => `
         <button type="button" role="tab" class="cat-chip ${c.room === room ? 'on' : ''}" aria-selected="${c.room === room}" data-room="${c.room}" onclick="openHousingRoom('${c.room === room ? 'housing' : c.room}')">
             <i class="fas ${c.icon}"></i><span>${c.label}</span>${counts[c.id] ? `<b>${counts[c.id]}</b>` : ''}
         </button>`).join('')}</div></div>`;

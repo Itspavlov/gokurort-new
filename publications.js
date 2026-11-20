@@ -9,7 +9,8 @@ const PUB_CHIPS = [
     ['work', 'Работа', 'fa-briefcase'],
     ['trips', 'Поездки', 'fa-car-side'],
     ['services', 'Развлечения', 'fa-sailboat'],
-    ['dviz', 'Поиски компаний', 'fa-champagne-glasses']
+    ['dviz', 'Поиски компаний', 'fa-champagne-glasses'],
+    ['fav', 'Избранное', 'fa-heart']
 ];
 let pubChip = 'housing';
 // у каждого раздела две вкладки: ads — объявления, req — запросы (у «Развлечений» вторая — поиски компании)
@@ -48,7 +49,8 @@ function pubCounts() {
         work: pubCount('work', 'ads') + pubCount('work', 'req'),
         trips: pubCount('trips', 'ads') + pubCount('trips', 'req'),
         services: pubCount('services', 'ads'),
-        dviz: pubCount('dviz', 'ads')
+        dviz: pubCount('dviz', 'ads'),
+        fav: typeof favIds !== 'undefined' ? favIds.size : 0
     };
 }
 
@@ -60,7 +62,7 @@ function pubCenterChip() {
     row.scrollTo ? row.scrollTo({ left: Math.max(0, to), behavior: 'smooth' }) : (row.scrollLeft = Math.max(0, to));
 }
 
-function pubSetSection() { window._reqSecOverride = pubChip; }
+function pubSetSection() { window._reqSecOverride = pubChip === 'fav' ? 'housing' : pubChip; }
 
 function renderMyPubs() {
     const root = document.getElementById('pubRoot');
@@ -191,6 +193,14 @@ function paintPubs() {
     const chips = document.querySelectorAll('#pubRoot .cat-chip[data-pc]');
     const counts = pubCounts();
     chips.forEach(c => { const b = c.querySelector('b'), n = counts[c.dataset.pc] || 0; if (b) { b.hidden = !n; b.textContent = String(n); } });
+    if (pubChip === 'fav') {
+        // избранное: жильё, которое человек отметил сердечком
+        const hf = '<div id="favBox" class="req-mine pub-fav"></div>';
+        if (body._h !== hf || !body.children.length) { body._h = hf; body.innerHTML = hf; }
+        if (typeof paintFavSections === 'function') paintFavSections();
+        if (!body._favAt || Date.now() - body._favAt > 4000) { body._favAt = Date.now(); if (typeof refreshFavSections === 'function') refreshFavSections(); }
+        return;
+    }
     const sec = pubChip, tab = pubTab[sec] || 'ads';
     let list = pubItems(sec, tab);
     let inner = '', shown = list.length;
@@ -227,7 +237,7 @@ document.addEventListener('click', (ev) => {
     const chip = ev.target.closest('.cat-chip[data-pc]');
     if (chip) {
         pubChip = chip.dataset.pc;
-        try { localStorage.setItem('yugi-pubchip', pubChip); } catch (_) {}
+        try { if (pubChip !== 'fav') localStorage.setItem('yugi-pubchip', pubChip); } catch (_) {}
         pubSetSection();
         root.querySelectorAll('.cat-chip[data-pc]').forEach(c => { const on = c === chip; c.classList.toggle('on', on); c.setAttribute('aria-selected', String(on)); });
         paintPubs();
@@ -289,6 +299,7 @@ document.addEventListener('click', (ev) => {
         return;
     }
     if (ev.target.closest('#pubDv')) onFeedClick(ev);
+    if (ev.target.closest('#favBox') && typeof onFavClick === 'function') onFavClick(ev);
 });
 // Переход из уведомления: «Мои публикации», нужный раздел и вкладка
 function pubGoto(chip, tab) {

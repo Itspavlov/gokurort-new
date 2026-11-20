@@ -94,7 +94,7 @@ function paintFavSections() {
 function refreshFavSections() {
     if (!document.getElementById('favBox')) return;
     if (!getToken()) { favList = []; paintFavSections(); return; }
-    favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; paintFavSections(); } }).catch(() => {});
+    favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; paintFavSections(); if (document.getElementById('pubBody') && typeof paintPubs === 'function') paintPubs(); } }).catch(() => {});
 }
 
 // ---------- окно «Избранное» (сердечко в шапке) ----------
@@ -120,7 +120,7 @@ function onFavClick(ev) {
         if (typeof findAd === 'function' && findAd(id)) { closeSheet(); openListing(id); }
         else if (typeof fetchFullAd === 'function') fetchFullAd(id, (ok) => { if (ok) { closeSheet(); openListing(id); } else showToast('Объявление больше недоступно'); });
     } else if (b.dataset.a === 'unfav') {
-        favApi('/api/favorites', { id, on: false }).then(d => { if (d.ok) { favIds = new Set(d.ids); favList = favList.filter(x => x.id !== id); paintFavSections(); } else showToast(d.message || 'Не удалось'); }).catch(() => showToast('Нет связи с сервером'));
+        favApi('/api/favorites', { id, on: false }).then(d => { if (d.ok) { favIds = new Set(d.ids); favList = favList.filter(x => x.id !== id); paintFavSections(); if (typeof paintPubs === 'function' && document.getElementById('pubBody')) paintPubs(); } else showToast(d.message || 'Не удалось'); }).catch(() => showToast('Нет связи с сервером'));
     }
 }
 
@@ -130,7 +130,7 @@ function paintCardFavs() {
 }
 // Сердечко «улетает» с карточки в сердечко в шапке; там оно подпрыгивает
 function flyHeartToFav(from) {
-    const to = document.getElementById('roomFavBtn');
+    const to = document.getElementById('roomPubBtn');
     if (!to || !from || !from.isConnected) return;
     const bump = () => { to.classList.remove('bump'); void to.offsetWidth; to.classList.add('bump'); setTimeout(() => to.classList.remove('bump'), 600); };
     const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
@@ -159,7 +159,7 @@ function toggleCardFav(id, btn) {
         if (on && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); flyHeartToFav(btn); }
         favApi('/api/favorites', { id, on }).then(d => {
             if (!d.ok) { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast(d.message || 'Не удалось сохранить'); }
-            else { favIds = new Set(d.ids); paintCardFavs(); showToast(on ? 'Добавлено в избранное' : 'Убрано из избранного'); refreshFavSections(); }
+            else { favIds = new Set(d.ids); paintCardFavs(); showToast(on ? 'Добавлено в избранное' : 'Убрано из избранного'); refreshFavSections(); if (typeof paintPubs === 'function' && document.getElementById('pubBody')) paintPubs(); }
         }).catch(() => { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast('Нет связи с сервером'); });
     });
 }

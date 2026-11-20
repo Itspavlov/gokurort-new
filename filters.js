@@ -346,13 +346,13 @@ function paintMapTitle() {
 function setupFilters() {
     if (!isHousingRoom(currentRoom)) return;
     const head = document.querySelector('#group-screen .room-head');
-    if (!head || head.querySelector('#roomFavBtn')) { applyAdFilters(); return; }
+    if (!head || head.querySelector('#roomPubBtn')) { applyAdFilters(); return; }
     const help = head.querySelector('.chat-help-btn');
     const tools = document.createElement('div'); tools.className = 'head-tools';
-    tools.innerHTML = '<button type="button" class="chat-header-btn" id="roomFavBtn" aria-label="Избранное"><i class="fas fa-heart"></i></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
+    tools.innerHTML = '<button type="button" class="chat-header-btn room-pub-btn" id="roomPubBtn" aria-label="Мои публикации"><i class="fas fa-clipboard-list"></i><span>Мои публикации</span></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
     if (help) tools.appendChild(help);
     head.appendChild(tools);
-    tools.querySelector('#roomFavBtn').onclick = () => { if (typeof openFavorites === 'function') openFavorites(); };
+    tools.querySelector('#roomPubBtn').onclick = () => { if (typeof closeGroup === 'function') closeGroup(); if (typeof pubGoto === 'function') pubGoto('housing', 'ads'); else switchTab('mypubs'); };
     const fb = document.getElementById('filtBtn'); if (fb) fb.onclick = openFilterSheet;
     tools.querySelector('#mapBtn').onclick = openAdMap;
     const wrap = document.querySelector('#group-screen .cat-chips-wrap');

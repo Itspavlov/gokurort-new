@@ -2404,3 +2404,19 @@ html.on-home-top { background-color: var(--hero-top); }
 /* карточки услуг не сжимаются: у них overflow:hidden, и сетка делила на них ограниченную высоту экрана (получались «таблетки») */
 .sv-grid, #chatMessages.cards:has(.sv-item) { grid-auto-rows: max-content; }
 .sv-cell { flex-shrink: 0; min-height: min-content; }
+
+/* ===== жильё: «Мои публикации» вместо сердечка в шапке, чипсы меньше и с «Все»; в «Моих публикациях» шестая плашка «Избранное» ===== */
+#roomPubBtn { position: relative; }
+#roomPubBtn.bump { animation: favBump .55s ease; }
+.chat-header-btn.room-pub-btn { width: auto; height: 40px; padding: 0 15px 0 12px; gap: 8px; border-radius: 99px; font: 700 13px var(--font); white-space: nowrap; }
+.room-pub-btn i { font-size: 15px; }
+#catChips { gap: 6px; padding: 2px 14px 4px; }
+#catChips .cat-chip { height: 30px; gap: 5px; padding: 0 10px; font-size: 12.5px; }
+#catChips .cat-chip i { font-size: 11.5px; }
+#catChips .cat-chip b { min-width: 16px; height: 16px; padding: 0 4px; margin-right: -2px; border-radius: 8px; font-size: 10.5px; line-height: 16px; }
+#catChips .cat-chip.on { box-shadow: 0 3px 10px rgba(255, 122, 89, .3); }
+.pub-chips { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+.pub-chips .cat-chip, .pub-chips .cat-chip:last-child { font-size: 8.8px; border-radius: 14px; }
+.pub-chips .cat-chip i { font-size: 18px; }
+.pub-chips .cat-chip[data-pc="fav"] i { color: #FF5A6E; }
+.pub-chips .cat-chip[data-pc="fav"].on i { color: #B01234; }
