@@ -2330,3 +2330,6 @@ html.lite-im .hero-mirror { display: none !important; }
 :root[data-theme="eve"] .req-card.rq2 .req-actions button:not(.main) { background: rgba(255, 255, 255, .6); }
 :root[data-theme="eve"] .req-card.rq2 .req-kind, :root[data-theme="eve"] .req-card.rq2 .req-status { background: rgba(255, 255, 255, .65); }
 :root[data-theme="eve"] .req-card.rq2 .req-actions button.req-del-btn:not(.sure) { color: #C0262D; background: rgba(229, 72, 77, .1); }
+
+/* верх экрана на главной: фон страницы того же цвета, что небо на фото, чтобы iOS не подмешивал светлую полосу под часами */
+html.on-home-top { background-color: var(--hero-top); }
