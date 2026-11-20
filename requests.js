@@ -193,7 +193,7 @@ function reqCardHTML(r, opts = {}) {
         ? (r.status === 'active' ? found + grp + `<button type="button" data-act="notify" title="Сообщать, когда появится подходящее жильё"><i class="fas ${r.notify === false ? 'fa-bell-slash' : 'fa-bell'}"></i> ${r.notify === false ? 'Не сообщать' : 'Сообщать о новом'}</button><button type="button" data-act="found">Нашёл жильё</button><button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` : '')
         : (r.status === 'active' ? `<button type="button" class="main" data-act="write"><i class="fas fa-paper-plane"></i> Предложить жильё</button>` + grp + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.text || ('Запрос на ' + noun), icon: true }) : '') : '');
     return `<div class="req-card rq2${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check" title="Проверен"></i>' : ''}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>
+        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check" title="Проверен"></i>' : ''}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${st}</div>
         <div class="rq-title">${r.mine ? 'Ваш запрос' : 'Запрос'} на ${noun}</div>
         ${reqPresenceHTML(r)}
         ${lines ? `<div class="req-lines">${lines}</div>` : ''}
@@ -475,11 +475,17 @@ function openRequestSheet(edit) {
             };
             label();
             const t = setInterval(() => { if (!document.body.contains(btn)) { clearInterval(t); return; } label(); }, 500);
+            let previewOk = false;
             btn.addEventListener('click', () => {
                 const v = (id) => el.querySelector(id).value.trim();
                 const from = v('#rqFrom'), to = v('#rqTo');
                 if (to && !from) { err.textContent = 'Укажите дату заезда'; return; }
                 if (from && to && to < from) { err.textContent = 'Выезд раньше заезда'; return; }
+                if (!reqEditing && !previewOk && typeof cardPreview === 'function') {
+                    cardPreview('request', { kind: 'seek', section: 'housing', category: v('#rqCat'), city: v('#rqCity'), district: v('#rqDistrict'), dateFrom: from, dateTo: to, guests: v('#rqGuests'), budget: v('#rqBudget'), pets: el.querySelector('#rqPets').checked, text: v('#rqText') }, () => { previewOk = true; btn.click(); });
+                    return;
+                }
+                previewOk = false;
                 err.textContent = '';
                 btn.disabled = true;
                 const body = { category: v('#rqCat'), city: v('#rqCity'), district: v('#rqDistrict'), dateFrom: from, dateTo: to, guests: v('#rqGuests'), budget: v('#rqBudget'), pets: el.querySelector('#rqPets').checked, text: v('#rqText') };
@@ -598,10 +604,16 @@ function openCardSheet(kind, edit, prefill) {
                 priceInp.placeholder = neg.checked ? 'Цена договорная' : '';
                 if (neg.checked) priceInp.value = '';
             });
+            let previewOk = false;
             btn.addEventListener('click', () => {
                 const v = (id) => { const n = el.querySelector(id); return n ? n.value.trim() : ''; };
                 if (uploading) { err.textContent = 'Подождите, фото загружается'; return; }
                 if (!v('#cdTitle')) { err.textContent = 'Напишите заголовок'; return; }
+                if (!r && !previewOk && typeof cardPreview === 'function') {
+                    cardPreview('request', { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText'), photos: carOn ? cars.map(c => c.id) : undefined, art: artOn ? art : undefined }, () => { previewOk = true; btn.click(); });
+                    return;
+                }
+                previewOk = false;
                 err.textContent = '';
                 btn.disabled = true;
                 const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText') };

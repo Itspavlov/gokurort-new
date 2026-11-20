@@ -797,9 +797,15 @@ function openDvizForm(opts) {
                 for (const f of list) { try { photos.push(await svPhoto(f)); } catch (_) { err.textContent = 'Не удалось обработать фото'; } }
                 paint();
             });
+            let previewOk = false;
             btn.addEventListener('click', async () => {
                 const v = (id) => el.querySelector(id).value.trim();
                 if (!v('#dvTitle')) { err.textContent = 'Напишите, о чём поиск'; return; }
+                if (!previewOk && typeof cardPreview === 'function') {
+                    cardPreview('dviz', { title: v('#dvTitle'), text: v('#dvText'), when: v('#dvWhen'), max: v('#dvMax'), place: v('#dvPlace'), coords: coords || undefined, photos: photos.slice() }, () => { previewOk = true; btn.click(); });
+                    return;
+                }
+                previewOk = false;
                 err.textContent = ''; btn.disabled = true; const btnLbl = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Публикую…'; const unlock = () => { btn.disabled = false; btn.innerHTML = btnLbl; };
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}

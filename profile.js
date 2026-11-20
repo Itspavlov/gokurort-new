@@ -633,6 +633,11 @@ function saveAdForm() {
     const remoteId = isRemoteAdId(formState.id) ? formState.id : null;
     const legacyId = formState.id && !remoteId ? formState.id : null;
     const adCat = AD_CATS.find(c => c.id === formState.category) || AD_CATS[0];
+    if (!remoteId && !legacyId && !formState._previewOk && typeof cardPreview === 'function') {      // новое объявление: сначала предпросмотр
+        cardPreview('ad', ad, () => { formState._previewOk = true; saveAdForm(); });
+        return;
+    }
+    formState._previewOk = false;
     publishAd(ad, remoteId, (ok, saved) => {
         if (!ok) return;
         if (legacyId) saveMyAds(getMyAds().filter(a => String(a.id) !== String(legacyId)));

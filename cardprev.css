@@ -1,0 +1,16 @@
+/* Предпросмотр карточки перед публикацией */
+.cp-overlay { position: fixed; inset: 0; z-index: 6000; display: flex; align-items: flex-end; justify-content: center; background: rgba(8, 14, 30, .55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); opacity: 0; transition: opacity .2s; }
+.cp-overlay.open { opacity: 1; }
+.cp-panel { width: 100%; max-width: 480px; max-height: 94dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box; padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px)); border-radius: 28px 28px 0 0; background: var(--bg); color: var(--text); box-shadow: 0 -12px 40px rgba(0, 0, 0, .3); transform: translateY(24px); transition: transform .25s ease; }
+.cp-overlay.open .cp-panel { transform: none; }
+.cp-grab { width: 42px; height: 5px; border-radius: 3px; background: var(--glass-border, rgba(128, 128, 128, .35)); margin: 2px auto 12px; }
+.cp-title { margin: 0 2px 4px; font: 800 20px var(--font-display, var(--font)); letter-spacing: -.3px; }
+.cp-sub { margin: 0 2px 14px; color: var(--text-muted); font-size: 13.5px; line-height: 1.35; }
+.cp-stage { pointer-events: none; user-select: none; margin: 0 0 16px; }
+.cp-stage .sv-slides { overflow: hidden; }
+.cp-go { margin-bottom: 8px; }
+/* карточки в предпросмотре — как в ленте, но в одну колонку */
+.cp-stage.cp-sv { display: block; padding: 0; overflow: visible; max-width: 330px; margin: 0 auto 16px; }
+.cp-stage.cp-dv, .cp-stage.cp-req { max-width: 440px; margin: 0 auto 16px; }
+.cp-stage.cp-ad { display: flex; justify-content: center; margin-bottom: 16px; }
+.cp-stage.cp-ad .ad-card { width: 240px; flex: none; }

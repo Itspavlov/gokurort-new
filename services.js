@@ -485,6 +485,7 @@ function openServiceEditor(edit, after) {
                 paint();
                 if (list.length && photos.length === list.length) photoGuess();
             });
+            let previewOk = false;
             btn.addEventListener('click', async () => {
                 const v = (id) => el.querySelector(id).value.trim();
                 if (!v('#svTitle')) { err.textContent = 'Напишите название'; return; }
@@ -492,6 +493,11 @@ function openServiceEditor(edit, after) {
                 readFacts();
                 const fullText = svPackText(tag, facts, v('#svText'));
                 if (fullText.length > 800) { err.textContent = 'Слишком длинно: сократите описание'; return; }
+                if (!edit && !previewOk && typeof cardPreview === 'function') {      // новая карточка: сначала предпросмотр
+                    cardPreview('service', { title: v('#svTitle'), tag, price: v('#svPrice'), unit: el.querySelector('#svUnit').value, city: v('#svCity'), place: v('#svPlace'), phone: el.querySelector('#svHidePhone').checked ? '' : v('#svPhone'), coords: picker.get() || null, photos: photos.slice() }, () => { previewOk = true; btn.click(); });
+                    return;
+                }
+                previewOk = false;
                 err.textContent = ''; btn.disabled = true; const btnLbl = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохраняю…'; const unlock = () => { btn.disabled = false; btn.innerHTML = btnLbl; };
                 let thumb = '';
                 try { if (photos[0]) thumb = await svThumb(photos[0]); } catch (_) {}
