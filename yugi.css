@@ -2337,3 +2337,67 @@ html.on-home-top { background-color: var(--hero-top); }
 /* фото шапки теперь само продолжается выше экрана, поэтому плоская плашка под строкой состояния не нужна — именно она «отрезала» верх и пропадала при прокрутке */
 #topTint { display: none !important; }
 :root[data-theme="sky"] .hero-mirror { filter: saturate(1.05) brightness(1.1); }
+
+/* ===== v111: карточки готовых услуг по новому макету — стеклянная карточка, панель с изогнутым краем поверх фото ===== */
+.sv-cell, .sv-grid .sv-cell { gap: 0; border-radius: 28px; overflow: hidden; border: 1px solid var(--glass-border, var(--rq-border)); background: linear-gradient(165deg, var(--glass-strong), var(--glass)); box-shadow: var(--shadow, 0 12px 30px rgba(8, 20, 38, .2)); }
+.sv-cell .sv-tile, .sv-grid .sv-tile { border-radius: 0; height: 252px; }
+.sv-cell .sv-tile::after { background: linear-gradient(180deg, rgba(8, 14, 34, .42) 0%, rgba(8, 14, 34, 0) 26%, rgba(8, 14, 34, 0) 58%, rgba(8, 14, 34, .5) 100%); }
+.sv-cell .sv-t-top { padding: 14px 14px 0; gap: 9px; }
+.sv-cell .sv-t-top > .chat-avatar { width: 40px; height: 40px; font-size: 16px; border: 2px solid rgba(255, 255, 255, .9); box-shadow: 0 3px 10px rgba(0, 0, 0, .28); }
+.sv-cell .sv-t-by b { font-size: 15px; font-weight: 800; }
+.sv-cell .sv-t-by small { font-size: 12px; opacity: .88; }
+.sv-cell .sv-t-by .pf-check { font-size: 13px; color: #5AB0FF; }
+.sv-cell .sv-t-top em { padding: 7px 12px; border-radius: 99px; font-size: 13px; background: rgba(255, 255, 255, .26); border: 1px solid rgba(255, 255, 255, .45); color: #fff; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.sv-cell .sv-t-bottom { padding: 0 14px 40px; }
+.sv-cell .sv-t-tag { padding: 7px 13px; font-size: 13px; background: rgba(255, 255, 255, .28); border: 1px solid rgba(255, 255, 255, .5); color: #fff; }
+.sv-cell .sv-t-pricetag { display: none; }
+/* панель: полупрозрачное стекло с изогнутым верхним краем, наезжает на фото */
+.sv-cell .sv-panel { position: relative; z-index: 2; margin-top: -30px; padding: 24px 16px 14px; gap: 12px; border: 0; border-radius: 30px 30px 0 0; background: var(--glass-strong); box-shadow: 0 -6px 18px rgba(10, 20, 50, .12), 0 1px 0 rgba(255, 255, 255, .7) inset; }
+.sv-cell > .sv-panel:last-child { border-radius: 30px 30px 0 0; }
+.sv-cell .sv-panel .sv-t-title { font-size: 21px; font-weight: 800; letter-spacing: -.4px; line-height: 1.15; }
+.sv-cell .sv-panel .sv-t-city { margin-top: 5px; font-size: 15px; color: var(--text-secondary); }
+.sv-cell .sv-panel .sv-t-city i { color: #F25C6E; margin-right: 6px; font-size: 14px; }
+/* кнопки: широкое «Написать», квадратные «Карта» и телефон */
+.sv-cell .sv-panel .sv-t-btns { gap: 10px; align-items: stretch; }
+.sv-cell .sv-panel .sv-t-btns .sv-cta { flex: none; height: 56px; border-radius: 20px; border: 1px solid var(--glass-border); background: var(--glass-strong); color: var(--text); box-shadow: 0 4px 12px rgba(30, 40, 90, .1); }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.main { flex: 1 1 0; min-width: 0; border: 0; border-radius: 99px; font-size: 17px; color: var(--on-sea, #fff); background: var(--sea); background: linear-gradient(135deg, color-mix(in srgb, var(--sea) 62%, #fff) 0%, var(--sea) 100%); box-shadow: 0 8px 20px color-mix(in srgb, var(--sea) 38%, transparent); }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.main > i { font-size: 17px; }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.map { width: 66px; flex-direction: column; gap: 3px; padding: 0; font-size: 12.5px; font-weight: 700; }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.map > i { font-size: 19px; color: var(--sea); }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.call { width: 56px; padding: 0; background: var(--glass-strong); color: var(--sea); }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.call > span { display: none; }
+.sv-cell .sv-panel .sv-t-btns .sv-cta.call > i { font-size: 20px; }
+.sv-cell .sv-panel .sv-t-btns .sv-cta:not(.main):not(.map):not(.call) { flex: 1 1 0; }
+/* нижняя строка: цена и «Проверено» */
+.sv-cell .sv-t-foot2 { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding-top: 12px; border-top: 1px solid var(--glass-border); }
+.sv-pill { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; padding: 7px 12px; border-radius: 99px; background: var(--glass-strong); border: 1px solid var(--glass-border); font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sv-pill b { font-weight: 800; }
+.sv-pill small { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; }
+.sv-pill.ok { flex: none; }
+.sv-pill.price > i { color: #F2A52E; font-size: 15px; }
+.sv-pill.price.ask > i { color: var(--text-muted); }
+.sv-pill.ok { margin-left: auto; font-weight: 700; }
+.sv-pill.ok > i { color: var(--sea); font-size: 17px; }
+/* карточка в ленте запросов (две в ряд): тот же вид, но компактнее */
+.req-item.sv-item .sv-cell { border-radius: 22px; }
+.req-item.sv-item .sv-cell .sv-tile { height: 168px; }
+.req-item.sv-item .sv-cell .sv-t-top { padding: 9px 9px 0; }
+.req-item.sv-item .sv-cell .sv-t-top > .chat-avatar { width: 28px; height: 28px; font-size: 12px; }
+.req-item.sv-item .sv-cell .sv-t-by b { font-size: 12px; }
+.req-item.sv-item .sv-cell .sv-t-by small { font-size: 10px; }
+.req-item.sv-item .sv-cell .sv-t-tag { display: none; }
+.req-item.sv-item .sv-cell .sv-panel { margin-top: -22px; padding: 12px 10px 10px; gap: 8px; border-radius: 22px 22px 0 0; }
+.req-item.sv-item .sv-cell .sv-panel .sv-t-title { font-size: 15px; }
+.req-item.sv-item .sv-cell .sv-panel .sv-t-city { font-size: 12px; margin-top: 3px; }
+.req-item.sv-item .sv-cell .sv-panel .sv-t-btns .sv-cta { height: 40px; border-radius: 14px; }
+.req-item.sv-item .sv-cell .sv-panel .sv-t-btns .sv-cta.main { border-radius: 99px; }
+.req-item.sv-item .sv-cell .sv-panel .sv-t-btns .sv-cta > span { display: none; }
+.req-item.sv-item .sv-cell .sv-panel .sv-t-btns .sv-cta.map, .req-item.sv-item .sv-cell .sv-panel .sv-t-btns .sv-cta.call { width: 40px; }
+.req-item.sv-item .sv-cell .sv-t-foot2 { padding-top: 8px; gap: 6px; }
+.req-item.sv-item .sv-pill { padding: 5px 10px; font-size: 12.5px; }
+.req-item.sv-item .sv-pill small { display: none; }
+.req-item.sv-item .sv-pill.ok { display: none; }
+/* панель и карточка одного сплошного цвета: фото не просвечивает, нет полос на стыке */
+:root { --sv-lift: rgba(255, 255, 255, .07); }
+:is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) { --sv-lift: rgba(255, 255, 255, .6); }
+.sv-cell, .sv-grid .sv-cell, .sv-cell .sv-panel { background: linear-gradient(var(--sv-lift), var(--sv-lift)), var(--bg); }
