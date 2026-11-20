@@ -2401,3 +2401,6 @@ html.on-home-top { background-color: var(--hero-top); }
 :root { --sv-lift: rgba(255, 255, 255, .07); }
 :is([data-theme="light"], [data-theme="sand"], [data-theme="surf"], [data-theme="sky"], [data-theme="eve"]) { --sv-lift: rgba(255, 255, 255, .6); }
 .sv-cell, .sv-grid .sv-cell, .sv-cell .sv-panel { background: linear-gradient(var(--sv-lift), var(--sv-lift)), var(--bg); }
+/* карточки услуг не сжимаются: у них overflow:hidden, и сетка делила на них ограниченную высоту экрана (получались «таблетки») */
+.sv-grid, #chatMessages.cards:has(.sv-item) { grid-auto-rows: max-content; }
+.sv-cell { flex-shrink: 0; min-height: min-content; }
