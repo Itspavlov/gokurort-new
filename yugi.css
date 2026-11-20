@@ -2426,3 +2426,7 @@ html.on-home-top { background-color: var(--hero-top); }
 .pub-back { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass-strong, rgba(255,255,255,.14)); color: var(--text); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
 .pub-back[hidden] { display: none; }
 .pub-back:active { transform: scale(.9); }
+/* «Мои публикации» в шапке жилья: компактная, чуть крупнее соседних кнопок */
+.chat-header-btn.room-pub-btn { height: 40px; padding: 0 12px 0 10px; gap: 7px; border-radius: 20px; font: 700 11px/1.08 var(--font); text-align: left; }
+.room-pub-btn i { font-size: 16px; }
+.room-pub-btn span { display: block; }

@@ -349,7 +349,7 @@ function setupFilters() {
     if (!head || head.querySelector('#roomPubBtn')) { applyAdFilters(); return; }
     const help = head.querySelector('.chat-help-btn');
     const tools = document.createElement('div'); tools.className = 'head-tools';
-    tools.innerHTML = '<button type="button" class="chat-header-btn room-pub-btn" id="roomPubBtn" aria-label="Мои публикации"><i class="fas fa-clipboard-list"></i><span>Мои публикации</span></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
+    tools.innerHTML = '<button type="button" class="chat-header-btn room-pub-btn" id="roomPubBtn" aria-label="Мои публикации"><i class="fas fa-clipboard-list"></i><span>Мои<br>публикации</span></button><button type="button" class="chat-header-btn" id="mapBtn" aria-label="Карта"><i class="fas fa-map-location-dot"></i></button>';
     if (help) tools.appendChild(help);
     head.appendChild(tools);
     tools.querySelector('#roomPubBtn').onclick = () => { const from = currentRoom; if (typeof closeGroup === 'function') closeGroup(); if (typeof pubGoto === 'function') pubGoto('housing', 'ads', from); else switchTab('mypubs'); };

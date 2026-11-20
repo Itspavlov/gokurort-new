@@ -159,7 +159,7 @@ function toggleCardFav(id, btn) {
         if (on && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); flyHeartToFav(btn); }
         favApi('/api/favorites', { id, on }).then(d => {
             if (!d.ok) { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast(d.message || 'Не удалось сохранить'); }
-            else { favIds = new Set(d.ids); paintCardFavs(); showToast(on ? 'Добавлено в избранное' : 'Убрано из избранного'); refreshFavSections(); if (typeof paintPubs === 'function' && document.getElementById('pubBody')) paintPubs(); }
+            else { favIds = new Set(d.ids); paintCardFavs(); if (!on) showToast('Убрано из избранного'); refreshFavSections(); if (typeof paintPubs === 'function' && document.getElementById('pubBody')) paintPubs(); }
         }).catch(() => { if (on) favIds.delete(id); else favIds.add(id); paintCardFavs(); showToast('Нет связи с сервером'); });
     });
 }
