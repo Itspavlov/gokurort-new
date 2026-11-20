@@ -2516,3 +2516,39 @@ html.on-home-top { background-color: var(--hero-top); }
 .req-item.sv-item .sv-cell .sv-panel .sv-t-btns .sv-cta.call.off { flex: 0 0 36px; width: 36px; }
 .sv-cell .sv-t-top .sv-t-who[data-sv="who"] { pointer-events: auto; cursor: pointer; }
 .sv-cell .sv-t-top .sv-t-who[data-sv="who"] { pointer-events: auto; cursor: pointer; }
+
+/* ===== v114: «Работа» и «Поездки» — карточки в стиле «Готовых услуг» ===== */
+.sv-cell.req-card.rq-sv { padding: 0; -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 24px; }
+.sv-cell.req-card.rq-sv.mine { border-color: var(--glass-border); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+.req-item:has(> .rq-sv) { margin: 0 0 30px; }
+.rq-sv .sv-t-bg .rq-art { position: absolute; inset: 0; margin: 0; padding: 0; background: none; border: 0; display: flex; align-items: center; justify-content: center; }
+.rq-sv .sv-t-bg .rq-art img { width: 100%; height: 100%; object-fit: cover; }
+.rq-sv.nophoto .sv-tile { height: 118px; }
+.rq-sv .sv-t-ico { font-size: 44px; opacity: .55; }
+.rq-sv .rq-kind { flex: none; align-self: center; padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; letter-spacing: -.1px; white-space: nowrap; color: var(--text); background: color-mix(in srgb, var(--sea) 16%, transparent); border: 1px solid color-mix(in srgb, var(--sea) 40%, transparent); }
+.rq-sv .rq-kind.offer { background: color-mix(in srgb, #25A85A 16%, transparent); border-color: color-mix(in srgb, #25A85A 42%, transparent); }
+.rq-sv .rq-kind.st { background: var(--glass); border-color: var(--glass-border); color: var(--text-secondary); }
+.rq-sv .rq-where { display: flex; flex-wrap: wrap; gap: 3px 12px; overflow: visible; white-space: normal; }
+.rq-sv .rq-where span { white-space: nowrap; }
+.rq-sv .rq-where i { margin-right: 6px; color: var(--text-secondary); font-size: 12px; }
+.rq-sv .rq-where i.fa-location-dot { color: #FF7A59; }
+.rq-sv .sv-t-price.ask small { color: var(--text-secondary); font-size: 12.5px; }
+.rq-sv .req-text { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--text-secondary); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; cursor: pointer; }
+.rq-sv .req-text.open { display: block; -webkit-line-clamp: unset; line-clamp: unset; color: var(--text); }
+.rq-sv .sv-t-btns .sf-link.ico { flex: 0 0 42px; width: 42px; height: 42px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--glass-strong); border: 1px solid var(--glass-border); color: var(--text-secondary); }
+.rq-sv .sv-t-btns .sf-link.ico span { display: none; }
+.rq-sv .sv-t-btns .sv-cta.req-del-btn { color: #E5484D; border-color: rgba(229, 72, 77, .4); background: rgba(229, 72, 77, .08); }
+.rq-sv .sv-t-btns .sv-cta.req-del-btn.sure { background: #E5484D; color: #fff; }
+.rq-sv .sv-t-btns .sv-cta:not(.main) > i { font-size: 13px; }
+
+/* ===== v115: внутри карточки услуги — тот же стиль, что снаружи ===== */
+.sv-vcard { margin: 0 0 12px; box-shadow: none; }
+.sv-vcard .sv-tile { height: 236px; }
+.sv-vcard .sv-panel { cursor: default; gap: 11px; padding-bottom: 14px; }
+.sv-vcard .sv-panel .sv-t-title { -webkit-line-clamp: 3; line-clamp: 3; font-size: 19px; }
+.sv-vcard .sv-view-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.sv-vcard .sv-facts { margin: 0; }
+.sv-vcard .sv-view-phone { margin: 0; font-size: 15px; }
+.sv-vplace { display: block; font-size: 12.5px; color: var(--text-secondary); }
+.sv-vplace i { margin-right: 6px; color: #FF7A59; }
+.sv-vcard .sv-slide img { cursor: default; }

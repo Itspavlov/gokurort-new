@@ -5,7 +5,7 @@
 let inboxUnread = 0;
 let inboxTimer = 0;
 const INBOX_ICONS = { dm: 'fa-comment', group: 'fa-user-group', reply: 'fa-reply', invite: 'fa-user-plus', verify: 'fa-shield-halved', listing: 'fa-house-circle-xmark', offer: 'fa-house-circle-check', match: 'fa-magnifying-glass-location', request: 'fa-clock', review: 'fa-star', search: 'fa-bell' };
-const INBOX_GROUPS = [['messages', 'Сообщения', 'Личные, групповые и ответы'], ['offers', 'Предложения жилья', 'Хозяева предложили вам жильё'], ['matches', 'Подходящее жильё', 'Появилось жильё под ваш запрос'], ['requests', 'Запросы', 'Срок запроса закончился'], ['reviews', 'Отзывы', 'Новые отзывы и ответы хозяев'], ['searches', 'Подписки на поиск', 'Появилось жильё по сохранённому поиску']];
+const INBOX_GROUPS = [['offers', 'Предложения жилья', 'Хозяева предложили вам жильё'], ['matches', 'Подходящее жильё', 'Появилось жильё под ваш запрос'], ['requests', 'Запросы', 'Срок запроса закончился'], ['reviews', 'Отзывы', 'Новые отзывы и ответы хозяев'], ['searches', 'Подписки на поиск', 'Появилось жильё по сохранённому поиску']];
 
 const inboxHeaders = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() });
 const inboxApi = (path, body) => fetch(SERVER_URL + path, body === undefined ? { headers: inboxHeaders() } : { method: 'POST', headers: inboxHeaders(), body: JSON.stringify(body) }).then(r => r.json());
@@ -13,13 +13,15 @@ const inboxApi = (path, body) => fetch(SERVER_URL + path, body === undefined ? {
 function paintBell() {
     const b = document.getElementById('bellBadge');
     if (!b) return;
-    b.hidden = inboxUnread <= 0;
-    b.textContent = inboxUnread > 99 ? '99+' : String(inboxUnread);
+    const n = bellCount();
+    b.hidden = n <= 0;
+    b.textContent = n > 99 ? '99+' : String(n);
     const btn = document.getElementById('bellBtn');
-    if (btn) btn.setAttribute('aria-label', inboxUnread > 0 ? 'Уведомления: ' + inboxUnread + ' новых' : 'Уведомления');
+    if (btn) btn.setAttribute('aria-label', n > 0 ? 'Уведомления: ' + n + ' новых' : 'Уведомления');
     try { if (navigator.setAppBadge) { inboxUnread > 0 ? navigator.setAppBadge(inboxUnread) : navigator.clearAppBadge(); } } catch (e) {}
 }
 
+// Колокольчик — только важное: предложения, подходящее жильё, отзывы, запросы, служебные. Сообщения живут во вкладке «Сообщения».
 function setUnread(n) { inboxUnread = Math.max(0, Number(n) || 0); paintBell(); }
 
 // ---------- цифры на нижней панели ----------
@@ -28,6 +30,7 @@ let inboxItems = [];
 const NAV_MSG_KINDS = ['dm', 'group', 'reply', 'invite'];
 const NAV_PUB_KINDS = ['offer', 'match', 'request', 'review', 'listing', 'dviz'];
 const NAV_CACHE = 'yy-navcache';
+const bellCount = () => inboxItems.reduce((n, it) => n + (!it.read && !NAV_MSG_KINDS.includes(it.kind) ? (it.count || 1) : 0), 0);
 const navCount = (kinds) => inboxItems.reduce((n, it) => n + (!it.read && kinds.includes(it.kind) ? (it.count || 1) : 0), 0);
 function paintNavBadges() {
     const set = (tab, n) => {
@@ -56,7 +59,7 @@ function paintNavFromCache() {
         });
     } catch (_) {}
 }
-function setInboxItems(items) { inboxItems = Array.isArray(items) ? items : []; paintNavBadges(); }
+function setInboxItems(items) { inboxItems = Array.isArray(items) ? items : []; paintNavBadges(); paintBell(); }
 // отметка «прочитано» сразу и у нас: не ждём ответа сервера
 function localMarkRead(sel) {
     inboxItems.forEach(it => { if ((sel && sel.all) || (sel && sel.ids && sel.ids.includes(it.id)) || (sel && sel.open && it.open === sel.open)) it.read = true; });
@@ -98,11 +101,13 @@ function openInbox() {
             const box = el.querySelector('#inboxBox');
             const draw = (d) => {
                 const e = escapeHtml;
-                const head = `<div class="inbox-top"><button type="button" data-a="all" ${d.unread ? '' : 'disabled'}>Прочитать все</button><button type="button" data-a="prefs"><i class="fas fa-sliders"></i> Настройки</button></div>`;
+                d = { ...d, items: (d.items || []).filter(it => !NAV_MSG_KINDS.includes(it.kind)) };   // сообщения сюда не попадают
+                const unreadBell = d.items.filter(it => !it.read).length;
+                const head = `<div class="inbox-top"><button type="button" data-a="all" ${unreadBell ? '' : 'disabled'}>Прочитать все</button><button type="button" data-a="prefs"><i class="fas fa-sliders"></i> Настройки</button></div>`;
                 const rows = d.items.length ? d.items.map(it => `<button type="button" class="inbox-item ${it.read ? '' : 'new'}" data-id="${e(it.id)}" data-open="${e(it.open || '')}">
                     <span class="inbox-ic kind-${e(it.kind)}"><i class="fas ${INBOX_ICONS[it.kind] || 'fa-bell'}"></i></span>
                     <span class="inbox-tx"><b>${e(it.title)}${it.count > 1 ? ' <em>×' + it.count + '</em>' : ''}</b><span>${e(it.body)}</span><small>${inboxAgo(it.time)}</small></span>${it.read ? '' : '<i class="inbox-dot"></i>'}</button>`).join('')
-                    : '<div class="req-empty"><i class="fas fa-bell"></i><b>Пока ничего нового</b><span>Здесь появятся сообщения, предложения жилья и новости по вашим запросам.</span></div>';
+                    : '<div class="req-empty"><i class="fas fa-bell"></i><b>Пока ничего нового</b><span>Здесь появятся только важные новости: предложения жилья, отзывы и ответы по вашим запросам.</span></div>';
                 box.innerHTML = head + rows;
             };
             const load = () => inboxApi('/api/notifications').then(d => { if (!d.ok) { box.innerHTML = '<p class="opt-empty">Не удалось загрузить</p>'; return; } setUnread(d.unread); setInboxItems(d.items); box._d = d; draw(d); }).catch(() => { box.innerHTML = '<p class="opt-empty">Нет связи с сервером</p>'; });
@@ -120,7 +125,10 @@ function openInbox() {
                     return;
                 }
                 const b = ev.target.closest('button[data-a]'); if (!b) return;
-                if (b.dataset.a === 'all') inboxApi('/api/notifications/read', { all: true }).then(d => { if (d.ok) { setUnread(d.unread); localMarkRead({ all: true }); load(); } });
+                if (b.dataset.a === 'all') {
+                    const ids = (box._d && box._d.items || []).filter(it => !it.read && !NAV_MSG_KINDS.includes(it.kind)).map(it => it.id).slice(0, 200);   // «Прочитать все» не трогает непрочитанные сообщения
+                    inboxApi('/api/notifications/read', { ids }).then(d => { if (d.ok) { setUnread(d.unread); localMarkRead({ ids }); load(); } });
+                }
                 else if (b.dataset.a === 'prefs') openInboxPrefs(box._d && box._d.prefs);
             });
         });

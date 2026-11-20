@@ -164,21 +164,39 @@ function openServiceView(id) {
         const s = d.service, e = escapeHtml;
         const acc = typeof getAccount === 'function' ? getAccount() : null;
         const mine = !!(acc && acc.id === s.ownerId);
-        const gal = (s.photos || []).length ? `<div class="sv-gallery">${s.photos.map((p, i) => `<img src="${e(p)}" alt="Фото ${i + 1}">`).join('')}</div>` : '';
-        openSheet(e(s.title), `
-            ${gal}
-            <div class="sv-view-price">${e(svPrice(s))}</div>
-            <div class="sv-view-meta"><span class="sv-tag">${e(SV_TAGS[s.tag] || '')}</span>${s.city ? `<span><i class="fas fa-location-dot"></i>${e(s.city)}</span>` : ''}</div>
-            ${(() => { const u = svUnpackText(s.text); return (u.facts.length ? `<div class="sv-facts">${u.facts.map(([k, v]) => `<div><small>${e(k)}</small><b>${e(v)}</b></div>`).join('')}</div>` : '') + (u.desc ? `<p class="sv-view-text">${e(u.desc)}</p>` : ''); })()}
-            ${s.coords ? `<button type="button" class="ghost-btn wide-btn sv-viewmap" data-sv="map" data-id="${e(s.id)}"><i class="fas fa-map-location-dot"></i> Карта${s.place ? ' · ' + e(s.place) : ''}</button>` : ''}
+        const photos = (s.photos || []).filter(Boolean);
+        const u = svUnpackText(s.text);
+        const bg = photos.length
+            ? `<div class="sv-slides" data-loaded="1">${photos.map((p, i) => `<div class="sv-slide"><img src="${e(p)}" alt="Фото ${i + 1}" decoding="async"></div>`).join('')}</div>`
+            : `<i class="fas ${SV_ICONS[s.tag] || 'fa-star'} sv-t-ico"></i>`;
+        const rate = s.rating ? `<span class="sv-rate"><i class="fas fa-star"></i><b>${String(s.rating).replace('.', ',')}</b>${s.reviews ? `<small>(${svRevWord(s.reviews)})</small>` : ''}</span>` : '';
+        const price = s.price
+            ? `<span class="sv-t-price"><b>${e(Number(s.price).toLocaleString('ru-RU'))} ₽</b>${s.unit ? `<small>${e(s.unit)}</small>` : ''}</span>`
+            : '<span class="sv-t-price ask"><small>Цена договорная</small></span>';
+        const btns = mine
+            ? `<button type="button" class="sv-cta" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i><span>Изменить</span></button>`
+            : `<button type="button" class="main sv-cta" data-sv="write" data-id="${e(s.id)}"><i class="far fa-comment-dots"></i><span>Написать</span></button>`
+              + (s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : `<span class="sv-cta call off" role="button" aria-disabled="true" aria-label="Номер не указан"><i class="fas fa-phone-slash"></i><span>Номер не указан</span></span>`)
+              + (s.coords ? `<button type="button" class="sv-cta map" data-sv="map" data-id="${e(s.id)}" aria-label="Карта"><i class="fas fa-location-dot"></i><span>Карта</span></button>` : '');
+        openSheet(e(SV_TAGS[s.tag] || 'Услуга'), `
+            <div class="sv-cell sv-vcard"><div class="sv-tile sv-g${(s.tag || 'other').length % 5}">
+                <div class="sv-t-bg">${bg}</div>
+                <div class="sv-t-top"><span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
+                    <span class="sv-t-by"><b>${e(mine ? 'Вы' : s.ownerName)}${s.verified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>
+                    ${photos.length > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${photos.length}</span></em>` : ''}</div>
+                </div>
+                <div class="sv-panel">
+                    <div class="sv-row1"><b class="sv-t-title">${e(s.title)}</b>${rate}</div>
+                    <div class="sv-row2">${s.city ? `<small class="sv-t-city"><i class="fas fa-location-dot"></i>${e(s.city)}</small>` : '<span></span>'}${price}</div>
+                    ${u.facts.length ? `<div class="sv-facts">${u.facts.map(([k, v]) => `<div><small>${e(k)}</small><b>${e(v)}</b></div>`).join('')}</div>` : ''}
+                    ${u.desc ? `<p class="sv-view-text">${e(u.desc)}</p>` : ''}
+                    ${s.place ? `<small class="sv-vplace"><i class="fas fa-map-pin"></i>${e(s.place)}</small>` : ''}
+                    ${mine && s.phone ? `<div class="sv-view-phone${s.hidePhone ? ' off' : ''}"><i class="fas ${s.hidePhone ? 'fa-phone-slash' : 'fa-phone'}"></i><span>${e(svFmtPhone(s.phone))}${s.hidePhone ? ' · скрыт от других' : ''}</span></div>` : ''}
+                    <span class="sv-t-btns">${btns}</span>
+                </div></div>
             <button type="button" class="sv-owner" data-sv-owner><span class="chat-avatar" data-avn="${avEsc(s.ownerName)}" style="background:${dmColor(s.ownerName)}">${avInner(s.ownerName)}</span>
-                <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие развлечения</small></span><i class="fas fa-chevron-right"></i></button>
-            ${s.phone && !mine ? `<div class="sv-view-phone"><i class="fas fa-phone"></i><a href="tel:${e(s.phone)}" data-sv="call">${e(svFmtPhone(s.phone))}</a></div>` : ''}
-            ${mine ? `${s.phone ? `<div class="sv-view-phone${s.hidePhone ? ' off' : ''}"><i class="fas ${s.hidePhone ? 'fa-phone-slash' : 'fa-phone'}"></i><span>${e(svFmtPhone(s.phone))}${s.hidePhone ? ' · скрыт от других' : ''}</span></div>` : ''}<div class="sv-view-btns"><button class="ghost-btn" data-sv="edit" data-id="${e(s.id)}"><i class="fas fa-pen"></i> Изменить</button></div>`
-                : `<div class="sv-view-act"><button class="main sv-cta" data-sv="write" data-id="${e(s.id)}"><i class="fas fa-paper-plane"></i><span>Написать</span></button>${s.phone ? `<a class="sv-cta call" href="tel:${e(s.phone)}" data-sv="call"><i class="fas fa-phone"></i><span>Позвонить</span></a>` : ''}</div>`}
-            <button type="button" class="ghost-btn wide-btn dv-from-sv" data-dv-create><i class="fas fa-champagne-glasses"></i> Создать поиск с этим развлечением</button>
+                <span><b>${e(mine ? 'Вы' : s.ownerName)}</b><small>Открыть профиль и другие услуги</small></span><i class="fas fa-chevron-right"></i></button>
             ${!mine && typeof sfReportBtn === 'function' ? `<div class="sf-row">${sfReportBtn({ kind: 'service', id: s.id, ownerId: s.ownerId, ownerName: s.ownerName, title: s.title })}</div>` : ''}`, (el) => {
-            el.querySelector('[data-dv-create]').addEventListener('click', () => { closeSheet(); if (typeof openDvizForm === 'function') openDvizForm({ attach: s }); });
             el.querySelector('[data-sv-owner]').addEventListener('click', () => { closeSheet(); if (typeof openUserProfile === 'function') openUserProfile({ id: s.ownerId, name: s.ownerName }); });
             el._sv = s;
         });

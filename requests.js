@@ -148,29 +148,41 @@ document.addEventListener('scroll', (ev) => {
     dots.forEach((d, j) => d.classList.toggle('on', j === k));
 }, { capture: true, passive: true });
 
+// Карточки «Работа» и «Поездки» — в том же стиле, что и «Готовые услуги»: фото сверху, плотная панель снизу
+const RQ_ICONS = { work: 'fa-briefcase', trips: 'fa-car-side', services: 'fa-champagne-glasses' };
 function cardHTML(r) {
     const e = escapeHtml, sec = SEC[r.section];
     const seek = r.kind !== 'offer';
-    const lines = [
-        r.city ? `<span><i class="fas fa-location-dot"></i>${e(r.city)}</span>` : '',
-        r.dateFrom ? `<span><i class="fas fa-calendar"></i>${fmtShortDate(r.dateFrom)}</span>` : '',
-        r.guests ? `<span><i class="fas fa-user-group"></i>${r.guests} ${sec && sec.seats ? 'мест' : 'чел.'}</span>` : '',
-        r.budget ? `<span><i class="fas fa-ruble-sign"></i>${seek && r.section !== 'work' ? 'до ' : ''}${Number(r.budget).toLocaleString('ru-RU')} ₽</span>` : (r.negotiable ? '<span><i class="fas fa-handshake"></i>Цена договорная</span>' : '')
-    ].join('');
-    const st = r.status !== 'active' ? `<em class="req-status">${REQ_STATUS[r.status] || ''}</em>` : `<em class="req-kind ${seek ? 'seek' : 'offer'}">${seek ? 'Ищет' : 'Предлагает'}</em>`;
-    const delBtn = `<button type="button" class="req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
-    const actions = r.status !== 'active' ? (r.mine ? delBtn : '') : (r.mine
-        ? `<button type="button" data-act="edit">Изменить</button><button type="button" data-act="closed">Закрыть</button>` + delBtn
-        : `<button type="button" class="main" data-act="write-dm"><i class="fas fa-paper-plane"></i> Написать</button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
-    const gal = carGalleryHTML(r);
-    const art = r.section === 'work' && r.kind === 'offer' && typeof artCardHTML === 'function' ? artCardHTML(r.art) : '';   // иллюстрация вакансии из библиотеки
-    return `<div class="req-card rq2 card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${gal ? ' rq-ph' : ''}${art ? ' rq-has-art' : ''}" data-rid="${e(r.id)}">
-        <div class="rq-top">${reqAvatarHTML(r)}<div class="rq-who"><b>${e(r.mine ? 'Вы' : r.ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check" title="Проверен"></i>' : ''}</b><small>${fmtAgo ? fmtAgo(r.created) : ''}</small></div>${gal ? '' : st}</div>${art}
-        <div class="rq-title">${e(r.title || '')}</div>
-        ${reqPresenceHTML(r)}
-        ${lines ? `<div class="req-lines">${lines}</div>` : ''}
-        ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
-        ${actions ? `<div class="req-actions">${actions}</div>` : ''}${gal ? st.replace('<em class="', '<em class="rq-kind-low ') + gal : ''}</div>`;
+    const act = r.status === 'active';
+    const ph = (Array.isArray(r.photos) ? r.photos : []).filter(id => MEDIA_ID_RE.test(String(id))).slice(0, 3);
+    const art = !ph.length && r.section === 'work' && r.kind === 'offer' && typeof artCardHTML === 'function' ? artCardHTML(r.art) : '';
+    const bg = ph.length
+        ? `<div class="sv-slides" data-loaded="1">${ph.map((id, i) => `<div class="sv-slide"><img src="${e(carUrl(id))}" alt="Фото ${i + 1}" data-ph="${i}" loading="${i ? 'lazy' : 'eager'}" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('')}</div>`
+        : (art || `<i class="fas ${RQ_ICONS[r.section] || 'fa-star'} sv-t-ico"></i>`);
+    const kindPill = !act ? `<span class="rq-kind st">${REQ_STATUS[r.status] || ''}</span>` : `<span class="rq-kind ${seek ? 'seek' : 'offer'}">${seek ? 'Ищет' : 'Предлагает'}</span>`;
+    const where = [r.city ? `<i class="fas fa-location-dot"></i>${e(r.city)}` : '', r.dateFrom ? `<i class="fas fa-calendar"></i>${fmtShortDate(r.dateFrom)}` : '',
+        r.guests ? `<i class="fas fa-user-group"></i>${r.guests} ${sec && sec.seats ? 'мест' : 'чел.'}` : ''].filter(Boolean).map(x => `<span>${x}</span>`).join('');
+    const price = r.budget
+        ? `<span class="sv-t-price"><b>${seek && r.section !== 'work' ? 'до ' : ''}${e(Number(r.budget).toLocaleString('ru-RU'))} ₽</b></span>`
+        : `<span class="sv-t-price ask"><small>${r.negotiable ? 'Цена договорная' : ''}</small></span>`;
+    const delBtn = `<button type="button" class="sv-cta req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
+    const btns = !act ? (r.mine ? delBtn : '') : (r.mine
+        ? `<button type="button" class="sv-cta" data-act="edit"><i class="fas fa-pen"></i><span>Изменить</span></button><button type="button" class="sv-cta" data-act="closed"><span>Закрыть</span></button>` + delBtn
+        : `<button type="button" class="main sv-cta" data-act="write-dm"><i class="far fa-comment-dots"></i><span>Написать</span></button>` + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
+    const ownerName = r.mine ? 'Вы' : r.ownerName;
+    return `<div class="sv-cell req-card rq-sv card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}${ph.length || art ? '' : ' nophoto'}" data-rid="${e(r.id)}">
+        <div class="sv-tile sv-g${String(r.section || 'x').length % 5}">
+            <div class="sv-t-bg">${bg}</div>
+            <div class="sv-t-top"><span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span>
+                <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>
+                ${ph.length > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${ph.length}</span></em>` : ''}</div>
+        </div>
+        <div class="sv-panel">
+            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b>${kindPill}</div>
+            <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${price}</div>
+            ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
+            ${btns ? `<span class="sv-t-btns">${btns}</span>` : ''}
+        </div></div>`;
 }
 
 function reqCardHTML(r, opts = {}) {
@@ -389,7 +401,7 @@ openGroup = function () { const r = _openGroupForReq.apply(this, arguments); set
 
 // ---------- действия на карточке ----------
 function onReqCardClick(ev) {
-    const pic = ev.target.closest('.req-card .rq-gal img');
+    const pic = ev.target.closest('.req-card .rq-gal img, .req-card .sv-slides img[data-ph]');
     if (pic) {
         const c = pic.closest('.req-card'), rr = c && (reqList.find(x => x.id === c.dataset.rid) || myReqs.find(x => x.id === c.dataset.rid));
         if (rr) openCarPhotos(rr, Number(pic.dataset.ph) || 0);
