@@ -454,6 +454,7 @@ YuGi YuGi — жильё, работа, попутчики и развлечен
 Ищу работу => Looking for a job
 Например: официант, опыт 2 года => For example: waiter, 2 years of experience
 Предлагаю работу => Offering a job
+Найти сотрудника => Find an employee
 Например: нужен повар на лето => For example: a cook needed for the summer
 Оплата, ₽ => Pay, ₽
 Ищу поездку => Looking for a ride

@@ -3,7 +3,9 @@
 // Файлы: images/art/aNN.webp (крупная) и images/art/t/aNN.webp (миниатюра для выбора).
 // В карточке хранится только код вида «a22»: сервер принимает a01…a70 и больше ничего.
 // ============================================
-const ART_V = 1;
+const ART_V = 2;
+// иллюстрации с вырезанным фоном (остальные показываются «наклейкой» со скруглёнными углами)
+const ART_CUT = new Set(["a02", "a03", "a04", "a05", "a07", "a08", "a09", "a10", "a11", "a12", "a13", "a14", "a15", "a16", "a21", "a22", "a24", "a25", "a26", "a27", "a28", "a29", "a31", "a32", "a36", "a38", "a39", "a43", "a44", "a50", "a53", "a54", "a57", "a58", "a59", "a62", "a63", "a64", "a66", "a69", "a70"]);
 const ART_CATS = [['job', 'Профессии'], ['food', 'Еда и напитки'], ['water', 'Вода и пляж'], ['fun', 'Развлечения'], ['move', 'Транспорт'], ['stay', 'Жильё и сервис']];
 // [код, название, раздел, ширина, высота] — размеры нужны, чтобы страница не прыгала, пока картинка грузится
 const ART = [
@@ -86,7 +88,7 @@ const artKnown = (id) => typeof id === 'string' && Object.prototype.hasOwnProper
 function artCardHTML(id) {
     if (!artKnown(id)) return '';
     const a = ART_BY_ID[id];
-    return `<div class="rq-art"><img src="${artSrc(id)}" alt="${a[1]}" width="${a[3]}" height="${a[4]}" decoding="async" draggable="false" onerror="this.parentNode.remove()"></div>`;
+    return `<div class="rq-art${ART_CUT.has(id) ? ' cut' : ''}"><img src="${artSrc(id)}" alt="${a[1]}" width="${a[3]}" height="${a[4]}" decoding="async" draggable="false" onerror="this.parentNode.remove()"></div>`;
 }
 
 // выбор в форме: кнопка с предпросмотром и раскрывающаяся библиотека по разделам

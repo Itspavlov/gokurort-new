@@ -2552,3 +2552,22 @@ html.on-home-top { background-color: var(--hero-top); }
 .sv-vplace { display: block; font-size: 12.5px; color: var(--text-secondary); }
 .sv-vplace i { margin-right: 6px; color: #FF7A59; }
 .sv-vcard .sv-slide img { cursor: default; }
+
+/* ===== v116: «Работа» и «Поездки» — карточки ниже; иллюстрации библиотеки без фона, по центру плитки ===== */
+.rq-sv .sv-tile, .sv-cell.rq-sv .sv-tile { height: 132px; }
+.rq-sv.nophoto .sv-tile { height: 84px; }
+.rq-sv .sv-t-ico { font-size: 34px; }
+.rq-sv .sv-t-bg .rq-art { width: auto; height: auto; float: none; margin: 0; padding: 14px 0 26px; shape-outside: none; }
+.rq-sv .sv-t-bg .rq-art img { width: auto; height: 100%; max-width: 70%; object-fit: contain; border-radius: 0; box-shadow: none; filter: drop-shadow(0 8px 10px rgba(8, 20, 40, .35)); }
+.sv-cell.rq-sv .sv-t-top { padding: 8px 8px 0; }
+.sv-cell.rq-sv .sv-panel { margin-top: -16px; padding: 12px 14px 11px; gap: 7px; }
+.sv-cell.rq-sv .sv-panel::before { height: 40px; }
+.sv-cell.rq-sv .sv-panel .sv-t-title { font-size: 16px; -webkit-line-clamp: 1; line-clamp: 1; }
+.rq-sv .rq-kind { padding: 4px 10px; font-size: 11.5px; }
+.sv-cell.rq-sv .sv-t-price b { font-size: 15px; }
+.rq-sv .req-text { font-size: 13px; line-height: 1.35; -webkit-line-clamp: 1; line-clamp: 1; }
+.sv-cell.rq-sv .sv-panel .sv-t-btns .sv-cta { height: 38px; font-size: 13px; }
+.rq-sv .sv-t-btns .sf-link.ico { flex-basis: 38px; width: 38px; height: 38px; }
+.req-item:has(> .rq-sv) { margin: 0 0 22px; }
+/* иллюстрации без фона стоят прямо на плитке, остальные — «наклейкой» */
+.rq-sv .sv-t-bg .rq-art:not(.cut) img { border-radius: 16px; box-shadow: 0 8px 16px rgba(8, 20, 40, .38); filter: none; max-width: 60%; }
