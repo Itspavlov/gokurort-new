@@ -2571,3 +2571,41 @@ html.on-home-top { background-color: var(--hero-top); }
 .req-item:has(> .rq-sv) { margin: 0 0 22px; }
 /* иллюстрации без фона стоят прямо на плитке, остальные — «наклейкой» */
 .rq-sv .sv-t-bg .rq-art:not(.cut) img { border-radius: 16px; box-shadow: 0 8px 16px rgba(8, 20, 40, .38); filter: none; max-width: 60%; }
+
+/* ===== v117: «Работа» и «Поездки» — карточки сплошной заливкой своего цвета, с тенью, без картинок ===== */
+.req-item:has(> .rq-solid) { margin: 0 0 20px; }
+.req-card.rq-solid { position: relative; padding: 14px 15px 14px; border: 0; border-radius: 22px; background: var(--rc, #2F7DE1); color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: 0 14px 28px -8px color-mix(in srgb, var(--rc, #2F7DE1) 62%, transparent), 0 3px 8px rgba(8, 20, 40, .22); }
+.req-card.rq-solid.mine { border: 0; box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 14px 28px -8px color-mix(in srgb, var(--rc, #2F7DE1) 62%, transparent), 0 3px 8px rgba(8, 20, 40, .22); }
+.rq-solid .rs-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rq-solid .rs-kind { padding: 5px 11px; border-radius: 99px; font-size: 12px; font-weight: 800; letter-spacing: -.1px; background: rgba(255, 255, 255, .22); color: #fff; white-space: nowrap; }
+.rq-solid .rs-kind.st { background: rgba(0, 0, 0, .22); }
+.rq-solid .rs-who { display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 62%; padding: 3px 11px 3px 3px; border-radius: 99px; background: rgba(0, 0, 0, .22); border: 1px solid rgba(255, 255, 255, .28); color: #fff; cursor: pointer; }
+.rq-solid .rs-who .chat-avatar { width: 26px; height: 26px; font-size: 11px; flex: none; border: 0; box-shadow: none; }
+.rq-solid .rs-who b { font-size: 13px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rq-solid .rs-who .pf-check { color: #fff; font-size: 12px; }
+.rq-solid .rs-title { margin: 12px 0 0; font-size: 20px; font-weight: 800; letter-spacing: -.3px; line-height: 1.2; overflow-wrap: anywhere; }
+.rq-solid .rs-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 13px; color: rgba(255, 255, 255, .9); }
+.rq-solid .rs-meta span { white-space: nowrap; }
+.rq-solid .rs-meta i { margin-right: 6px; opacity: .85; font-size: 12px; }
+.rq-solid .rs-price { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.rq-solid .rs-price b { font-size: 22px; font-weight: 900; letter-spacing: -.4px; }
+.rq-solid .rs-price small { font-size: 12.5px; color: rgba(255, 255, 255, .85); }
+.rq-solid .req-text { margin: 10px 0 0; font-size: 13.5px; line-height: 1.4; color: rgba(255, 255, 255, .92); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; cursor: pointer; }
+.rq-solid .req-text.open { display: block; -webkit-line-clamp: unset; line-clamp: unset; }
+.rq-solid .rs-btns { display: flex; gap: 8px; align-items: center; margin-top: 13px; }
+.rq-solid .rs-btn { flex: 1 1 0; min-width: 0; height: 42px; padding: 0 12px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .16); color: #fff; font: 700 13.5px var(--font); display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; text-decoration: none; cursor: pointer; box-sizing: border-box; }
+.rq-solid .rs-btn > i { font-size: 14px; }
+.rq-solid .rs-btn:active { transform: scale(.97); }
+.rq-solid .rs-btn.main { flex: 1.35 1 0; background: #fff; border-color: #fff; color: color-mix(in srgb, var(--rc, #2F7DE1) 82%, #000); font-weight: 800; box-shadow: 0 5px 12px rgba(0, 0, 0, .18); }
+.rq-solid .rs-btn.call.off { opacity: .55; cursor: default; pointer-events: none; font-size: 12px; font-weight: 600; flex: 1.5 1 0; }
+.rq-solid .rs-btn.ico { flex: 0 0 auto; padding: 0 12px; gap: 5px; }
+.rq-solid .rs-btn.ico b { font-size: 12px; }
+.rq-solid .sf-link.ico { flex: 0 0 42px; width: 42px; height: 42px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .45); color: #fff; }
+.rq-solid .sf-link.ico span { display: none; }
+.rq-solid .rs-btn.req-del-btn { color: #fff; background: rgba(0, 0, 0, .24); border-color: rgba(255, 255, 255, .3); }
+.rq-solid .rs-btn.req-del-btn.sure { background: #E5484D; border-color: #E5484D; }
+/* форма «Найти сотрудника»: период выплат */
+.rq-pay { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.rq-pay button { height: 42px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 700 13.5px var(--font); cursor: pointer; }
+.rq-pay button.on { background: var(--sea); border-color: var(--sea); color: var(--on-sea, #fff); }
