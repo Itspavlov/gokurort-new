@@ -2643,3 +2643,9 @@ html.on-home-top { background-color: var(--hero-top); }
 .rq-photo .sv-t-who { pointer-events: auto; cursor: pointer; }
 .rq-plain .sv-t-who { margin-left: 0; margin-right: auto; }
 .rq-plain .rq-kind { margin-left: auto; }
+
+/* ===== v120: у «Готовых услуг» растушёвка тоже короче, чтобы не заходила на фото ===== */
+.sv-cell:not(.rq-sv) .sv-panel { margin-top: -6px; padding-top: 14px; }
+.sv-cell:not(.rq-sv) .sv-panel::before { height: 26px; }
+.req-item.sv-item .sv-cell:not(.rq-sv) .sv-panel { margin-top: -6px; padding-top: 10px; }
+.req-item.sv-item .sv-cell:not(.rq-sv) .sv-panel::before { height: 20px; }
