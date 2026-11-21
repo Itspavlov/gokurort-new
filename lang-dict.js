@@ -457,9 +457,9 @@ YuGi YuGi — жильё, работа, попутчики и развлечен
 Найти сотрудника => Find an employee
 Например: нужен повар на лето => For example: a cook needed for the summer
 Оплата, ₽ => Pay, ₽
-Ищу поездку => Looking for a ride
+Найти транспорт => Find a ride
 Например: ищу попутчиков Сочи → Адлер => For example: looking for fellow travelers Sochi → Adler
-Предлагаю поездку => Offering a ride
+Найти пассажиров => Find passengers
 Например: еду в Краснодар, есть 2 места => For example: going to Krasnodar, 2 seats
 Дата поездки => Trip date
 Мест => Seats
