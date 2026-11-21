@@ -2697,7 +2697,8 @@ html.on-home-top { background-color: var(--hero-top); }
 .sv-cell.rq-sv .sv-t-top .sv-t-by b { font-size: 12px; font-weight: 700; }
 .sv-cell.rq-sv .sv-t-top .sv-t-by .pf-check { font-size: 11px; }
 .card-fav.rq-fav { top: 8px; right: 8px; width: 36px; height: 36px; font-size: 16px; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: rgba(10, 16, 32, .5); }
-.card-fav.rq-fav .far { display: block; }
+.card-fav.rq-fav.on .far { display: none; }
+.card-fav.rq-fav.on .fas { display: block; color: #FF5A6E; }
 .rq-plain .card-fav.rq-fav { background: var(--glass-strong); border-color: var(--glass-border); color: var(--text-secondary); }
 .rq-photo .sv-t-top em { margin-right: 44px; }
 .rq-kind.rq-ver { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
