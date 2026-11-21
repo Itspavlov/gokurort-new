@@ -2633,8 +2633,8 @@ html.on-home-top { background-color: var(--hero-top); }
 
 /* ===== v119: поездки с фото авто — карточка как в «Готовых услугах»; плашки: слева аватарка с именем, справа «Предлагает» ===== */
 .sv-cell.rq-sv.rq-photo .sv-tile { height: 176px; }
-.sv-cell.rq-sv.rq-photo .sv-panel { margin-top: -20px; padding: 16px 14px 12px; gap: 9px; }
-.sv-cell.rq-sv.rq-photo .sv-panel::before { height: 56px; }
+.sv-cell.rq-sv.rq-photo .sv-panel { margin-top: -6px; padding: 14px 14px 12px; gap: 9px; }
+.sv-cell.rq-sv.rq-photo .sv-panel::before { height: 26px; }
 .sv-cell.rq-sv.rq-photo .sv-panel .sv-t-title { font-size: 17px; -webkit-line-clamp: 2; line-clamp: 2; }
 .sv-cell.rq-sv.rq-photo .sv-panel .sv-t-btns .sv-cta { height: 42px; font-size: 13.5px; }
 .sv-cell.rq-sv.rq-photo .sv-panel .sv-t-btns .sf-link.ico { flex-basis: 42px; width: 42px; height: 42px; }
