@@ -195,6 +195,12 @@ function cardHTML(r) {
     const tileIco = r.section === 'trips' && RQ_VEH[r.vehicle] ? RQ_VEH[r.vehicle][1] : (RQ_ICONS[r.section] || 'fa-star');
     const ownerName = r.mine ? 'Вы' : r.ownerName;
     const kindCls = act ? (seek ? ' seek' : ' offer') : ' st';
+    const isTrips = r.section === 'trips';
+    // у поездок вместо «Предлагает / Ищет» — «Проверенный / Не проверенный» и сердце избранного
+    const kindPill = `<span class="rq-kind${kindCls}">${e(kind)}</span>`;
+    const verPill = isTrips ? `<span class="rq-kind rq-ver ${r.ownerVerified ? 'ok' : 'no'}"><i class="fas ${r.ownerVerified ? 'fa-circle-check' : 'fa-circle-question'}"></i>${r.ownerVerified ? 'Проверенный' : 'Не проверенный'}</span>` : '';
+    const isFav = typeof favIds !== 'undefined' && favIds.has(r.id);
+    const favBtn = isTrips && !r.mine ? `<button type="button" class="card-fav rq-fav${isFav ? ' on' : ''}" data-fav="${e(r.id)}" aria-pressed="${isFav}" aria-label="${isFav ? 'Убрать из избранного' : 'В избранное'}" onclick="event.stopPropagation();toggleCardFav('${e(r.id)}',this)"><i class="far fa-heart"></i><i class="fas fa-heart"></i></button>` : '';
     const who = `<span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span>
                     <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>`;
     // с фото автомобиля — карточка того же размера и вида, что в «Готовых услугах»; без фото — компактная белая
@@ -204,9 +210,10 @@ function cardHTML(r) {
         <div class="sv-tile sv-g${String(r.section || 'x').length % 5}">
             <div class="sv-t-bg">${slides}</div>
             <div class="sv-t-top">${who}${ph.length > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${ph.length}</span></em>` : ''}</div>
+            ${favBtn}
         </div>
         <div class="sv-panel">
-            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b><span class="rq-kind${kindCls}">${e(kind)}</span></div>
+            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b>${isTrips ? verPill : kindPill}</div>
             <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${priceHTML}</div>
             ${tagsHTML}
             ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
@@ -216,10 +223,11 @@ function cardHTML(r) {
     return `<div class="sv-cell req-card rq-sv rq-plain card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="sv-tile rq-tile">
             <i class="fas ${tileIco} rq-ico"></i>
-            <div class="sv-t-top">${who}<span class="rq-kind${kindCls}">${e(kind)}</span></div>
+            <div class="sv-t-top">${who}${isTrips ? '' : kindPill}</div>
+            ${favBtn}
         </div>
         <div class="sv-panel">
-            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b></div>
+            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b>${verPill}</div>
             <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${priceHTML}</div>
             ${tagsHTML}
             ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
@@ -329,6 +337,7 @@ function paintRequests() {
     }
     cardsNewestFirst(msgs);
     updateDockState();
+    if (typeof paintCardFavs === 'function') paintCardFavs();
     if (added) msgs.scrollTop = 0;
 }
 

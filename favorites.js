@@ -69,6 +69,13 @@ function openAdFromCard(light) {
 }
 
 // ---------- разделы в профиле ----------
+// Избранная карточка поездки: название, маршрут и цена
+function favTripHTML(r) {
+    const e = escapeHtml, price = r.negotiable ? 'Цена договорная' : (r.budget ? (r.kind === 'seek' ? 'до ' : '') + Number(r.budget).toLocaleString('ru-RU') + ' ₽' : '');
+    return `<div class="opt-card" data-lid="${e(r.id)}" data-kind="${e(r.kind)}"><div class="opt-thumb rq-fav-ico"><i class="fas fa-car-side"></i></div>
+        <div class="opt-info"><b>${e(r.title || '')}</b><small>${e([r.city, price].filter(Boolean).join(' · '))}</small>
+        <div class="opt-btns"><button class="main" data-a="open-req">Открыть</button><button data-a="unfav" aria-label="Убрать из избранного"><i class="fas fa-heart-crack"></i></button></div></div></div>`;
+}
 function favCardHTML(l, withRemove) {
     return listingMiniHTML({ id: l.id, title: l.title, price: l.price, location: l.location, thumb: l.thumb || l.image || '' },
         `<button class="main" data-a="open">Открыть</button>${withRemove ? '<button data-a="unfav" aria-label="Убрать из избранного"><i class="fas fa-heart-crack"></i></button>' : ''}`);
@@ -81,21 +88,22 @@ function recentCardHTML(l) {
         <b>${e(l.title)}</b><small>${e(l.price || '')}</small>${l.location ? `<small class="rc-loc">${e(l.location)}</small>` : ''}</button>`;
 }
 
-let favList = [], favSvc = [];
+let favList = [], favSvc = [], favReqs = [];
 function paintFavSections() {
     const fav = document.getElementById('favBox'), rec = document.getElementById('recentBox');
     const svBlock = favSvc.length && typeof serviceFeedHTML === 'function' ? `<div class="opt-sec fav-svc-h">Услуги: ${favSvc.length}</div><div class="fav-svc sv-grid">${favSvc.map(serviceFeedHTML).join('')}</div>` : '';
-    if (fav) fav.innerHTML = favList.length || favSvc.length ? (favList.length ? favList.map(l => favCardHTML(l, true)).join('') : '') + svBlock
+    const tripBlock = favReqs.length ? `<div class="opt-sec fav-svc-h">Поездки: ${favReqs.length}</div>${favReqs.map(favTripHTML).join('')}` : '';
+    if (fav) fav.innerHTML = favList.length || favSvc.length || favReqs.length ? (favList.length ? favList.map(l => favCardHTML(l, true)).join('') : '') + svBlock + tripBlock
         : `<div class="req-empty"><i class="fas fa-heart"></i><b>Пока пусто</b><span>${getToken() ? 'Нажмите «В избранное» в карточке жилья, чтобы вернуться к нему позже.' : 'Войдите в аккаунт, чтобы сохранять жильё в избранное.'}</span></div>`;
-    const secF = document.getElementById('favHead'); if (secF) secF.textContent = 'Избранное' + (favList.length + favSvc.length ? ': ' + (favList.length + favSvc.length) : '');
+    const secF = document.getElementById('favHead'); if (secF) secF.textContent = 'Избранное' + (favList.length + favSvc.length + favReqs.length ? ': ' + (favList.length + favSvc.length + favReqs.length) : '');
     const r = getRecent();
     if (rec) { rec.innerHTML = r.map(recentCardHTML).join(''); const s = document.getElementById('recentSec'); if (s) s.hidden = !r.length; }
 }
 
 function refreshFavSections() {
     if (!document.getElementById('favBox')) return;
-    if (!getToken()) { favList = []; favSvc = []; paintFavSections(); return; }
-    favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; favSvc = d.services || []; paintFavSections(); if (document.getElementById('pubBody') && typeof paintPubs === 'function') paintPubs(); } }).catch(() => {});
+    if (!getToken()) { favList = []; favSvc = []; favReqs = []; paintFavSections(); return; }
+    favApi('/api/favorites').then(d => { if (d && d.ok) { favIds = new Set(d.ids); favList = d.listings || []; favSvc = d.services || []; favReqs = d.requests || []; paintFavSections(); if (document.getElementById('pubBody') && typeof paintPubs === 'function') paintPubs(); } }).catch(() => {});
 }
 
 // ---------- окно «Избранное» (сердечко в шапке) ----------
@@ -114,6 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function onFavClick(ev) {
     const b = ev.target.closest('#favBox button[data-a], #recentBox button[data-a]'); if (!b) return;
     const card = b.closest('.opt-card, .rc-card'); const id = card.dataset.lid;
+    if (b.dataset.a === 'open-req') {
+        if (typeof pubShowInFeed === 'function') { closeSheet(); pubShowInFeed({ section: 'trips', kind: card.dataset.kind, rid: id }); }
+        return;
+    }
     if (b.dataset.a === 'open') {
         const l = favList.find(x => x.id === id);
         if (l) { closeSheet(); openAdFromCard(l); return; }
@@ -121,7 +133,7 @@ function onFavClick(ev) {
         if (typeof findAd === 'function' && findAd(id)) { closeSheet(); openListing(id); }
         else if (typeof fetchFullAd === 'function') fetchFullAd(id, (ok) => { if (ok) { closeSheet(); openListing(id); } else showToast('Объявление больше недоступно'); });
     } else if (b.dataset.a === 'unfav') {
-        favApi('/api/favorites', { id, on: false }).then(d => { if (d.ok) { favIds = new Set(d.ids); favList = favList.filter(x => x.id !== id); paintFavSections(); if (typeof paintPubs === 'function' && document.getElementById('pubBody')) paintPubs(); } else showToast(d.message || 'Не удалось'); }).catch(() => showToast('Нет связи с сервером'));
+        favApi('/api/favorites', { id, on: false }).then(d => { if (d.ok) { favIds = new Set(d.ids); favList = favList.filter(x => x.id !== id); favReqs = favReqs.filter(x => x.id !== id); paintFavSections(); if (typeof paintPubs === 'function' && document.getElementById('pubBody')) paintPubs(); } else showToast(d.message || 'Не удалось'); }).catch(() => showToast('Нет связи с сервером'));
     }
 }
 

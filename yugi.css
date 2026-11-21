@@ -2690,3 +2690,18 @@ html.on-home-top { background-color: var(--hero-top); }
 .sv-cell.rq-sv .sv-slides.one { overflow: hidden; touch-action: pan-y; scroll-snap-type: none; }
 .sv-cell.rq-sv { contain: layout style; }
 .sv-cell.rq-sv .sv-slide img { transform: translateZ(0); }
+
+/* ===== v125: поездки — сердце избранного, «Проверенный / Не проверенный», аватар и имя помельче ===== */
+.sv-cell.rq-sv .sv-t-top .sv-t-who { padding: 3px 9px 3px 3px; gap: 6px; max-width: 56%; }
+.sv-cell.rq-sv .sv-t-top .sv-t-who .chat-avatar { width: 22px !important; height: 22px !important; font-size: 11px !important; flex: none; }
+.sv-cell.rq-sv .sv-t-top .sv-t-by b { font-size: 12px; font-weight: 700; }
+.sv-cell.rq-sv .sv-t-top .sv-t-by .pf-check { font-size: 11px; }
+.card-fav.rq-fav { top: 8px; right: 8px; width: 36px; height: 36px; font-size: 16px; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background: rgba(10, 16, 32, .5); }
+.card-fav.rq-fav .far { display: block; }
+.rq-plain .card-fav.rq-fav { background: var(--glass-strong); border-color: var(--glass-border); color: var(--text-secondary); }
+.rq-photo .sv-t-top em { margin-right: 44px; }
+.rq-kind.rq-ver { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
+.rq-kind.rq-ver i { font-size: 11px; }
+.rq-kind.rq-ver.ok { background: rgba(37, 168, 90, .16); border-color: rgba(37, 168, 90, .45); color: #1E8F4E; }
+.rq-kind.rq-ver.no { background: rgba(128, 140, 160, .16); border-color: rgba(128, 140, 160, .4); color: var(--text-secondary); }
+.rq-fav-ico { display: grid; place-items: center; background: var(--glass-strong); color: var(--sea); font-size: 22px; }
