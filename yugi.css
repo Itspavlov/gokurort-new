@@ -2682,3 +2682,11 @@ html.on-home-top { background-color: var(--hero-top); }
 .req-skel .sk-l { height: 11px; width: 44%; }
 .req-skel .sk-b { height: 38px; width: 100%; border-radius: 19px; }
 @media (prefers-reduced-motion: reduce) { .req-skel, .req-skel .sk::after { animation: none; } }
+
+/* ===== v124: лента «Работа/Поездки» без тормозов: без размытия фона под плашками, одиночное фото не перехватывает вертикальную прокрутку ===== */
+.sv-cell.rq-sv, .sv-cell.rq-sv * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.sv-cell.rq-photo .sv-t-who { background: rgba(10, 16, 32, .66); }
+.sv-cell.rq-photo .sv-t-top em { background: rgba(12, 16, 34, .66); }
+.sv-cell.rq-sv .sv-slides.one { overflow: hidden; touch-action: pan-y; scroll-snap-type: none; }
+.sv-cell.rq-sv { contain: layout style; }
+.sv-cell.rq-sv .sv-slide img { transform: translateZ(0); }

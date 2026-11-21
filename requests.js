@@ -199,7 +199,7 @@ function cardHTML(r) {
                     <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>`;
     // с фото автомобиля — карточка того же размера и вида, что в «Готовых услугах»; без фото — компактная белая
     if (ph.length) {
-        const slides = `<div class="sv-slides" data-loaded="1">${ph.map((id, i) => `<div class="sv-slide"><img src="${e(carUrl(id))}" alt="Фото ${i + 1}" data-ph="${i}" loading="lazy" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('')}</div>`;
+        const slides = `<div class="sv-slides${ph.length < 2 ? ' one' : ''}" data-loaded="1">${ph.map((id, i) => `<div class="sv-slide"><img src="${e(carUrl(id))}" alt="Фото ${i + 1}" data-ph="${i}" loading="lazy" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('')}</div>`;
         return `<div class="sv-cell req-card rq-sv rq-photo card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="sv-tile sv-g${String(r.section || 'x').length % 5}">
             <div class="sv-t-bg">${slides}</div>
