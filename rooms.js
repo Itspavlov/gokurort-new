@@ -150,7 +150,7 @@ function placeTip() {
 // step: { sel | el, title, text, next, action: {label, fn}, index, total }
 function showTip(step, onNext, onClose) {
     closeTip();
-    const anchor = step.el || document.querySelector(step.sel);
+    const anchor = step.el || (step.get && step.get()) || (step.sel && document.querySelector(step.sel));
     if (!anchor) return false;
     if (!anchor.getClientRects().length) return 'hidden';     // экран уже закрыт (зашли и быстро вышли): подсказку не показываем
     tipAnchor = anchor;
@@ -188,7 +188,7 @@ function showTip(step, onNext, onClose) {
     document.body.appendChild(tipEl);
 
     const sc = anchor.closest('.chat-messages');
-    if (sc && anchor.classList.contains('chat-message')) anchor.scrollIntoView({ block: 'center' });
+    if ((sc && anchor.classList.contains('chat-message')) || (anchor.matches && anchor.matches('.req-card, .sv-cell'))) anchor.scrollIntoView({ block: 'center' });
     window.addEventListener('resize', placeTip);
     placeTip();
     if (step.demo === 'swipe') startSwipeDemo(anchor);
@@ -201,7 +201,7 @@ function showTip(step, onNext, onClose) {
 // Тур из нескольких подсказок. Показывается один раз; force — по кнопке «?».
 function runTour(id, steps, force) {
     if (!force && tipSeen(id)) return;
-    const list = steps.filter(s => { const a = s.el || document.querySelector(s.sel); return a && a.getClientRects().length; });
+    const list = steps.filter(s => { const a = s.el || (s.get && s.get()) || (s.sel && document.querySelector(s.sel)); return a && a.getClientRects().length; });
     if (!list.length) return;
     let i = 0;
     const finish = () => { tipMark(id); closeTip(); };

@@ -267,11 +267,12 @@ function dvSetTab(tab) {
 function dvTour(force) {
     if (!document.getElementById('dvPane')) return;
     if (dvTab === 'svc') {
-        runTour('dv-svc2', [
+        const go = () => runTour('dv-svc3', [
             helpStep(),
-            { sel: '.dv-tab[data-dvt="svc"]', pulse: true, img: 'images/tip-services.jpg?v=1', imgAlt: 'Пример карточки морской прогулки', title: 'Готовые услуги', text: 'Здесь организаторы размещают морские прогулки, экскурсии, джип-туры и другие развлечения: фото, цена и кнопка «Написать». Листайте карточки, выбирайте категорию сверху. ' + (window.FEATURE_DVIZ === false ? '' : 'Ищете компанию на отдых? Смотрите вкладку «Сейчас ищут».') },
+            { get: () => tipCard('джип'), title: 'Так выглядит услуга', text: 'Фото, цена и организатор. Кнопки «Написать» и «Позвонить» связывают с ним напрямую. Фото листаются свайпом, тап по карточке открывает подробности.' },
             { sel: '.dv-svc-add', title: 'Кнопка «Разместить услугу»', text: 'Катаете на катере, водите экскурсии, возите на джипах? Нажмите, заполните форму с фото и ценой: карточку увидят все.' }
         ], force);
+        if (typeof tipWhenCards === 'function') tipWhenCards(go); else go();
     } else {
         runTour('dv-dviz2', [
             helpStep(),
