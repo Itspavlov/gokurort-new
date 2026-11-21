@@ -2649,3 +2649,17 @@ html.on-home-top { background-color: var(--hero-top); }
 .sv-cell:not(.rq-sv) .sv-panel::before { height: 26px; }
 .req-item.sv-item .sv-cell:not(.rq-sv) .sv-panel { margin-top: -6px; padding-top: 10px; }
 .req-item.sv-item .sv-cell:not(.rq-sv) .sv-panel::before { height: 20px; }
+
+/* ===== v121: поездки — теги авто/животное/багаж, раскрытие по тапу, фильтр по типу авто ===== */
+.rq-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.rq-tag { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font: 700 12px var(--font); white-space: nowrap; }
+.rq-tag i { font-size: 11px; color: var(--sea, #2BC4D6); }
+.sv-cell.rq-sv.rq-open .req-text { display: block !important; -webkit-line-clamp: unset !important; line-clamp: unset !important; color: var(--text); }
+.sv-cell.rq-sv.rq-open .sv-t-title { -webkit-line-clamp: unset; line-clamp: unset; display: block; }
+.sv-cell.rq-sv .sv-panel { cursor: pointer; }
+.rq-veh { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rq-veh button { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.rq-veh button i { font-size: 14px; }
+.seek-bar:has(+ .rq-fbar) { margin-bottom: 0; }
+.rq-fbar { margin: 4px 0 0; padding-bottom: 6px; position: relative; z-index: 3; }
+.rq-sq { margin-top: 0; }

@@ -149,6 +149,8 @@ document.addEventListener('scroll', (ev) => {
 }, { capture: true, passive: true });
 
 // Карточки «Работа» и «Поездки»: сплошная заливка своего цвета и тень, чтобы каждая выделялась; без картинок
+const RQ_VEH = { car: ['Легковая', 'fa-car-side'], minivan: ['Минивен', 'fa-van-shuttle'], microbus: ['Микроавтобус', 'fa-bus-simple'], bus: ['Автобус', 'fa-bus'] };
+let rqVeh = '', rqQ = '';        // фильтр поездок: тип авто и слова из поиска
 const RQ_ICONS = { work: 'fa-briefcase', trips: 'fa-car-side', services: 'fa-champagne-glasses' };
 const RQ_COLORS = ['#2F7DE1', '#E8643F', '#12A8A8', '#7C5CFF', '#C2417A', '#25A85A', '#D9822B', '#3F5BD9'];
 const rqColor = (id) => { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return RQ_COLORS[h % RQ_COLORS.length]; };
@@ -183,13 +185,17 @@ function cardHTML(r) {
         ? `<button type="button" class="sv-cta" data-act="edit"><i class="fas fa-pen"></i><span>Изменить</span></button><button type="button" class="sv-cta" data-act="closed"><span>Закрыть</span></button>` + delBtn
         : `<button type="button" class="main sv-cta" data-act="write-dm"><i class="far fa-comment-dots"></i><span>Написать</span></button>` + call
           + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
+    const tripTags = r.section === 'trips' ? [RQ_VEH[r.vehicle] ? `<span class="rq-tag"><i class="fas ${RQ_VEH[r.vehicle][1]}"></i>${RQ_VEH[r.vehicle][0]}</span>` : '',
+        r.animal ? '<span class="rq-tag"><i class="fas fa-paw"></i>С животным</span>' : '', r.luggage ? '<span class="rq-tag"><i class="fas fa-suitcase-rolling"></i>Багаж</span>' : ''].filter(Boolean).join('') : '';
+    const tagsHTML = tripTags ? `<div class="rq-tags">${tripTags}</div>` : '';
+    const tileIco = r.section === 'trips' && RQ_VEH[r.vehicle] ? RQ_VEH[r.vehicle][1] : (RQ_ICONS[r.section] || 'fa-star');
     const ownerName = r.mine ? 'Вы' : r.ownerName;
     const kindCls = act ? (seek ? ' seek' : ' offer') : ' st';
     const who = `<span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span>
                     <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>`;
     // с фото автомобиля — карточка того же размера и вида, что в «Готовых услугах»; без фото — компактная белая
     if (ph.length) {
-        const slides = `<div class="sv-slides" data-loaded="1">${ph.map((id, i) => `<div class="sv-slide"><img src="${e(carUrl(id))}" alt="Фото ${i + 1}" data-ph="${i}" loading="${i ? 'lazy' : 'eager'}" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('')}</div>`;
+        const slides = `<div class="sv-slides" data-loaded="1">${ph.map((id, i) => `<div class="sv-slide"><img src="${e(carUrl(id))}" alt="Фото ${i + 1}" data-ph="${i}" loading="lazy" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('')}</div>`;
         return `<div class="sv-cell req-card rq-sv rq-photo card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="sv-tile sv-g${String(r.section || 'x').length % 5}">
             <div class="sv-t-bg">${slides}</div>
@@ -198,18 +204,20 @@ function cardHTML(r) {
         <div class="sv-panel">
             <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b><span class="rq-kind${kindCls}">${e(kind)}</span></div>
             <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${priceHTML}</div>
+            ${tagsHTML}
             ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
             ${btns ? `<span class="sv-t-btns">${btns}</span>` : ''}
         </div></div>`;
     }
     return `<div class="sv-cell req-card rq-sv rq-plain card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="sv-tile rq-tile">
-            <i class="fas ${RQ_ICONS[r.section] || 'fa-star'} rq-ico"></i>
+            <i class="fas ${tileIco} rq-ico"></i>
             <div class="sv-t-top">${who}<span class="rq-kind${kindCls}">${e(kind)}</span></div>
         </div>
         <div class="sv-panel">
             <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b></div>
             <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${priceHTML}</div>
+            ${tagsHTML}
             ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
             ${btns ? `<span class="sv-t-btns">${btns}</span>` : ''}
         </div></div>`;
@@ -282,7 +290,11 @@ function paintRequests() {
     if (!msgs) return;
     msgs.querySelectorAll('.req-item').forEach(n => n.remove());
     // карточки запросов и (в разделе «Услуги») карточки услуг встают в ленту по времени вместе
-    const items = (reqListSec === reqSection() ? reqList : []).map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
+    const trips = reqSection() === 'trips', qq = rqQ.trim().toLowerCase();
+    const shown = (reqListSec === reqSection() ? reqList : []).filter(r => !trips || ((!rqVeh || r.vehicle === rqVeh)
+        && (!qq || [r.title, r.city, r.text, RQ_VEH[r.vehicle] ? RQ_VEH[r.vehicle][0] : ''].join(' ').toLowerCase().includes(qq))));
+    paintVehMenu();
+    const items = shown.map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
     if (reqSection() === 'services' && typeof serviceFeed !== 'undefined') {
         serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, tag: sv.tag || 'other', html: serviceFeedHTML(sv) }));
     }
@@ -299,6 +311,32 @@ function paintRequests() {
     cardsNewestFirst(msgs);
     updateDockState();
     if (added) msgs.scrollTop = 0;
+}
+
+// Меню «тип авто» у поездок (как «Все категории» в готовых услугах)
+function paintVehMenu() {
+    const lbl = document.getElementById('rqVehLbl'), menu = document.getElementById('rqVehMenu');
+    if (!lbl || !menu) return;
+    const list = reqListSec === 'trips' ? reqList : [], n = (k) => list.filter(r => r.vehicle === k).length;
+    lbl.textContent = rqVeh ? RQ_VEH[rqVeh][0] : 'Любой транспорт';
+    const item = (k, label, icon, c) => `<button type="button" role="option" class="dv-cat-item ${rqVeh === k ? 'on' : ''}" data-veh="${k}" aria-selected="${rqVeh === k}"><i class="fas ${icon}"></i><span>${label}</span><b>${c || ''}</b></button>`;
+    menu.innerHTML = item('', 'Любой транспорт', 'fa-border-all', list.length) + Object.entries(RQ_VEH).map(([k, [l, ic]]) => item(k, l, ic, n(k))).join('');
+}
+function bindTripsFilter() {
+    const bar = document.getElementById('rqFBar'); if (!bar || bar.dataset.on) return;
+    bar.dataset.on = '1';
+    const menu = document.getElementById('rqVehMenu'), btn = document.getElementById('rqVehBtn'), sq = document.getElementById('rqSQ'), sb = document.getElementById('rqSBtn'), q = document.getElementById('rqQ');
+    const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (ev) => { ev.stopPropagation(); const open = menu.hidden; menu.hidden = !open; btn.setAttribute('aria-expanded', String(open)); });
+    menu.addEventListener('click', (ev) => { const it = ev.target.closest('[data-veh]'); if (!it) return; rqVeh = it.dataset.veh; close(); paintRequests(); });
+    bar.addEventListener('click', (ev) => { if (!ev.target.closest('.dv-cat')) close(); });
+    sb.addEventListener('click', () => {
+        const open = sq.hidden; sq.hidden = !open; sb.setAttribute('aria-expanded', String(open));
+        if (open) q.focus(); else { q.value = ''; rqQ = ''; sb.classList.remove('on'); paintRequests(); }
+    });
+    let tm = 0;
+    q.addEventListener('input', () => { rqQ = q.value; sb.classList.toggle('on', !!rqQ.trim()); clearTimeout(tm); tm = setTimeout(paintRequests, 160); });
+    q.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); q.blur(); } });
 }
 
 // Счётчики на вкладках и подсказка, когда в выбранной вкладке пусто
@@ -329,13 +367,16 @@ function seekBarHTML(room) {
     const L = secLabels(SEC[room] ? room : 'housing');
     // вкладка («ищут» / «предлагают») помнится только внутри одного раздела; в другом разделе всегда открываются предложения
     const secKey = (typeof isHousingRoom === 'function' && isHousingRoom(room)) ? 'housing' : room;
-    if (secKey !== reqLastSec) reqView = 'offer';
+    if (secKey !== reqLastSec) { reqView = 'offer'; rqVeh = ''; rqQ = ''; }
     reqLastSec = secKey;
     if (reqView !== 'seek') reqView = 'offer';
     const t = (v, l) => `<button type="button" role="tab" class="seek-tab${l.length > 18 ? ' sm' : ''} ${reqView === v ? 'on' : ''}" data-v="${v}" aria-selected="${reqView === v}"><span>${l}</span><b>${L.subs[v === 'seek' ? 0 : 1]} 0</b></button>`;
     // кнопка «Фильтры» (только жильё) стоит справа от вкладок
     const filt = (typeof isHousingRoom === 'function' && isHousingRoom(room)) ? '<button type="button" class="seek-filter" id="filtBtn" aria-label="Фильтры"><i class="fas fa-sliders"></i><span class="fbadge" hidden>0</span></button>' : '';
-    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('offer', L.tabs[1])}${t('seek', L.tabs[0])}</div>${filt}</div>`;
+    const fbar = room === 'trips' ? `<div class="dv-svc-bar rq-fbar" id="rqFBar"><button type="button" class="dv-sbtn${rqQ ? ' on' : ''}" id="rqSBtn" aria-label="Поиск" aria-expanded="${rqQ ? 'true' : 'false'}"><i class="fas fa-magnifying-glass"></i></button>
+        <div class="dv-cat"><button type="button" class="dv-cat-btn" id="rqVehBtn" aria-haspopup="listbox" aria-expanded="false"><span id="rqVehLbl">Любой транспорт</span><i class="fas fa-chevron-down"></i></button><div class="dv-cat-menu" id="rqVehMenu" role="listbox" hidden></div></div></div>
+        <label class="dv-sq rq-sq" id="rqSQ"${rqQ ? '' : ' hidden'}><i class="fas fa-magnifying-glass"></i><input id="rqQ" type="search" enterkeyhint="search" autocomplete="off" maxlength="40" placeholder="Куда, откуда, легковая…" value="${escapeHtml(rqQ)}"></label>` : '';
+    return `<div class="seek-bar" id="seekBar"><div class="seek-tabs" role="tablist">${t('offer', L.tabs[1])}${t('seek', L.tabs[0])}</div>${filt}</div>${fbar}`;
 }
 const dockBtnHTML = (icon, label) => `<i class="fas ${icon}"></i> ${label}`;
 function cardsDockHTML(room) {
@@ -367,6 +408,7 @@ function setupCards() {
     const msgs = document.getElementById('chatMessages');
     if (!dock || !msgs || dock.dataset.on) return;
     dock.dataset.on = '1';
+    bindTripsFilter();
     msgs.insertAdjacentHTML('beforeend', '<div class="req-empty" id="reqEmpty" hidden></div>');
     const bar = document.getElementById('seekBar');
     if (bar) bar.addEventListener('click', (ev) => {
@@ -439,6 +481,10 @@ function onReqCardClick(ev) {
     }
     const po = ev.target.closest('.req-card [data-ph-open]');
     if (po) { const c = po.closest('.req-card'), rr = c && (reqList.find(x => x.id === c.dataset.rid) || myReqs.find(x => x.id === c.dataset.rid)); if (rr) openCarPhotos(rr, 0); return; }
+    const cardEl = ev.target.closest('.req-card');
+    if (cardEl && cardEl.classList.contains('rq-sv') && !ev.target.closest('button, a, .sv-t-who, .sv-t-btns')) {
+        cardEl.classList.toggle('rq-open'); const tx = cardEl.querySelector('.req-text'); if (tx) tx.classList.toggle('open', cardEl.classList.contains('rq-open')); return;
+    }
     const tx = ev.target.closest('.req-card .req-text');
     if (tx) { tx.classList.toggle('open'); return; }
     const btn = ev.target.closest('button[data-act]');
@@ -585,7 +631,7 @@ function openCardSheet(kind, edit, prefill) {
         if (!sec) return;
         kind = kind === 'offer' ? 'offer' : 'seek';
         const carOn = section === 'trips' && kind === 'offer';
-        const work = section === 'work', salOn = work && kind === 'offer', phoneOn = work || (section === 'trips' && kind === 'offer');
+        const tripsOn = section === 'trips', work = section === 'work', salOn = work && kind === 'offer', phoneOn = work || (section === 'trips' && kind === 'offer');
         const cfg = sec[kind], e = escapeHtml, v0 = r || (prefill ? { ...prefill, dateFrom: prefill.dateFrom && prefill.dateFrom >= todayISO() ? prefill.dateFrom : '' } : {});
         openSheet(r ? 'Изменить карточку' : cfg.head, `
             <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
@@ -596,8 +642,11 @@ function openCardSheet(kind, edit, prefill) {
             ${salOn ? `<div class="rq-row" id="cdSalBox"><label class="field"><span>Зарплата от, ₽</span><input id="cdSalFrom" type="number" inputmode="numeric" min="1" value="${v0.salaryFrom || ''}" ${v0.negotiable ? 'disabled' : ''}></label>
             <label class="field"><span>до, ₽</span><input id="cdSalTo" type="number" inputmode="numeric" min="1" value="${v0.salaryTo || ''}" ${v0.negotiable ? 'disabled' : ''}></label></div>
             <div class="field"><span>Как часто платите</span><div class="rq-pay" id="cdPay">${[['daily', 'Ежедневно'], ['weekly', 'Раз в неделю'], ['biweekly', 'Раз в две недели'], ['monthly', 'Раз в месяц']].map(([k, t]) => `<button type="button" data-pp="${k}" class="${v0.payPeriod === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>`
-            : `<label class="field" id="cdPriceBox"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}" ${v0.negotiable ? 'disabled placeholder="Цена договорная"' : ''}></label>`}
+            : (tripsOn && kind === 'seek' ? '' : `<label class="field" id="cdPriceBox"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}" ${v0.negotiable ? 'disabled placeholder="Цена договорная"' : ''}></label>`)}
             ${section !== 'services' ? `<label class="watch-top neg-row"><span><i class="fas fa-handshake"></i> Цена договорная</span><input type="checkbox" id="cdNeg" ${v0.negotiable ? 'checked' : ''}><i class="pref-sw"></i></label>` : ''}
+            ${tripsOn ? `<div class="field"><span>Тип автомобиля</span><div class="rq-pay rq-veh" id="cdVeh">${Object.entries(RQ_VEH).map(([k, [l, ic]]) => `<button type="button" data-veh="${k}" class="${v0.vehicle === k ? 'on' : ''}"><i class="fas ${ic}"></i> ${l}</button>`).join('')}</div></div>
+            <label class="watch-top neg-row"><span><i class="fas fa-paw"></i> ${kind === 'seek' ? 'Еду с животным' : 'Можно с животным'}</span><input type="checkbox" id="cdAnimal" ${v0.animal ? 'checked' : ''}><i class="pref-sw"></i></label>
+            <label class="watch-top neg-row"><span><i class="fas fa-suitcase-rolling"></i> ${kind === 'seek' ? 'Есть багаж' : 'Можно с багажом'}</span><input type="checkbox" id="cdLuggage" ${v0.luggage ? 'checked' : ''}><i class="pref-sw"></i></label>` : ''}
             ${phoneOn ? `<label class="field"><span>Телефон (необязательно)</span><input id="cdPhone" type="tel" inputmode="tel" maxlength="30" placeholder="+7 900 123-45-67" value="${e(v0.phone || '')}"></label>
             <label class="watch-top neg-row"><span><i class="fas fa-eye-slash"></i> Скрыть номер от других</span><input type="checkbox" id="cdHidePhone" ${v0.hidePhone ? 'checked' : ''}><i class="pref-sw"></i></label>` : ''}
             ${carOn ? `<div class="field"><span>Фото автомобиля (до 3, необязательно)</span><div class="photo-grid sv-photo-grid rq-photo-grid" id="cdPhotos"></div><input type="file" id="cdFile" accept="image/*" multiple hidden><small class="rq-photo-hint">Первое фото видно на карточке, остальные листаются пальцем.</small></div>` : ''}
@@ -620,6 +669,13 @@ function openCardSheet(kind, edit, prefill) {
                 const b = ev.target.closest('[data-pp]'); if (!b) return;
                 payPeriod = payPeriod === b.dataset.pp ? '' : b.dataset.pp;           // повторное нажатие снимает выбор
                 payBox.querySelectorAll('[data-pp]').forEach(x => x.classList.toggle('on', x.dataset.pp === payPeriod));
+            });
+            let vehicle = tripsOn ? (v0.vehicle || '') : '';
+            const vehBox = el.querySelector('#cdVeh');
+            if (vehBox) vehBox.addEventListener('click', (ev) => {
+                const b = ev.target.closest('[data-veh]'); if (!b) return;
+                vehicle = vehicle === b.dataset.veh ? '' : b.dataset.veh;
+                vehBox.querySelectorAll('[data-veh]').forEach(x => x.classList.toggle('on', x.dataset.veh === vehicle));
             });
             const cars = carOn && carSrc && Array.isArray(carSrc.photos) ? carSrc.photos.filter(id => MEDIA_ID_RE.test(String(id))).slice(0, 3).map(id => ({ id, src: carUrl(id) })) : [];
             let uploading = 0;
@@ -668,6 +724,7 @@ function openCardSheet(kind, edit, prefill) {
                 if (salOn && v('#cdSalFrom') && v('#cdSalTo') && Number(v('#cdSalTo')) < Number(v('#cdSalFrom'))) { err.textContent = 'Зарплата «до» не может быть меньше «от»'; return; }
                 if (!r && !previewOk && typeof cardPreview === 'function') {
                     cardPreview('request', { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText'), photos: carOn ? cars.map(c => c.id) : undefined,
+                        vehicle: tripsOn ? vehicle : '', animal: !!(el.querySelector('#cdAnimal') || {}).checked, luggage: !!(el.querySelector('#cdLuggage') || {}).checked,
                         phone: phoneOn && !(el.querySelector('#cdHidePhone') || {}).checked ? v('#cdPhone') : '', hidePhone: false,
                         salaryFrom: salOn ? v('#cdSalFrom') : undefined, salaryTo: salOn ? v('#cdSalTo') : undefined, payPeriod: salOn ? payPeriod : undefined }, () => { previewOk = true; btn.click(); });
                     return;
@@ -677,6 +734,7 @@ function openCardSheet(kind, edit, prefill) {
                 btn.disabled = true;
                 const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText') };
                 if (carOn) body.photos = cars.map(c => c.id);
+                if (tripsOn) { body.vehicle = vehicle; body.animal = !!(el.querySelector('#cdAnimal') || {}).checked; body.luggage = !!(el.querySelector('#cdLuggage') || {}).checked; }
                 if (phoneOn) { body.phone = v('#cdPhone'); body.hidePhone = !!(el.querySelector('#cdHidePhone') || {}).checked; }
                 if (salOn) { body.salaryFrom = v('#cdSalFrom'); body.salaryTo = v('#cdSalTo'); body.payPeriod = payPeriod; delete body.budget; }
                 const url = r ? `${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}` : `${SERVER_URL}/api/requests`;
