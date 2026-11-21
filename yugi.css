@@ -2663,3 +2663,20 @@ html.on-home-top { background-color: var(--hero-top); }
 .seek-bar:has(+ .rq-fbar) { margin-bottom: 0; }
 .rq-fbar { margin: 4px 0 0; padding-bottom: 6px; position: relative; z-index: 3; }
 .rq-sq { margin-top: 0; }
+
+/* ===== v122: шапка без «тумана» над поисковой строкой: размытие убрано, затемнение слабее; на светлых темах почти нет ===== */
+.hero-scene::before { -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: linear-gradient(90deg, rgba(5, 20, 42, .16) 0%, rgba(5, 20, 42, .08) 62%, rgba(5, 20, 42, 0) 100%); }
+:root[data-theme="sand"] .hero-scene::before, :root[data-theme="eve"] .hero-scene::before { background: none; }
+:root[data-theme="sand"] .hero-scene::after, :root[data-theme="eve"] .hero-scene::after {
+  background: radial-gradient(ellipse 70% 30% at 22% 80%, rgba(5, 14, 30, .30) 0%, rgba(5, 14, 30, 0) 100%), linear-gradient(100deg, rgba(5, 14, 30, .12) 0%, rgba(5, 14, 30, .03) 55%, rgba(5, 14, 30, 0) 100%); }
+
+/* ===== v123: заглушки вместо пустого окна в «Работе», «Поездках» и «Развлечениях» ===== */
+.req-skel { pointer-events: none; animation: skIn .28s ease both; }
+.req-skel .sk { display: block; position: relative; overflow: hidden; background: rgba(128, 140, 160, .18); border-radius: 8px; }
+.req-skel .sk::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .35) 50%, transparent 80%); animation: skSweep 1.2s ease-in-out infinite; }
+.req-skel .sv-tile { background: rgba(128, 140, 160, .14) !important; }
+.req-skel .sk-t { height: 16px; width: 66%; }
+.req-skel .sk-l { height: 11px; width: 44%; }
+.req-skel .sk-b { height: 38px; width: 100%; border-radius: 19px; }
+@media (prefers-reduced-motion: reduce) { .req-skel, .req-skel .sk::after { animation: none; } }

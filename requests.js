@@ -5,6 +5,7 @@
 // ============================================
 let reqList = [];
 let reqListSec = '';                 // раздел, которому принадлежит reqList
+const reqCache = {};                 // последний список по разделам: при входе показываем сразу, а свежий подтягиваем фоном
 let reqLoadSeq = 0;                  // номер последнего запроса списка: старые ответы отбрасываются
 let reqLastSec = '';                // раздел, в котором выбрана вкладка
 let reqView = 'offer';               // seek | offer: вкладки сверху, «все» убрано
@@ -77,11 +78,14 @@ function loadRequests(cb) {
             if (!d || !d.ok) throw new Error('bad');
             // ответ опоздал: пока он шёл, человек перешёл в другой раздел. Чужой список не показываем
             if (seq !== reqLoadSeq || reqSection() !== sec || (typeof currentRoom === 'string' && currentRoom !== room)) return;
-            reqList = d.requests || []; reqListSec = sec;
+            reqList = d.requests || []; reqListSec = sec; reqCache[sec] = reqList;
             if (getToken() && typeof d.cooldown === 'number') setCooldown(d.cooldown);
             paintRequests();
             cb && cb();
-        }).catch(() => { if (n < 3 && seq === reqLoadSeq) setTimeout(() => { if (seq === reqLoadSeq) attempt(n + 1); }, 700 * n); });
+        }).catch(() => {
+            if (n < 3 && seq === reqLoadSeq) setTimeout(() => { if (seq === reqLoadSeq) attempt(n + 1); }, 700 * n);
+            else if (seq === reqLoadSeq && reqListSec !== sec) { reqList = []; reqListSec = sec; paintRequests(); }     // сервер молчит: убираем заглушки, чтобы не висели вечно
+        });
     };
     attempt(1);
 }
@@ -288,12 +292,27 @@ function watchCardsOrder(box) {
 function paintRequests() {
     const msgs = document.getElementById('chatMessages');
     if (!msgs) return;
-    msgs.querySelectorAll('.req-item').forEach(n => n.remove());
     // карточки запросов и (в разделе «Услуги») карточки услуг встают в ленту по времени вместе
     const trips = reqSection() === 'trips', qq = rqQ.trim().toLowerCase();
-    const shown = (reqListSec === reqSection() ? reqList : []).filter(r => !trips || ((!rqVeh || r.vehicle === rqVeh)
+    const loaded = reqListSec === reqSection();
+    // список ещё не пришёл: вместо пустого окна показываем заглушки (в жилье свои заглушки)
+    if (!loaded && reqSection() !== 'housing') {
+        if (msgs._rqSig !== 'skel') {
+            msgs.querySelectorAll('.req-item').forEach(n => n.remove());
+            msgs.insertAdjacentHTML('beforeend', Array.from({ length: 3 }, (_, i) => `<div class="req-item req-skel" aria-hidden="true" data-ts="${Date.now() - i}"><div class="sv-cell rq-sv rq-plain"><div class="sv-tile rq-tile"></div><div class="sv-panel"><span class="sk sk-t"></span><span class="sk sk-l"></span><span class="sk sk-b"></span></div></div></div>`).join(''));
+            msgs._rqSig = 'skel';
+        }
+        updateDockState();
+        return;
+    }
+    const shown = (loaded ? reqList : []).filter(r => !trips || ((!rqVeh || r.vehicle === rqVeh)
         && (!qq || [r.title, r.city, r.text, RQ_VEH[r.vehicle] ? RQ_VEH[r.vehicle][0] : ''].join(' ').toLowerCase().includes(qq))));
     paintVehMenu();
+    // ничего не изменилось с прошлой отрисовки — ленту не трогаем, иначе карточки мигают и прокрутка прыгает
+    const sig = JSON.stringify([reqSection(), shown, reqSection() === 'services' && typeof serviceFeed !== 'undefined' ? serviceFeed.map(x => [x.id, x.updated]) : 0]);
+    if (msgs._rqSig === sig && !msgs.querySelector('.req-skel')) { updateDockState(); return; }
+    msgs._rqSig = sig;
+    msgs.querySelectorAll('.req-item').forEach(n => n.remove());
     const items = shown.map(r => ({ ts: r.created, kind: r.kind === 'offer' ? 'offer' : 'seek', rid: r.id, html: reqCardHTML(r) }));
     if (reqSection() === 'services' && typeof serviceFeed !== 'undefined') {
         serviceFeed.forEach(sv => items.push({ ts: sv.updated || sv.created, kind: 'offer', sid: sv.id, tag: sv.tag || 'other', html: serviceFeedHTML(sv) }));
@@ -349,7 +368,7 @@ function updateDockState() {
     const SB = secLabels().subs; set('seek', SB[0], seeks); set('offer', SB[1], offers);
     const empty = document.getElementById('reqEmpty');
     if (!empty) return;
-    if (msgs.querySelector('.ad-skel')) { empty.hidden = true; return; }   // идёт загрузка жилья: сообщение «пока пусто» не нужно
+    if (msgs.querySelector('.ad-skel, .req-skel')) { empty.hidden = true; return; }   // идёт загрузка жилья: сообщение «пока пусто» не нужно
     const shown = reqView === 'seek' ? seeks : reqView === 'offer' ? offers : seeks + offers;
     empty.hidden = shown > 0;
     if (!shown) {
@@ -428,6 +447,7 @@ function setupCards() {
     });
     msgs.addEventListener('click', (ev) => { if (ev.target.closest('.req-card')) onReqCardClick(ev); });
     watchCardsOrder(msgs);
+    if (reqListSec !== reqSection() && reqCache[reqSection()]) { reqList = reqCache[reqSection()]; reqListSec = reqSection(); }
     applyReqView();
     paintRequests();
     loadRequests();

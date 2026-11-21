@@ -1477,19 +1477,26 @@ function placeRemoteAds() {
     // ещё не получили список с сервера — показываем скелетон вместо пустой ленты
     if (!remoteAdsReady && !remoteAds.length) { showAdSkeleton(box); return; }
     const hadSkel = hideAdSkeleton(box);
-    box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => el.remove());
+    // обновляем точечно: неизменившиеся карточки остаются на месте (иначе вся лента мигает при каждом обновлении)
+    const have = new Map();
+    box.querySelectorAll('.chat-message-ad[data-ad-id^="l_"]').forEach(el => have.set(el.dataset.adId, el));
     const sorted = adsForRoom(currentRoom)([...remoteAds]).sort((a, b) => (a.updated || a.created || 0) - (b.updated || b.created || 0));   // поднятые встают ниже, ближе к свежим
+    const want = new Set();
     let added = 0;
     for (const ad of sorted) {
+        const html = renderHousingMessage(ad).trim(), id = String(ad.id);
+        want.add(id);
+        const old = have.get(id);
+        if (old && old._sig === html) continue;
         const tpl = document.createElement('template');
-        tpl.innerHTML = renderHousingMessage(ad).trim();
+        tpl.innerHTML = html;
         const el = tpl.content.firstElementChild;
         if (!el) continue;
-        const ts = Number(ad.updated || ad.created) || 0;
+        el._sig = html;
         if (hadSkel && added <= 5) { el.classList.add('ad-in'); el.style.setProperty('--d', (added * 45) + 'ms'); }
-        box.appendChild(el);
-        added = (added || 0) + 1;
+        if (old) old.replaceWith(el); else { box.appendChild(el); added++; }
     }
+    have.forEach((el, id) => { if (!want.has(id)) el.remove(); });
     if (typeof cardsNewestFirst === 'function') cardsNewestFirst(box);
     if (added && nearTop) box.scrollTop = 0;
     if (hadSkel && typeof updateDockState === 'function') updateDockState();

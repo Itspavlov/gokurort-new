@@ -191,22 +191,20 @@ function adImg(ad, alt) {
 const html = document.documentElement;
 const metaTheme = document.querySelector('meta[name="theme-color"]');
 
-// Темы: sea — «Морской вечер», sand — «Песок», sky — «Небо» (по умолчанию), dusk — «Закат», eve — «Светлый вечер» (светлая версия «Вечера»).
-// Старые «light» и «surf» (Прибой) переносятся на «Песок», «dark» — на «Морской вечер».
+// Темы: sea — «Морской вечер», sand — «Песок» (по умолчанию), dusk — «Закат», eve — «Светлый вечер» (светлая версия «Вечера»).
+// Старые «light», «surf» (Прибой), «sky» (Небо) и «peak» переносятся на «Песок», «dark» — на «Морской вечер».
 const THEMES = {
     sea:  { name: 'Вечер',  meta: '#060F1C', bg: '#060F1C', accent: '#FF9A5C' },
     sand: { name: 'Песок',  meta: '#FBF3E4', bg: '#FBF3E4', accent: '#F08A24' },
-    sky:  { name: 'Небо',   meta: '#F0F8FF', bg: '#F0F8FF', accent: '#0C84C4' },
     dusk: { name: 'Закат',  meta: '#121216', bg: '#121216', accent: '#FF5E8A' },
     eve:  { name: 'Светлый вечер', meta: '#EEF1FA', bg: '#EEF1FA', accent: '#E8742E' }
 };
 const THEME_FONTS = {
     sand: 'family=Nunito:wght@500;600;700;800;900',
-    sky: 'family=Nunito:wght@500;600;700;800;900',
     dusk: 'family=Space+Grotesk:wght@500;600;700',
     eve: 'family=Nunito:wght@500;600;700;800;900'
 };
-const normTheme = (t) => (t === 'light' || t === 'surf') ? 'sand' : t === 'peak' ? 'sky' : (THEMES[t] ? t : 'sea');
+const normTheme = (t) => (t === 'light' || t === 'surf' || t === 'sky' || t === 'peak') ? 'sand' : (THEMES[t] ? t : 'sea');
 function getTheme() { return normTheme(html.getAttribute('data-theme')); }
 function loadThemeFont(theme) {
     const q = THEME_FONTS[theme]; if (!q || document.getElementById('font-' + theme)) return;
@@ -223,7 +221,7 @@ function setTheme(theme) {
     if (typeof window.syncTopTint === 'function') window.syncTopTint();
     document.querySelectorAll('.theme-grid button').forEach(b => b.classList.toggle('on', b.dataset.th === theme));
 }
-setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'sky');
+setTheme((function () { try { return localStorage.getItem('tell-theme'); } catch (e) { return null; } })() || 'sand');
 
 // ---------- ИМЯ ПОЛЬЗОВАТЕЛЯ ----------
 function getUserName() {
