@@ -2706,3 +2706,10 @@ html.on-home-top { background-color: var(--hero-top); }
 .rq-kind.rq-ver.ok { background: rgba(37, 168, 90, .16); border-color: rgba(37, 168, 90, .45); color: #1E8F4E; }
 .rq-kind.rq-ver.no { background: rgba(128, 140, 160, .16); border-color: rgba(128, 140, 160, .4); color: var(--text-secondary); }
 .rq-fav-ico { display: grid; place-items: center; background: var(--glass-strong); color: var(--sea); font-size: 22px; }
+
+/* ===== v126: картинка-пример в подсказке: карточка целиком, плоская, с лёгкой тенью ===== */
+.tip-img.fit { width: min(100%, calc(min(270px, 36vh) * var(--rn, 1.33))); max-width: 100%; height: auto; aspect-ratio: var(--r, 4 / 3); max-height: none; object-fit: contain; object-position: center; margin: 0 auto 10px; border: 0; border-radius: 0; background: none; box-shadow: none; display: block; }
+.tip-pic:has(.tip-img.fit) { display: grid; place-items: center; }
+.tip-pic:has(.tip-img.fit) { transform: none; animation: none; background: none; box-shadow: none; margin: 2px 0 12px; }
+.tip-pic:has(.tip-img.fit)::before, .tip-pic:has(.tip-img.fit)::after { display: none; }
+.tip-img.fit { border-radius: 18px; box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }

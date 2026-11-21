@@ -171,7 +171,7 @@ function showTip(step, onNext, onClose) {
     // картинка-пример (скриншот карточки): место под неё резервируется заранее, чтобы подсказка не прыгала
     let pic = null;
     if (step.img) {
-        pic = document.createElement('img'); pic.className = 'tip-img'; pic.src = step.img; pic.alt = step.imgAlt || ''; pic.decoding = 'async'; pic.draggable = false;
+        pic = document.createElement('img'); pic.className = 'tip-img' + (step.imgRatio ? ' fit' : ''); if (step.imgRatio) { pic.style.setProperty('--r', step.imgRatio); const rr = String(step.imgRatio).split('/').map(Number); if (rr[0] && rr[1]) pic.style.setProperty('--rn', rr[0] / rr[1]); } pic.src = step.img; pic.alt = step.imgAlt || ''; pic.decoding = 'async'; pic.draggable = false;
         pic.onload = () => { if (tipEl) placeTip(); };
     }
     const foot = document.createElement('div'); foot.className = 'tip-foot';
