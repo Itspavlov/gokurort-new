@@ -78,7 +78,9 @@ function paintUserProfile() {
     const e = escapeHtml, d = pv.data, u = d.user;
     const color = u.color || (typeof dmColor === 'function' ? dmColor(u.name) : '#E8643F');
     const avatar = u.avatar ? `<img src="${e(u.avatar)}" alt="">` : e(Array.from(u.name || '?')[0] || '?');
-    const rate = d.count ? `<div class="up-rate"><span class="rv-big">${rateFmt(d.rating)}</span><span class="rv-stars">${starsHTML(d.rating)}</span><span class="rv-n">${d.count} ${ratingWord(d.count)}</span></div>` : '<div class="up-rate"><span class="rv-n">Пока без отзывов</span></div>';
+    const rate = d.count
+        ? `<button type="button" class="up-rate up-rate-btn${pv.tab === 'rev' ? ' on' : ''}" data-a="tab" data-t="rev" aria-label="Открыть отзывы"><span class="rv-big">${rateFmt(d.rating)}</span><span class="rv-stars">${starsHTML(d.rating)}</span><span class="rv-n">${d.count} ${ratingWord(d.count)}</span><i class="fas fa-chevron-right up-rate-go"></i></button>`
+        : `<button type="button" class="up-rate up-rate-btn${pv.tab === 'rev' ? ' on' : ''}" data-a="tab" data-t="rev" aria-label="Открыть отзывы"><span class="rv-n">Пока без отзывов</span><i class="fas fa-chevron-right up-rate-go"></i></button>`;
     const ads = d.listings || [];
     const cards = ads.length ? ads.map(a => `
         <div class="ad-card up-ad" data-ad="${e(String(a.id))}">
@@ -128,7 +130,6 @@ function paintUserProfile() {
             <div class="up-tabs">
                 <button class="${pv.tab === 'ads' ? 'on' : ''}" data-a="tab" data-t="ads">Объявления · ${ads.length}</button>
                 <button class="${pv.tab === 'svc' ? 'on' : ''}" data-a="tab" data-t="svc">Развлечения · ${svs.length}</button>
-                <button class="${pv.tab === 'rev' ? 'on' : ''}" data-a="tab" data-t="rev">Отзывы · ${d.count}</button>
             </div>
             <div class="up-body">${pv.tab === 'ads' ? `<div class="featured-list up-list">${cards}</div>` : pv.tab === 'svc' ? svcHTML : revs}</div>
         </div>`;
@@ -149,7 +150,7 @@ function onUserScreenClick(ev) {
     const a = b.dataset.a;
     if (a === 'close') closeUserProfile();
     else if (a === 'more') { if (typeof SF !== 'undefined') SF.userMenu(pv.data.user); }
-    else if (a === 'tab') { pv.tab = b.dataset.t; paintUserProfile(); }
+    else if (a === 'tab') { pv.tab = b.dataset.t; paintUserProfile(); const bd = document.querySelector('#user-screen .up-tabs'); if (bd && pv.tab === 'rev' && bd.scrollIntoView) bd.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
     else if (a === 'write') { if (!getAccount()) { showToast('Войдите в аккаунт'); return; } openReviewForm(); }
     else if (a === 'reply') openReplyForm(b.dataset.id);
     else if (a === 'del') deleteMyReview(b.dataset.id, b);

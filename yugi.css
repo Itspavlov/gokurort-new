@@ -2713,3 +2713,12 @@ html.on-home-top { background-color: var(--hero-top); }
 .tip-pic:has(.tip-img.fit) { transform: none; animation: none; background: none; box-shadow: none; margin: 2px 0 12px; }
 .tip-pic:has(.tip-img.fit)::before, .tip-pic:has(.tip-img.fit)::after { display: none; }
 .tip-img.fit { border-radius: 18px; box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
+
+/* v127: рейтинг под именем в профиле — кнопка, ведёт к отзывам */
+.up-rate-btn { background: none; border: 0; padding: 4px 10px; margin-top: 4px; border-radius: 999px; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; justify-content: center; }
+.up-rate-btn:active { background: rgba(127,127,127,.14); }
+.up-rate-btn.on { background: rgba(127,127,127,.12); }
+.up-rate-go { font-size: 10px; opacity: .45; margin-left: 2px; }
+/* v127: плашка раздела над лентой */
+.sec-note { margin: 6px 12px 10px; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.35; background: rgba(255,255,255,.07); border: 1px solid rgba(127,127,127,.18); }
+.sec-note b { font-weight: 700; }

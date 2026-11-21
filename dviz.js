@@ -241,6 +241,7 @@ function dvDockHTML() {
 function dvPaneHTML() {
     if (dvTab === 'svc') {
         return `<div class="dv-svc" id="dvSvc">
+            <div class="sec-note"><b>Чат развлечений.</b> Публикуйте карточки чаще, чтобы всегда быть на виду.</div>
             <div class="dv-svc-bar">
                 <button type="button" class="dv-sbtn${dvSvcQ ? ' on' : ''}" id="dvSBtn" aria-label="Поиск" aria-expanded="${dvSvcQ ? 'true' : 'false'}"><i class="fas fa-magnifying-glass"></i></button>
                 <div class="dv-cat"><button type="button" class="dv-cat-btn" id="dvCatBtn" aria-haspopup="listbox" aria-expanded="false"><span id="dvCatLbl"></span><i class="fas fa-chevron-down"></i></button><div class="dv-cat-menu" id="dvCatMenu" role="listbox" hidden></div></div>
