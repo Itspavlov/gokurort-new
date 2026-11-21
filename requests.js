@@ -176,20 +176,36 @@ function cardHTML(r) {
     const priceHTML = price ? `<span class="sv-t-price"><b>${e(price)}</b>${pay ? `<small>${e(pay)}</small>` : ''}</span>`
         : `<span class="sv-t-price ask"><small>${r.negotiable ? (work ? 'Оплата договорная' : 'Цена договорная') : ''}</small>${pay ? `<small>${e(pay)}</small>` : ''}</span>`;
     const delBtn = `<button type="button" class="sv-cta req-del-btn" data-act="delete"><i class="fas fa-trash"></i><span>Удалить</span></button>`;
+    const hasPhone = work || (r.section === 'trips' && !seek);
     const call = r.phone ? `<a class="sv-cta call" href="tel:${e(r.phone)}" aria-label="Позвонить"><i class="fas fa-phone"></i><span>Позвонить</span></a>`
-        : (work ? `<span class="sv-cta call off" role="button" aria-disabled="true" aria-label="Номер не указан"><i class="fas fa-phone-slash"></i><span>Номер не указан</span></span>` : '');
+        : (hasPhone ? `<span class="sv-cta call off" role="button" aria-disabled="true" aria-label="Номер не указан"><i class="fas fa-phone-slash"></i><span>Номер не указан</span></span>` : '');
     const btns = !act ? (r.mine ? delBtn : '') : (r.mine
         ? `<button type="button" class="sv-cta" data-act="edit"><i class="fas fa-pen"></i><span>Изменить</span></button><button type="button" class="sv-cta" data-act="closed"><span>Закрыть</span></button>` + delBtn
         : `<button type="button" class="main sv-cta" data-act="write-dm"><i class="far fa-comment-dots"></i><span>Написать</span></button>` + call
-          + (ph.length ? `<button type="button" class="sv-cta ico" data-ph-open aria-label="Фото"><i class="fas fa-images"></i><b>${ph.length}</b></button>` : '')
           + (typeof sfReportBtn === 'function' ? sfReportBtn({ kind: 'request', id: r.id, ownerId: r.ownerId, ownerName: r.ownerName, title: r.title || r.text, icon: true }) : ''));
     const ownerName = r.mine ? 'Вы' : r.ownerName;
+    const kindCls = act ? (seek ? ' seek' : ' offer') : ' st';
+    const who = `<span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span>
+                    <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span>`;
+    // с фото автомобиля — карточка того же размера и вида, что в «Готовых услугах»; без фото — компактная белая
+    if (ph.length) {
+        const slides = `<div class="sv-slides" data-loaded="1">${ph.map((id, i) => `<div class="sv-slide"><img src="${e(carUrl(id))}" alt="Фото ${i + 1}" data-ph="${i}" loading="${i ? 'lazy' : 'eager'}" decoding="async" draggable="false" onerror="this.style.visibility='hidden'"></div>`).join('')}</div>`;
+        return `<div class="sv-cell req-card rq-sv rq-photo card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
+        <div class="sv-tile sv-g${String(r.section || 'x').length % 5}">
+            <div class="sv-t-bg">${slides}</div>
+            <div class="sv-t-top">${who}${ph.length > 1 ? `<em><i class="fas fa-images"></i><span><span class="cur">1</span>/${ph.length}</span></em>` : ''}</div>
+        </div>
+        <div class="sv-panel">
+            <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b><span class="rq-kind${kindCls}">${e(kind)}</span></div>
+            <div class="sv-row2"><small class="sv-t-city rq-where">${where || ''}</small>${priceHTML}</div>
+            ${r.text ? `<p class="req-text">${e(r.text)}</p>` : ''}
+            ${btns ? `<span class="sv-t-btns">${btns}</span>` : ''}
+        </div></div>`;
+    }
     return `<div class="sv-cell req-card rq-sv rq-plain card-${seek ? 'seek' : 'offer'}${r.mine ? ' mine' : ''}" data-rid="${e(r.id)}">
         <div class="sv-tile rq-tile">
             <i class="fas ${RQ_ICONS[r.section] || 'fa-star'} rq-ico"></i>
-            <div class="sv-t-top"><span class="rq-kind${act ? (seek ? ' seek' : ' offer') : ' st'}">${e(kind)}</span>
-                <span class="sv-t-who"><span class="chat-avatar" data-avn="${avEsc(r.ownerName)}" style="background:${dmColor(r.ownerName)}">${avInner(r.ownerName)}</span>
-                    <span class="sv-t-by"><b>${e(ownerName)}${r.ownerVerified ? ' <i class="fas fa-circle-check pf-check"></i>' : ''}</b></span></span></div>
+            <div class="sv-t-top">${who}<span class="rq-kind${kindCls}">${e(kind)}</span></div>
         </div>
         <div class="sv-panel">
             <div class="sv-row1"><b class="sv-t-title">${e(r.title || '')}</b></div>
@@ -569,7 +585,7 @@ function openCardSheet(kind, edit, prefill) {
         if (!sec) return;
         kind = kind === 'offer' ? 'offer' : 'seek';
         const carOn = section === 'trips' && kind === 'offer';
-        const work = section === 'work', salOn = work && kind === 'offer';
+        const work = section === 'work', salOn = work && kind === 'offer', phoneOn = work || (section === 'trips' && kind === 'offer');
         const cfg = sec[kind], e = escapeHtml, v0 = r || (prefill ? { ...prefill, dateFrom: prefill.dateFrom && prefill.dateFrom >= todayISO() ? prefill.dateFrom : '' } : {});
         openSheet(r ? 'Изменить карточку' : cfg.head, `
             <p class="auth-note" style="margin:0 4px 12px">Карточка живёт 14 дней. Откликнуться можно только личным сообщением — переписки в разделе нет.</p>
@@ -582,7 +598,7 @@ function openCardSheet(kind, edit, prefill) {
             <div class="field"><span>Как часто платите</span><div class="rq-pay" id="cdPay">${[['daily', 'Ежедневно'], ['weekly', 'Раз в неделю'], ['biweekly', 'Раз в две недели'], ['monthly', 'Раз в месяц']].map(([k, t]) => `<button type="button" data-pp="${k}" class="${v0.payPeriod === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>`
             : `<label class="field" id="cdPriceBox"><span>${sec.price}</span><input id="cdPrice" type="number" inputmode="numeric" min="1" value="${v0.budget || ''}" ${v0.negotiable ? 'disabled placeholder="Цена договорная"' : ''}></label>`}
             ${section !== 'services' ? `<label class="watch-top neg-row"><span><i class="fas fa-handshake"></i> Цена договорная</span><input type="checkbox" id="cdNeg" ${v0.negotiable ? 'checked' : ''}><i class="pref-sw"></i></label>` : ''}
-            ${work ? `<label class="field"><span>Телефон (необязательно)</span><input id="cdPhone" type="tel" inputmode="tel" maxlength="30" placeholder="+7 900 123-45-67" value="${e(v0.phone || '')}"></label>
+            ${phoneOn ? `<label class="field"><span>Телефон (необязательно)</span><input id="cdPhone" type="tel" inputmode="tel" maxlength="30" placeholder="+7 900 123-45-67" value="${e(v0.phone || '')}"></label>
             <label class="watch-top neg-row"><span><i class="fas fa-eye-slash"></i> Скрыть номер от других</span><input type="checkbox" id="cdHidePhone" ${v0.hidePhone ? 'checked' : ''}><i class="pref-sw"></i></label>` : ''}
             ${carOn ? `<div class="field"><span>Фото автомобиля (до 3, необязательно)</span><div class="photo-grid sv-photo-grid rq-photo-grid" id="cdPhotos"></div><input type="file" id="cdFile" accept="image/*" multiple hidden><small class="rq-photo-hint">Первое фото видно на карточке, остальные листаются пальцем.</small></div>` : ''}
             <label class="field"><span>Подробности</span><textarea id="cdText" maxlength="300" rows="3">${e(v0.text || '')}</textarea></label>
@@ -652,7 +668,7 @@ function openCardSheet(kind, edit, prefill) {
                 if (salOn && v('#cdSalFrom') && v('#cdSalTo') && Number(v('#cdSalTo')) < Number(v('#cdSalFrom'))) { err.textContent = 'Зарплата «до» не может быть меньше «от»'; return; }
                 if (!r && !previewOk && typeof cardPreview === 'function') {
                     cardPreview('request', { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText'), photos: carOn ? cars.map(c => c.id) : undefined,
-                        phone: work && !(el.querySelector('#cdHidePhone') || {}).checked ? v('#cdPhone') : '', hidePhone: false,
+                        phone: phoneOn && !(el.querySelector('#cdHidePhone') || {}).checked ? v('#cdPhone') : '', hidePhone: false,
                         salaryFrom: salOn ? v('#cdSalFrom') : undefined, salaryTo: salOn ? v('#cdSalTo') : undefined, payPeriod: salOn ? payPeriod : undefined }, () => { previewOk = true; btn.click(); });
                     return;
                 }
@@ -661,7 +677,7 @@ function openCardSheet(kind, edit, prefill) {
                 btn.disabled = true;
                 const body = { section, kind, title: v('#cdTitle'), city: v('#cdCity'), dateFrom: v('#cdDate'), guests: v('#cdSeats'), budget: v('#cdPrice'), negotiable: !!(neg && neg.checked), text: v('#cdText') };
                 if (carOn) body.photos = cars.map(c => c.id);
-                if (work) { body.phone = v('#cdPhone'); body.hidePhone = !!(el.querySelector('#cdHidePhone') || {}).checked; }
+                if (phoneOn) { body.phone = v('#cdPhone'); body.hidePhone = !!(el.querySelector('#cdHidePhone') || {}).checked; }
                 if (salOn) { body.salaryFrom = v('#cdSalFrom'); body.salaryTo = v('#cdSalTo'); body.payPeriod = payPeriod; delete body.budget; }
                 const url = r ? `${SERVER_URL}/api/requests/${encodeURIComponent(r.id)}` : `${SERVER_URL}/api/requests`;
                 fetch(url, { method: 'POST', headers: reqAuthHeaders(), body: JSON.stringify(body) }).then(async (x) => {

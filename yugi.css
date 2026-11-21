@@ -2629,3 +2629,17 @@ html.on-home-top { background-color: var(--hero-top); }
 .rq-plain .sv-t-btns .sv-cta.ico { flex: 0 0 auto; width: auto; padding: 0 12px; gap: 5px; }
 .rq-plain .sv-t-btns .sv-cta.ico b { font-size: 12px; }
 .rq-plain .sv-t-btns .sv-cta.call.off { flex: 1.5 1 0; opacity: .5; cursor: default; font-size: 12px; font-weight: 600; pointer-events: none; }
+.rq-plain .sv-t-who, .rq-plain .sv-t-by b, .rq-plain .sv-t-top .rq-kind { text-shadow: none; }
+
+/* ===== v119: поездки с фото авто — карточка как в «Готовых услугах»; плашки: слева аватарка с именем, справа «Предлагает» ===== */
+.sv-cell.rq-sv.rq-photo .sv-tile { height: 176px; }
+.sv-cell.rq-sv.rq-photo .sv-panel { margin-top: -20px; padding: 16px 14px 12px; gap: 9px; }
+.sv-cell.rq-sv.rq-photo .sv-panel::before { height: 56px; }
+.sv-cell.rq-sv.rq-photo .sv-panel .sv-t-title { font-size: 17px; -webkit-line-clamp: 2; line-clamp: 2; }
+.sv-cell.rq-sv.rq-photo .sv-panel .sv-t-btns .sv-cta { height: 42px; font-size: 13.5px; }
+.sv-cell.rq-sv.rq-photo .sv-panel .sv-t-btns .sf-link.ico { flex-basis: 42px; width: 42px; height: 42px; }
+.sv-cell.rq-sv.rq-photo .sv-t-price b { font-size: 16px; }
+.sv-cell.rq-sv.rq-photo .req-text { -webkit-line-clamp: 2; line-clamp: 2; font-size: 13.5px; }
+.rq-photo .sv-t-who { pointer-events: auto; cursor: pointer; }
+.rq-plain .sv-t-who { margin-left: 0; margin-right: auto; }
+.rq-plain .rq-kind { margin-left: auto; }
