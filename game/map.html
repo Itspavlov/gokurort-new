@@ -1807,6 +1807,18 @@ function frame(now) {
 
 // ================= КАРТА: Архипо-Осиповка по данным OpenStreetMap =================
 // Данные © участники OpenStreetMap (ODbL). Координаты уже в метрах: x на восток, z на юг.
+const MAPERR = [];
+function mapErr(tag, e) {
+  MAPERR.push(tag + ': ' + ((e && e.message) || e)); try { console.error(tag, e); } catch (x) {}
+  try {
+    let d = document.getElementById('maperr');
+    if (!d) { d = document.createElement('div'); d.id = 'maperr'; d.style.cssText = 'position:fixed;left:6px;right:6px;bottom:6px;z-index:99;font:11px monospace;color:#fff;background:rgba(160,20,20,.88);padding:4px 8px;border-radius:8px;pointer-events:none;white-space:pre-wrap;max-height:30vh;overflow:hidden'; document.body.appendChild(d); }
+    d.textContent = MAPERR.slice(0, 6).join('\n');
+  } catch (x) {}
+}
+const safe = (tag, fn) => { try { return fn(); } catch (e) { mapErr(tag, e); return null; } };
+window.addEventListener('error', (ev) => mapErr('js', ev.error || ev.message));
+window.addEventListener('unhandledrejection', (ev) => mapErr('promise', ev.reason));
 const MAP = { lx: 0, lz: 0, bl: [], grid: new Map(), sea: null, ready: false };
 // разбиение многоугольника на треугольники методом отсечения ушей (без внешних библиотек)
 function earclip(pts) {
@@ -2003,7 +2015,7 @@ function buildMap(D) {
   layer(-7, (A) => flatPoly(A, D.sea, 0.035, hexRGB(0x3cb7da)));
   const COL = [0x5d6168, 0x666a71, 0x70747b, 0x7b7f86, 0xcdb98c, 0xe3d3a5], WID = [9, 7, 5.5, 3.6, 3, 1.8];
   // порядок: сначала широкие дороги, потом тропинки
-  grp.add(buildRoads(D));
+  safe('дороги', () => grp.add(buildRoads(D)));
   layer(-5, (A) => ribbon(A, D.coast, 2.2, 0.06, hexRGB(0xffffff), 0));
   MAP.sea = D.sea; MAP.seaZmin = D.sea.reduce((m, v, i) => (i % 2 ? Math.min(m, v) : m), 1e9);
   grp.add(buildBuildings(D));
@@ -2092,17 +2104,17 @@ function mapMode() {
   scene.children.slice().forEach((o) => { if (o !== hero.root && !o.isLight && o !== sun.target) o.visible = false; });
   scene.fog.near = 200; scene.fog.far = 1100; camera.near = 0.3; camera.far = 2500; camera.updateProjectionMatrix();
   scene.add(buildMap(MAPDATA));
-  scene.add(placesBuild());
-  scene.add(treesBuild());
+  safe('места', () => scene.add(placesBuild()));
+  safe('деревья', () => scene.add(treesBuild()));
   const p = hero.root.position, sp = SPAWNPT, face = Math.atan2(YARD_AT[0] - sp[0], YARD_AT[1] - sp[1]);   // старт на дороге, смотрим на ящики и недострои
   p.x = sp[0]; p.z = sp[1]; p.y = 0; MAP.lx = p.x; MAP.lz = p.z;
   S.seated = false; S.standing = false; S.ground = true; S.mode = 'idle'; S.hold = false; S.clip = null; S.clipRate = 0; S.yaw = face; hero.root.rotation.set(0, face, 0);
   CAMS.walk = { o: [0, 4.0, 6.4], l: [SHOULDER[0], SHOULDER[1], 0], f: 'hero' };   // камера из-за плеча, как в PUBG
   basket.visible = false; ctl.mode = 'walk'; camMode = 'walk'; camYaw = camYawS = Math.atan2(-Math.sin(face), -Math.cos(face)); camSwing = 0;
   camFocus.set(p.x, 0, p.z);
-  carInit(); pbInit();
-  treesTick(0.016, true);
-  mapLook();
+  safe('машина', carInit); safe('пейнтбол', pbInit);
+  safe('деревья0', () => treesTick(0.016, true));
+  safe('свет', mapLook);
   $('#hud').hidden = false; $('#steps').hidden = true;
   setHint('Слева — ходьба, справа — камера. Рядом машина и склад ящиков (на них можно запрыгивать), дальше два недостроя. Арена «ПЕЙНТБОЛ» — на севере.');
   setTimeout(() => setHint(''), 13000);
@@ -2553,7 +2565,7 @@ function placesBuild() {
   // арена пейнтбола: поле лежит на 0.2 м выше земли карты, опускаем модель
   const arena = placeBuild(ARENADATA, ARENAAT, { reg: [-30, 30, -39, 39], oy: -0.2, vis: 300 });
   buildSign(arena, 36.9); buildSign(arena, -36.9);
-  yardPlace(); buildingA(); buildingB();
+  safe('склад', yardPlace); safe('недострой А', buildingA); safe('недострой Б', buildingB);
   PLACES.forEach((P) => grp.add(P.root));
   return grp;
 }
@@ -2614,14 +2626,14 @@ function greenAt(x, z) {
   const m = trMaskAt(x, z); if (m) return m[0][m[1]];
   return (TR.maskFail || (typeof TILES !== 'undefined' && TILES.ok === 0 && TILES.err > 3)) ? 2 : -1;
 }
-function vnoise(x, z) {
+function trNoise(x, z) {
   const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
   const h = (a, b) => hash(a * 57 + b * 131 + 7), a = h(ix, iz), b = h(ix + 1, iz), c = h(ix, iz + 1), d = h(ix + 1, iz + 1);
   return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz;
 }
 function trCell(cx, cz) {
   const key = cx + ',' + cz; let c = TR.cells.get(key); if (c) return c;
-  const h1 = hash(cx * 73 + cz * 1949 + 11), h2 = hash(cx * 331 + cz * 17 + 3), h3 = hash(cx * 19 + cz * 7919 + 5), h4 = hash(cx * 7 + cz * 23 + 99), n = vnoise(cx * TR.cs / 80, cz * TR.cs / 80);
+  const h1 = hash(cx * 73 + cz * 1949 + 11), h2 = hash(cx * 331 + cz * 17 + 3), h3 = hash(cx * 19 + cz * 7919 + 5), h4 = hash(cx * 7 + cz * 23 + 99), n = trNoise(cx * TR.cs / 80, cz * TR.cs / 80);
   c = { x: (cx + 0.15 + 0.7 * h1) * TR.cs, z: (cz + 0.15 + 0.7 * h2) * TR.cs, want: h3 < 0.12 + 0.75 * n * n, st: 0, h: 8 + 5 * h4, ry: h1 * 6.283, s: 0.88 + 0.28 * h2 };
   TR.cells.set(key, c); return c;
 }
@@ -2689,6 +2701,9 @@ function treesBuild() {
 }
 function treesTick(dt, force) {
   if (!TR.ready) return;
+  try { treesTick2(dt, force); } catch (e) { TR.ready = false; mapErr('деревья-кадр', e); }
+}
+function treesTick2(dt, force) {
   const p = hero.root.parent === scene ? hero.root.position : { x: CAR.x, z: CAR.z };
   TR.catcher.position.x = p.x; TR.catcher.position.z = p.z;
   TR.t -= dt; if (TR.t > 0 && !force) return; TR.t = 0.4;
@@ -2728,7 +2743,7 @@ function trGrass(p, force) {
     if (c === undefined) {
       if (budget <= 0) continue;
       const hx = hash(i * 31 + k * 977 + 1), hz = hash(i * 7 + k * 1301 + 2), x = (i + hx) * st, z = (k + hz) * st;
-      if (hash(i * 101 + k * 53 + 4) > 0.28 + 0.6 * vnoise(x / 22, z / 22)) { c = null; }
+      if (hash(i * 101 + k * 53 + 4) > 0.28 + 0.6 * trNoise(x / 22, z / 22)) { c = null; }
       else { const gr = greenAt(x, z); if (gr === -1) continue; budget--; const m = trMaskAt(x, z); c = (gr !== 0 && groundFree(x, z, 0.6)) ? { x, z, ry: hx * 6.283, s: 0.7 + 0.8 * hz, r: m ? m[0][m[1] + 1] / 255 : 0.35, g: m ? m[0][m[1] + 2] / 255 : 0.55, b: m ? m[0][m[1] + 3] / 255 : 0.25 } : null; }
       TR.gcache.set(key, c);
     }
@@ -2986,7 +3001,8 @@ function pbInit() {
   PB.bmat = PB_COL.map((c) => new THREE.MeshBasicMaterial({ color: c }));
   const bg = new THREE.SphereGeometry(0.075, 6, 5);
   for (let i = 0; i < 28; i++) { const m = new THREE.Mesh(bg, PB.bmat[0]); m.visible = false; m.frustumCulled = false; scene.add(m); PB.bm.push(m); }
-  PB.gun = pbBuildGun(); S.aimK = 0; S.gp = 0; S.rec = 0;
+  try { PB.gun = pbBuildGun(); } catch (e) { mapErr('автомат', e); PB.gun = new THREE.Group(); PB.fl = { visible: false }; PB.muz = null; PB.mv = new V3(); }
+  S.aimK = 0; S.gp = 0; S.rec = 0;
   try { pbBuildTargets(); } catch (e) { console.warn('targets', e); }
   PB.ready = true;
 }
