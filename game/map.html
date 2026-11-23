@@ -1930,7 +1930,7 @@ const lonOfTX = (x, z) => x / Math.pow(2, z) * 360 - 180;
 const latOfTY = (y, z) => { const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z); return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))); };
 const tileXY = (lon, lat, z) => { const n = Math.pow(2, z), la = lat * Math.PI / 180; return [Math.floor((lon + 180) / 360 * n), Math.floor((1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * n)]; };
 const tileBox = (tx, ty, z) => ({ x0: (lonOfTX(tx, z) - LON0) * KX, x1: (lonOfTX(tx + 1, z) - LON0) * KX, z0: -(latOfTY(ty, z) - LAT0) * KZ, z1: -(latOfTY(ty + 1, z) - LAT0) * KZ });
-const TILES = { map: new Map(), busy: 0, t: 0, loader: null };
+const TILES = { map: new Map(), busy: 0, t: 0, loader: null, ok: 0, err: 0, el: null };
 function tileRoofs(bx, tex) {
   // крыши домов этой плитки берут цвет прямо из снимка: проекция сверху по тем же координатам
   const A = [], UV = [];
@@ -1965,8 +1965,8 @@ function addTile(tx, ty, z, order, roofs) {
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, depthWrite: false, side: THREE.DoubleSide }));
     m.renderOrder = order; m.frustumCulled = false; MAP.root.add(m); rec.mesh = m; rec.tex = tex; rec.ok = true;
     if (roofs) { rec.roof = tileRoofs(bx, tex); if (rec.roof) MAP.root.add(rec.roof); }
-    if (!MAP.photo) { MAP.photo = true; }
-  }, undefined, () => { TILES.busy--; rec.dead = true; });
+    TILES.ok++;
+  }, undefined, () => { TILES.busy--; TILES.err++; rec.dead = true; });
 }
 function dropTile(rec) {
   rec.dead = true; TILES.map.delete(rec.key);
@@ -1975,6 +1975,8 @@ function dropTile(rec) {
 }
 function updateTiles(dt) {
   if (!MAP.ready) return;
+  if (!TILES.el) { const e = document.createElement('div'); e.style.cssText = 'position:absolute;left:8px;top:8px;z-index:5;font:600 11px sans-serif;color:#12395b;background:rgba(255,255,255,.75);padding:2px 8px;border-radius:8px;pointer-events:none'; document.body.appendChild(e); TILES.el = e; }
+  TILES.el.textContent = 'карта v3 · снимки: ' + TILES.ok + ' загружено, ' + TILES.err + ' ошибок';
   TILES.t -= dt; if (TILES.t > 0 || TILES.busy > 6) return; TILES.t = 0.6;
   const p = hero.root.position, lon = LON0 + p.x / KX, lat = LAT0 - p.z / KZ, want = new Set();
   [[16, 3, -4, false], [18, 2, -3, true]].forEach(([z, R, order, roofs]) => {
