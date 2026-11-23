@@ -2666,9 +2666,13 @@ function carUI() {
   const app = document.getElementById('app') || document.body;
   const b = document.createElement('button'); b.id = 'carBtn'; b.type = 'button'; b.className = 'glass'; b.hidden = true; app.appendChild(b);
   const bar = document.createElement('div'); bar.id = 'actBar'; bar.hidden = true; app.appendChild(bar);
-  const mk = (id, label, path, fn) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'glass abtn'; x.id = id; x.setAttribute('aria-label', label); x.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + path + '"/></svg><span>' + label + '</span>'; x.addEventListener('click', (e) => { e.preventDefault(); audio.unlock(); fn(); x.blur(); }); bar.appendChild(x); return x; };
+  const mk = (id, label, path, fn, hold) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'glass abtn'; x.id = id; x.setAttribute('aria-label', label); x.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + path + '"/></svg><span>' + label + '</span>'; const down = (e) => { e.preventDefault(); audio.unlock(); if (hold) { try { x.setPointerCapture(e.pointerId); } catch (z) {} fn(true); } else fn(); };
+    const up = () => { if (hold) fn(false); };
+    x.addEventListener('pointerdown', down); x.addEventListener('pointerup', up); x.addEventListener('pointercancel', up); x.addEventListener('lostpointercapture', up);
+    x.addEventListener('contextmenu', (e) => e.preventDefault()); x.addEventListener('click', (e) => e.preventDefault());
+    bar.appendChild(x); return x; };
   CAR_UI.jump = mk('bJump', 'Прыжок', 'M12 19V6M6 12l6-6 6 6', heroJump);
-  CAR_UI.sprint = mk('bSprint', 'Бег', 'M13 2L5 14h6l-1 8 8-12h-6z', () => heroSprint());
+  CAR_UI.sprint = mk('bSprint', 'Бег', 'M13 2L5 14h6l-1 8 8-12h-6z', (v) => heroSprint(v), true);
   CAR_UI.crouch = mk('bCrouch', 'Присесть', 'M12 5v13M6 12l6 6 6-6', () => heroCrouch());
   CAR_UI.btn = b; CAR_UI.bar = bar;
   b.addEventListener('click', (e) => { e.preventDefault(); audio.unlock(); b.blur(); if (CAR.mode === 'out') carBoard(); else if (CAR.mode === 'in') carExit(); });
@@ -2685,7 +2689,7 @@ function carUI() {
 // ---- прыжок / бег / присесть ----
 const heroFree = () => hero.root.parent === scene && ctl.mode === 'walk' && CAR.mode === 'out' && !S.seated;
 function heroJump() { if (!heroFree() || HERO.air) return; if (S.udance && typeof stopDance === 'function') stopDance(); HERO.want = true; }
-function heroSprint(v) { if (!heroFree()) return; HERO.sprint = v === undefined ? !HERO.sprint : v; if (HERO.sprint && HERO.crouch) heroCrouch(false); heroUi(); }
+function heroSprint(v) { if (v === false) { HERO.sprint = false; heroUi(); return; } if (!heroFree()) return; HERO.sprint = v === undefined ? !HERO.sprint : v; if (HERO.sprint && HERO.crouch) heroCrouch(false); heroUi(); }
 function heroCrouch(v) {
   if (!heroFree() && v !== false) return;
   HERO.crouch = v === undefined ? !HERO.crouch : v;
@@ -2694,7 +2698,7 @@ function heroCrouch(v) {
   heroUi();
 }
 function heroUi() { if (!CAR_UI.sprint) return; CAR_UI.sprint.classList.toggle('on', HERO.sprint); CAR_UI.crouch.classList.toggle('on', HERO.crouch); }
-const heroSpeed = () => (HT.inside ? 3.2 : 5.0) * (HERO.sprint ? 1.75 : HERO.crouch ? 0.45 : 1);
+const heroSpeed = () => (HT.inside ? 3.2 : 5.0) * (HERO.sprint ? 1.225 : HERO.crouch ? 0.45 : 1);
 function heroPose(dt) {
   const H = HERO;
   if (!heroFree()) { if (H.jy || H.air) { H.jy = 0; H.vy = 0; H.air = false; S.jv = 0; if (S.mode === 'jump') S.mode = 'idle'; } return; }
