@@ -109,6 +109,13 @@ body.online .steps, body.online .chips { display: none; }
 .toast { width: max-content; max-width: min(92%, 340px); text-align: center; white-space: normal; }
 #lobby.sheet { top: 5%; bottom: auto; align-items: flex-start; }
 .card input { -webkit-user-select: text; user-select: text; touch-action: manipulation; }
+body.online.sea .chips { display: flex; }
+.pushb { position: absolute; right: max(26px, calc(env(safe-area-inset-right, 0px) + 8px)); bottom: 240px; width: 76px; height: 76px; border-radius: 50%; border: 3px solid #fff; background: #12395b; color: #fff; font: 900 13px var(--body); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: auto; box-shadow: 0 5px 0 #0a2238; padding: 0; }
+.pushb[hidden] { display: none; }
+.pushb .em { font-size: 26px; line-height: 1; }
+.pushb:active { transform: translateY(3px); box-shadow: 0 2px 0 #0a2238; }
+.pushb.dis { opacity: .5; }
+@media (max-height: 520px) { .pushb { bottom: 100px; right: 170px; width: 68px; height: 68px; font-size: 12px; } .pushb .em { font-size: 22px; } }
 </style>
 
 </head>
@@ -130,6 +137,7 @@ body.online .steps, body.online .chips { display: none; }
     <button class="dbtn chatb" id="chatBtn" type="button" aria-label="Фразы">💬</button>
     <div class="phrases" id="phrases" hidden></div>
     <button class="pill" id="share" type="button" hidden>Пригласить</button>
+    <button class="pushb" id="pushBtn" type="button" hidden aria-label="Толкнуть"><span class="em">🦶</span><span>Толчок</span></button>
     <div class="stick" id="stick" hidden aria-label="Джойстик"><div class="knob" id="knob"></div></div>
     <div class="bottom">
       <button class="go" id="go" type="button" hidden></button>
@@ -1004,43 +1012,98 @@ const SH_NEED = 2;
 let arrived = false;
 const center = new V3();
 function sharkPos(sh, ang, R, out) { return out.set(center.x + Math.cos(ang) * R, 0, center.z + Math.sin(ang) * R); }
-function updateSharks(dt) {
-  sharks.forEach((sh) => {
-    if (!sh.active) return;
+// Акулы в онлайне: продавец считает движение (simShark), покупатель только рисует присланное (puppetShark).
+function sharkO(sh) { return sh.o || (sh.o = { x: 0, y: -1.4, z: 0, ry: 0, pt: 0, mo: 0, hr: false }); }
+// кого сейчас можно кусать: плывущие в воде (только считает продавец)
+function sharkTargets() {
+  const L = [];
+  if (ONLINE.where === 'swim' && !ONLINE.falling) L.push({ me: true, p: hero.root.position });
+  if (ONLINE.pw === 'swim' && !ONLINE.rHop) L.push({ me: false, p: vendor.root.position });
+  return L;
+}
+function simShark(sh, dt, tg) {
+  const o = sharkO(sh);
+  let vic = null, bd = 1e9;
+  for (let k = 0; k < tg.length; k++) {
+    const t = tg[k], d = Math.hypot(t.p.x - (sh.chase ? sh.fx : o.x), t.p.z - (sh.chase ? sh.fz : o.z));
+    if (d < bd) { bd = d; vic = t; }
+  }
+  if (vic && bd < 70) {
+    if (!sh.chase) { sh.chase = true; sh.fx = o.x; sh.fz = o.z; sh.leaving = false; sh.hd = -o.ry; }
+  } else if (sh.chase) {
+    sh.chase = false; sh.ang = Math.atan2(sh.fz - center.z, sh.fx - center.x); sh.R = Math.hypot(sh.fx - center.x, sh.fz - center.z);
+    if (ONLINE.fedAll) sh.leaving = true;
+  }
+  let px, pz;
+  if (sh.chase) {
+    const ph = sh.i * 2.1 + T * 0.8, tx = vic.p.x + Math.cos(ph) * 1.5, tz = vic.p.z + Math.sin(ph) * 1.5;
+    const dx = tx - sh.fx, dz = tz - sh.fz, d = Math.hypot(dx, dz) || 1;
+    const sp = (3.6 + sh.i * 0.35) * (sh.leap >= 0 ? 0.35 : 1), st = Math.min(d, sp * dt);
+    sh.fx += dx / d * st; sh.fz += dz / d * st; if (sh.fx < 6.4) sh.fx = 6.4;
+    const vx = vic.p.x - sh.fx, vz = vic.p.z - sh.fz;
+    sh.hd = lerpAngle(sh.hd, d > 1.2 ? Math.atan2(dz, dx) : Math.atan2(vz, vx), 1 - Math.exp(-6 * dt));
+    px = sh.fx; pz = sh.fz;
+    const key = vic.me ? 'me' : 'rem';
+    if (sh.leap < 0 && vic.p.x > 6.0 && Math.hypot(vx, vz) < 1.9 && ONLINE.cd[key] <= 0) {
+      sh.leap = 0; sh.chomped = true; sh.bite = true; ONLINE.cd[key] = 1.5; hostBite(sh, vic);
+    }
+    sh.y += (-0.1 - sh.y) * (1 - Math.exp(-2.2 * dt));
+  } else {
     sh.ang += sh.w * dt;
     const targetR = sh.leaving ? 26 : sh.R1;
     sh.R += (targetR - sh.R) * (1 - Math.exp(-(sh.leaving ? 0.8 : 1.1) * dt));
     const wantY = sh.leaving && sh.R > 20 ? -1.6 : -0.1;
     sh.y += (wantY - sh.y) * (1 - Math.exp(-2.2 * dt));
-    const pos = sharkPos(sh, sh.ang, sh.R, new V3());
-    const sg = Math.sign(sh.w), hx = -Math.sin(sh.ang) * sg, hz = Math.cos(sh.ang) * sg;
-    let lift = 0, pitch = 0;
-    if (sh.leap >= 0) {
-      if (!sh._lp) { sh._lp = true; audio.splash(0.55); }
-      sh.leap += dt / 0.95;
-      const q = Math.min(1, sh.leap);
-      lift = Math.sin(Math.PI * q) * 1.5; pitch = Math.sin(Math.PI * q) * 0.7;
-      sh.mouthOpen = q < 0.2 ? q / 0.2 : q < 0.6 ? 1 : Math.max(0, 1 - (q - 0.6) / 0.15);
-      if (!sh.chomped && sh.leap > 0.45) {
-        sh.chomped = true; sh.fed++; sh.incoming--; audio.chomp();
-        const bp = pos.clone(); bp.y = 1.2; burst(bp, [0xffd166, 0xffffff, 0xe5304c], 14, 3);
-        if (sh.fed >= SH_NEED) sh.heart.visible = true;
-        onFed();
-      }
-      if (sh.leap >= 1) { sh.leap = -1; sh.mouthOpen = 0; }
-    } else { sh._lp = false; sh.mouthOpen = Math.max(0, sh.mouthOpen - dt * 3); }
-    if (sh.dance) { const d = Math.sin(T * 4.2 + sh.i * 1.7); lift += Math.abs(d) * 0.9; pitch += d * 0.45; sh.mouthOpen = d > 0 ? 0.85 : 0.15; sh.heart.visible = true; }
-    sh.root.position.set(pos.x, waveY(pos.x, pos.z, T) * 0.6 + sh.y + lift, pos.z);
-    sh.root.rotation.y = -Math.atan2(hz, hx);
-    sh.body.rotation.z = pitch; sh.body.rotation.x = sh.dance ? Math.sin(T * 5 + sh.i * 2) * 0.5 : Math.sin(T * 2 + sh.i) * 0.05;
-    sh.body.rotation.y = Math.sin(T * 3 + sh.i * 2) * 0.12;
-    { const a = sh.geo.attributes.position, b = sh.base, ph = T * (sh.dance ? 7 : 4.6) + sh.i * 1.7, amp = sh.dance ? 0.22 : 0.14;
-      for (let q = 0; q < a.count; q++) { const x = b[q * 3], w = Math.max(0, Math.min(1, (0.2 - x) / 1.9)); a.setXYZ(q, x, b[q * 3 + 1], b[q * 3 + 2] + Math.sin(ph - x * 2.1) * amp * w * w); }
-      a.needsUpdate = true; }
-    sh.mouth.visible = sh.mouthOpen > 0.05; sh.mouth.scale.setScalar(0.4 + sh.mouthOpen * 0.8);
-    sh.heart.position.y = 1.6 + Math.sin(T * 3 + sh.i) * 0.12;
+    px = center.x + Math.cos(sh.ang) * sh.R; pz = center.z + Math.sin(sh.ang) * sh.R;
+    const sg = Math.sign(sh.w); sh.hd = Math.atan2(Math.cos(sh.ang) * sg, -Math.sin(sh.ang) * sg);
+  }
+  let lift = 0, pitch = 0;
+  if (sh.leap >= 0) {
+    if (!sh._lp) { sh._lp = true; audio.splash(0.55); }
+    sh.leap += dt / (sh.bite ? 0.6 : 0.95);
+    const q = Math.min(1, sh.leap), H = sh.bite ? 0.5 : 1.5, Pt = sh.bite ? 0.35 : 0.7;
+    lift = Math.sin(Math.PI * q) * H; pitch = Math.sin(Math.PI * q) * Pt;
+    sh.mouthOpen = q < 0.2 ? q / 0.2 : q < 0.6 ? 1 : Math.max(0, 1 - (q - 0.6) / 0.15);
+    if (!sh.chomped && sh.leap > 0.45) {
+      sh.chomped = true; sh.fed++; sh.incoming = Math.max(0, sh.incoming - 1); audio.chomp();
+      burst(new V3(px, 1.2, pz), [0xffd166, 0xffffff, 0xe5304c], 14, 3);
+      onFed();
+    }
+    if (sh.leap >= 1) { sh.leap = -1; sh.mouthOpen = 0; sh.bite = false; }
+  } else { sh._lp = false; sh.mouthOpen = Math.max(0, sh.mouthOpen - dt * 3); }
+  o.x = px; o.z = pz; o.y = waveY(px, pz, T) * 0.6 + sh.y + lift; o.ry = -sh.hd; o.pt = pitch; o.mo = sh.mouthOpen; o.hr = sh.fed >= SH_NEED;
+}
+// у покупателя акулы только следуют за присланными положениями
+function puppetShark(sh, dt) {
+  const o = sharkO(sh), t = sh.t;
+  if (!t) return;
+  if (!sh.snap) { o.x = t.x; o.y = t.y; o.z = t.z; o.ry = t.ry; o.pt = t.pt; o.mo = t.mo; o.hr = t.hr; sh.snap = true; sh.root.visible = true; return; }
+  const k = 1 - Math.exp(-14 * dt);
+  o.x += (t.x - o.x) * k; o.y += (t.y - o.y) * k; o.z += (t.z - o.z) * k;
+  o.ry = lerpAngle(o.ry, t.ry, k); o.pt += (t.pt - o.pt) * k; o.mo += (t.mo - o.mo) * k; o.hr = t.hr;
+}
+function drawShark(sh) {
+  const o = sharkO(sh);
+  sh.root.position.set(o.x, o.y, o.z); sh.root.rotation.y = o.ry;
+  sh.body.rotation.z = o.pt; sh.body.rotation.x = Math.sin(T * 2 + sh.i) * 0.05; sh.body.rotation.y = Math.sin(T * 3 + sh.i * 2) * 0.12;
+  { const a = sh.geo.attributes.position, b = sh.base, ph = T * 4.6 + sh.i * 1.7, amp = 0.14;
+    for (let q = 0; q < a.count; q++) { const x = b[q * 3], w = Math.max(0, Math.min(1, (0.2 - x) / 1.9)); a.setXYZ(q, x, b[q * 3 + 1], b[q * 3 + 2] + Math.sin(ph - x * 2.1) * amp * w * w); }
+    a.needsUpdate = true; }
+  sh.mouth.visible = o.mo > 0.05; sh.mouth.scale.setScalar(0.4 + o.mo * 0.8);
+  sh.heart.visible = !!o.hr; sh.heart.position.y = 1.6 + Math.sin(T * 3 + sh.i) * 0.12;
+}
+function updateSharks(dt) {
+  const host = seller;
+  if (host && ONLINE.feeding && ONLINE.phase === 'sea') { const k = 1 - Math.exp(-2 * dt); center.x += (boat.position.x - center.x) * k; center.z += (boat.position.z - center.z) * k; }
+  ONLINE.cd.me = Math.max(0, ONLINE.cd.me - dt); ONLINE.cd.rem = Math.max(0, ONLINE.cd.rem - dt);
+  const tg = host ? sharkTargets() : null;
+  sharks.forEach((sh) => {
+    if (!sh.active) return;
+    if (host) simShark(sh, dt, tg); else puppetShark(sh, dt);
+    if (host || sh.snap) drawShark(sh);
   });
 }
+
 
 // ---------- состояние ----------
 const S = { seated: false, standing: false, mode: 'idle', ph: 0, throwP: 0, twist: 0, push: 0, kick: 0, clip: null, hold: false, yaw: 0, ground: true, berries: 0, bought: 0, fed: 0, busy: false, t0: 0, thrown: 0, asked: false, pushed: false };
@@ -1078,6 +1141,7 @@ function updateCamera(dt, snap) {
   const hx = camOff.x * cs + camOff.z * sn, hz = -camOff.x * sn + camOff.z * cs;
   camera.position.set(camFocus.x + hx * zm, camFocus.y + camOff.y * zm, camFocus.z + hz * zm);
   camera.lookAt(camFocus.x + camLk.x * cs + camLk.z * sn, camFocus.y + camLk.y, camFocus.z - camLk.x * sn + camLk.z * cs);
+  applyShake(dt);
   const hl = Math.hypot(hx, hz) || 1; camFwd.set(-hx / hl, 0, -hz / hl);
 }
 
@@ -1145,7 +1209,7 @@ let pressRes = null, feedHandler = null;
 function press(label, hint) {
   return new Promise((res) => { setHint(hint); goBtn.textContent = label; goBtn.hidden = false; pressRes = () => { pressRes = null; goBtn.hidden = true; setHint(''); res(); }; });
 }
-goBtn.addEventListener('click', () => { if (pressRes) pressRes(); else if (feedHandler) feedHandler(); });
+goBtn.addEventListener('click', () => { if (pressRes) pressRes(); else if (feedHandler) feedHandler(); else if (ONLINE.go) ONLINE.go(); });
 const showCard = (id) => new Promise((res) => { const el = $(id); el.hidden = false; const b = el.querySelector('button'); const h = () => { b.removeEventListener('click', h); el.hidden = true; res(); }; b.addEventListener('click', h); });
 
 // ---------- облачка с репликами ----------
@@ -1267,7 +1331,7 @@ function startSharks() {
 let feedDone = null;
 function onFed() {
   const full = sharks.filter((s) => s.fed >= SH_NEED).length; setSharksFed(full);
-  if (feedDone && sharks.every((s) => s.fed >= SH_NEED)) { const r = feedDone; feedDone = null; r(); }
+  if (full === 3) fedAllHost();
 }
 function predict(sh, t, out) {
   const R = sh.R1, a = sh.ang + sh.w * t, sg = Math.sign(sh.w);
@@ -1283,8 +1347,8 @@ function pickShark(prefer) {
 async function throwAt(sh) {
   if (!sh || S.busy || S.berries <= 0 || !arrived) return;
   S.busy = true;
-  setBerries(S.berries - 1); basket.berries[S.berries].visible = false; sh.incoming++; S.thrown++;
-  const tgt = predict(sh, 0.95, new V3());
+  setBerries(S.berries - 1); basket.berries[S.berries].visible = false; sh.incoming++; S.thrown++; netThrow(sh);
+  const tgt = aimAt(sh, 0.95);
   hero.root.updateMatrixWorld(true);
   const lp = hero.root.worldToLocal(tgt.clone());
   S.twist = clamp(Math.atan2(lp.x, lp.z), -2.4, 2.4);
@@ -1300,7 +1364,7 @@ async function throwAt(sh) {
       task(0.95, (u) => {
         berry.position.set(lerp(start.x, tgt.x, u), lerp(start.y, tgt.y + 0.9, u) + Math.sin(Math.PI * u) * 1.7, lerp(start.z, tgt.z, u));
         berry.rotation.x += 0.3; berry.rotation.z += 0.2;
-      }).then(() => { scene.remove(berry); audio.plop(); sh.leap = 0; sh.chomped = false; if (!S.sharkSaid) { S.sharkSaid = true; wait(0.7).then(() => talk('s', 'Ммм, как мы любим — без хвостиков!', sh)); } });
+      }).then(() => { scene.remove(berry); audio.plop(); landBerry(sh); if (!S.sharkSaid) { S.sharkSaid = true; wait(0.7).then(() => talk('s', 'Ммм, как мы любим — без хвостиков!', sh)); } });
     }
   });
   S.throwP = 0;
@@ -1359,11 +1423,6 @@ async function feedPhase() {
   sharks.forEach((s) => { s.heart.visible = true; });
   toast(S.pushed ? 'Акулы сыты и очень довольны!' : 'Все акулы сыты!', 2200);
   await wait(1.6);
-}
-async function doThrow(sh) {
-  if (!sh || S.busy || !arrived) return;
-  await throwAt(sh);
-  if (S.thrown >= 3 && !S.asked && feedHandler) { S.asked = true; await decide(); }
 }
 // после третьей клубники героиня решает, что делать с продавцом
 async function decide() {
@@ -1731,6 +1790,18 @@ const audio = (() => {
   P.thump = ok(() => { if (!ac) return; const t = now(); tone(t, 0.22, 'sine', 120, 48, 0.5); nz(t, 0.1, 'lowpass', 600, 200, 0.2, 0.005); });
   P.pop = ok(() => { if (!ac) return; tone(now(), 0.09, 'sine', 520, 840, 0.2); });
   P.flop = ok(() => { if (!ac) return; const t = now(), r = Math.random(); nz(t, 0.22 + r * 0.25, 'lowpass', 3400, 450, 0.2 + r * 0.12, 0.01); tone(t + 0.05, 0.1, 'sine', 380 + r * 380, 150, 0.1); if (r > 0.55) tone(t + 0.16, 0.09, 'sine', 300 + r * 200, 120, 0.09); });
+  // «Эй!»: гласные синтезируются двумя формантами, f0 задаёт высоту голоса
+  P.hey = ok((f0 = 200) => {
+    if (!ac) return; const t = now(), d = 0.42;
+    const o = ac.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * 1.2, t + 0.18); o.frequency.linearRampToValueAtTime(f0 * 0.95, t + d);
+    const g = ac.createGain(); env(g, t, 0.03, d, 1.3);
+    [[560, 290, 1.0], [1850, 2300, 0.7], [2800, 3000, 0.35]].forEach(([a, b, gain]) => {
+      const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 6; bp.frequency.setValueAtTime(a, t); bp.frequency.linearRampToValueAtTime(a, t + 0.16); bp.frequency.linearRampToValueAtTime(b, t + d);
+      const gg = ac.createGain(); gg.gain.value = gain; o.connect(bp); bp.connect(gg); gg.connect(g);
+    });
+    g.connect(sfxB); o.start(t); o.stop(t + d + 0.06);
+  });
   // музыка танцев: у каждого танца свой ритм, тональность и темп
   const STY = {
     dance01: { bpm: 112, root: 45, minor: 1, prog: [0, -4, -7, -2], k: 'x..x..x...x.x...', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.', b: 'x.x..x.xx.x..x..', a: 'x.xx.xx.x.xx.xx.', w: 'square' },
@@ -1781,7 +1852,7 @@ function buildDances(list, labels) {
   });
 }
 buildDances(DANCES);
-const danceOK = () => !!(hero.rigged && hero.clips && !S.busy && !S.kick && ((ctl.mode === 'walk' && hero.root.parent === scene && !S.standing) || (ctl.mode === 'boat' && hero.root.parent === boat)));
+const danceOK = () => !!(hero.rigged && hero.clips && !S.busy && !S.kick && ((ctl.mode === 'walk' && hero.root.parent === scene && !S.standing) || hero.root.parent === boat));
 function userDance(name) {
   if (S.udance === name) { stopDance(); return; }
   if (!danceOK()) return;
@@ -1857,10 +1928,11 @@ function openSocket() {
     ONLINE.sock = s; let done = false;
     s.on('connect', () => { if (!done) { done = true; res(s); } else rejoin(); });
     s.on('connect_error', () => { if (!done) { done = true; ONLINE.sock = null; try { s.close(); } catch (e) {} rej(new Error('Нет связи с сервером. Попробуйте ещё раз.')); } });
-    s.on('disconnect', () => { ONLINE.peer = false; if (ONLINE.joined) setHint('Связь потеряна, пробуем вернуться…'); });
+    s.on('disconnect', () => { ONLINE.peer = false; if (ONLINE.joined) { hardReset(); ONLINE.lastHint = null; setHint('Связь потеряна, пробуем вернуться…'); } });
     s.on('g-peer', (d) => onPeer(d && d.present));
     s.on('g-s', (d) => onPeerState(d));
     s.on('g-ev', (d) => onPeerEvent(d));
+    s.on('g-w', (d) => onWorld(d && d.w));
   });
 }
 function rejoin() {
@@ -1883,6 +1955,8 @@ async function joinRoom(code) {
 
 function onPeer(present) {
   const was = ONLINE.peer; ONLINE.peer = !!present;
+  if (ONLINE.started && was !== !!present) hardReset();
+  $('#share').hidden = !!present;
   if (present) { setHint(''); if (!was) toast(otherName() + ' в игре!', 2600); return; }
   vendor.root.visible = false; ONLINE.rx = null;
   if (ONLINE.joined) setHint(otherName() + (ONLINE.role === 'seller' ? ' вышла' : ' вышел') + ' из игры. Код комнаты ' + ONLINE.code + ', можно позвать снова.');
@@ -1894,21 +1968,36 @@ function onPeerState(d) {
 }
 function onPeerEvent(d) {
   if (!d) return;
-  if (d.t === 'say' && typeof d.text === 'string') say('v', d.text, Math.max(2.4, 1 + d.text.length * 0.06));
+  if (d.t === 'say' && typeof d.text === 'string') { say('v', d.text, Math.max(2.4, 1 + d.text.length * 0.06)); if (d.text === 'Эй!') audio.hey(peerPitch()); }
+  else if (d.t === 'act' && typeof d.a === 'string') onPeerAct(d.a, Array.isArray(d.d) ? d.d : []);
 }
 // удалённый игрок: плавно догоняем присланное положение и повторяем его позу и клип
 function updateVendor(dt) {
   const r = vendor.root, d = ONLINE.rx;
   if (d && ONLINE.peer && r.visible) {
     const k = 1 - Math.exp(-14 * dt), p = r.position;
-    p.x += (d.x - p.x) * k; p.z += (d.z - p.z) * k; p.y = sandY(p.x);
-    r.rotation.y = lerpAngle(r.rotation.y, d.yaw, 1 - Math.exp(-10 * dt));
-    vState.mode = d.m; vState.clip = d.c; vState.clipRate = d.r;
+    let yaw = d.yaw;
+    if (ONLINE.pw === 'boat') {
+      // на лодке партнёр сидит на своём месте, а позу и танец берём из присланного
+      if (!ONLINE.rHop) { const rs = seller ? SEAT : SEAT2; p.x = rs.x; p.y = rs.y; p.z = rs.z; }
+      yaw = Math.PI / 2; r.rotation.x = r.rotation.z = 0;
+      vState.mode = d.m; vState.clip = d.c; vState.clipRate = d.r; vState.push = (!seller && d.m === 'sit') ? 0.55 : 0;
+    } else if (ONLINE.pw === 'swim') {
+      if (!ONLINE.rHop) { p.x += (d.x - p.x) * k; p.z += (d.z - p.z) * k; p.y = Math.max(waveY(p.x, p.z, T) - 1.05 + Math.sin(T * 2.1) * 0.05, sandY(p.x)); }
+      r.rotation.z = Math.sin(T * 3.3) * 0.2; r.rotation.x = Math.sin(T * 2.6 + 1) * 0.12;
+      vState.mode = 'flail'; vState.clip = null; vState.clipRate = 0; vState.push = 0;
+    } else {
+      p.x += (d.x - p.x) * k; p.z += (d.z - p.z) * k; p.y = sandY(p.x); r.rotation.x = r.rotation.z = 0;
+      vState.mode = d.m; vState.clip = d.c; vState.clipRate = d.r; vState.push = 0;
+    }
+    const vyx = vendor.rigged ? vState.twist - clamp(vState.twist, -0.9, 0.9) : 0;
+    r.rotation.y = lerpAngle(r.rotation.y, yaw + vyx, 1 - Math.exp(-10 * dt));
   }
   if (vendor.rigged) animateRigged(vendor, dt, vState); else animateChar(vendor, dt, vState);
 }
 // свои позы уходят партнёру: часто при движении, редко когда стоим
 function netTick(dt) {
+  if (ONLINE.joined) seaTick(dt);
   if (!ONLINE.joined || !ONLINE.sock || !ONLINE.sock.connected) return;
   ONLINE.sendT -= dt; if (ONLINE.sendT > 0) return; ONLINE.sendT = 0.08; ONLINE.idle += 0.08;
   const p = hero.root.position, yaw = Math.atan2(Math.sin(S.yaw), Math.cos(S.yaw));
@@ -1969,6 +2058,404 @@ function lobbyStart() {
   const q = (new URLSearchParams(location.search).get('r') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
   if (q.length === 4) { $('#codeIn').value = q; $('#lobbyP').textContent = 'Входим в комнату ' + q + '…'; joinRoom(q); }
 }
+
+// ================= ОНЛАЙН, часть 2: клубника, лодка вдвоём, акулы, толчок =================
+// Продавец (Тарас) считает лодку и акул и шлёт покупателю снимки (g-w). Остальное: события g-ev с числами.
+const FEED_AT = { x: 38, z: 0.9 }, DOCK_RING = { x: 3.2, z: 0.9 };
+Object.assign(ONLINE, {
+  where: 'beach', pw: 'beach', phase: 'beach',   // где я и где партнёр: beach | boat | swim; phase: beach | sea | dock
+  buyerHas: false, left: false, feeding: false, fedAll: false, apWait: 2.5, pushes: 0, pushAt: -99, lastPush: -99, slow: 0,
+  falling: false, rHop: false, myHop: false, bt: null, sendW: 0, askUntil: 0, lastHint: null, go: null, goLabel: null, cd: { me: 0, rem: 0 }, camSet: null, uiT: 0, lastFull: -1
+});
+const pushBtn = $('#pushBtn');
+const myPitch = () => (seller ? 150 : 250), peerPitch = () => (seller ? 250 : 150);
+const spotFor = (isSeller) => (isSeller ? { x: 2.4, z: 2.3 } : { x: 2.9, z: 0.9 });
+const sendAct = (a, d) => {
+  if (!ONLINE.joined || !ONLINE.sock || !ONLINE.sock.connected) return;
+  const m = { t: 'act', a }; if (d) m.d = d.map((v) => +(+v).toFixed(2)); ONLINE.sock.emit('g-ev', m);
+};
+const sendSay = (text) => { if (ONLINE.joined && ONLINE.sock && ONLINE.sock.connected) ONLINE.sock.emit('g-ev', { t: 'say', text }); };
+const handPos = (ch) => (ch.rigged ? ch.handL.getWorldPosition(new V3()) : ch.arms[1].localToWorld(ch.handLocal.clone()));
+const boatDocked = () => Math.hypot(boat.position.x - BOAT_DOCK.x, boat.position.z - BOAT_DOCK.z) < 1.8;
+const peerNear = (r) => ONLINE.peer && vendor.root.visible && ONLINE.pw === 'beach' && ONLINE.where === 'beach' &&
+  Math.hypot(vendor.root.position.x - hero.root.position.x, vendor.root.position.z - hero.root.position.z) < r;
+
+// ---------- тряска экрана ----------
+const shk = { t: 0, d: 0.3, a: 0.2 };
+function startShake(d, a) { shk.t = d; shk.d = d; shk.a = a; }
+function applyShake(dt) {
+  if (shk.t <= 0) return;
+  shk.t -= dt;
+  const k = Math.max(0, shk.t / shk.d), a = shk.a * k, r = () => Math.random() * 2 - 1;
+  camera.position.x += r() * a; camera.position.y += r() * a * 0.7; camera.position.z += r() * a; camera.rotation.z += r() * a * 0.1;
+}
+CAMS.swim = { o: [0, 3.2, 6.2], l: [0, 0.4, 0], f: 'hero' };
+
+// ---------- сброс при обрыве связи или выходе партнёра ----------
+function hardReset() {
+  const away = ONLINE.where !== 'beach' || ONLINE.phase !== 'beach' || ONLINE.pw !== 'beach';
+  if (away) tasks.length = 0;
+  clearBubs();
+  S.busy = false; S.kick = 0; S.throwP = 0; S.twist = 0; S.give = 0; S.udance = null; S.clip = null; S.clipRate = 0; S.hold = false; S.push = 0; S.thrown = 0; S.pending = null;
+  vState.kick = 0; vState.throwP = 0; vState.give = 0; vState.twist = 0; vState.push = 0;
+  basket.visible = false; basket.scale.setScalar(1); basket.berries.forEach((b) => { b.visible = true; }); setBerries(0); setSharksFed(0);
+  if (away) {
+    reparent(hero.root, scene); reparent(vendor.root, scene);
+    const sp = spotFor(seller), p = hero.root.position; p.x = sp.x; p.z = sp.z; p.y = sandY(sp.x);
+    S.mode = 'idle'; S.ground = true; hero.root.rotation.x = hero.root.rotation.z = 0; vendor.root.rotation.x = vendor.root.rotation.z = 0;
+  }
+  boat.position.x = BOAT_DOCK.x; boat.position.z = BOAT_DOCK.z; boat.rotation.y = 0; boatV = 0;
+  sharks.forEach((sh) => { sh.active = false; sh.root.visible = false; sh.chase = false; sh.snap = false; sh.t = null; sh.o = null; });
+  marker.visible = false; arrived = false; feedHandler = null; goBtn.hidden = true; pushBtn.hidden = true;
+  Object.assign(ONLINE, { where: 'beach', pw: 'beach', phase: 'beach', buyerHas: false, left: false, feeding: false, fedAll: false, falling: false, rHop: false, myHop: false, pushes: 0, slow: 0, bt: null, go: null, goLabel: null, lastHint: null, camSet: null, lastFull: -1 });
+  document.body.classList.remove('sea');
+}
+
+// ---------- клубника: попросить и дать ----------
+function askBerries() {
+  ONLINE.askUntil = T + 6;
+  S.yaw = Math.atan2(vendor.root.position.x - hero.root.position.x, vendor.root.position.z - hero.root.position.z);
+  sayPhrase('Можно клубнику?'); sendAct('ask');
+}
+async function giveBerries() {
+  if (S.busy) return;
+  S.busy = true;
+  S.yaw = Math.atan2(vendor.root.position.x - hero.root.position.x, vendor.root.position.z - hero.root.position.z);
+  sayPhrase('Вот, держи свежую клубнику!');
+  S.give = 1; sendAct('give'); ONLINE.buyerHas = true;
+  await wait(0.9); S.give = 0; S.busy = false;
+}
+async function receiveBerries() {
+  await wait(0.6);
+  basket.visible = true; basket.scale.setScalar(0.01); S.hold = true;
+  await task(0.4, (p) => basket.scale.setScalar(Math.max(0.01, p)), ease.back);
+  basket.berries.forEach((b) => { b.visible = true; });
+  for (let i = 1; i <= 6; i++) { setBerries(i); await wait(0.1); }
+  audio.pop();
+}
+function peerGive() {
+  vState.give = 1; wait(0.9).then(() => { vState.give = 0; });
+  if (!seller) receiveBerries();
+}
+
+// ---------- посадка в лодку ----------
+function departHost() { sendAct('depart'); boardBoth(); }
+async function boardBoth() {
+  if (ONLINE.phase !== 'beach') return;
+  Object.assign(ONLINE, { phase: 'sea', left: false, feeding: false, fedAll: false, apWait: 2.5, pushes: 0, buyerHas: false, where: 'boat', pw: 'boat', rHop: true, myHop: true, lastFull: -1, bt: null });
+  document.body.classList.add('sea');
+  if (S.udance) stopDance();
+  reparent(hero.root, boat); reparent(vendor.root, boat); vendor.root.visible = true;
+  S.ground = false; S.mode = 'idle'; S.yaw = Math.PI / 2; S.push = 0; vendor.root.rotation.y = Math.PI / 2;
+  const ms = seller ? SEAT2 : SEAT, rs = seller ? SEAT : SEAT2;
+  await Promise.all([hopObj(hero.root, ms, 0.85, 1.1), hopObj(vendor.root, rs, 0.85, 1.1)]);
+  ONLINE.rHop = false; ONLINE.myHop = false;
+  S.mode = 'sit'; hero.root.position.copy(ms); S.push = seller ? 0.55 : 0; audio.thump();
+  if (seller) {   // у продавца своя корзинка для кормления
+    basket.visible = true; basket.scale.setScalar(1); S.hold = true; basket.berries.forEach((b) => { b.visible = true; }); setBerries(6);
+  }
+}
+
+// ---------- кормление ----------
+function startFeedHost() {
+  ONLINE.feeding = true; startSharks(); sharks.forEach((sh) => { sh.chase = false; sh.o = null; sh.bite = false; });
+  sendAct('feed'); wait(3.2).then(() => { if (ONLINE.phase === 'sea') arrived = true; });
+}
+function startFeedGuest() {
+  ONLINE.feeding = true; startSharks();
+  sharks.forEach((sh) => { sh.root.visible = false; sh.snap = false; sh.t = null; sh.o = null; sh.vx = 0; sh.vz = 0; sh.lp = false; });
+  arrived = false; setSharksFed(0); ONLINE.lastFull = 0;
+}
+function fedAllHost() {
+  if (ONLINE.fedAll) return;
+  ONLINE.fedAll = true; toast('Все акулы сыты!', 2200);
+  wait(2.6).then(() => { if (ONLINE.phase === 'sea') sharks.forEach((sh) => { if (!sh.chase) sh.leaving = true; }); });
+}
+function aimAt(sh, tt) {
+  if (seller) return sh.chase ? new V3(sh.fx, 0.35, sh.fz) : predict(sh, tt, new V3());
+  const o = sh.o || sh.t || { x: 0, z: 0 };
+  return new V3(o.x + (sh.vx || 0) * tt, 0.35, o.z + (sh.vz || 0) * tt);
+}
+function landBerry(sh) {   // клубника упала в воду; решает продавец
+  if (!seller) return;
+  if (sh.chase || !sh.active) sh.incoming = Math.max(0, sh.incoming - 1);
+  else { sh.leap = 0; sh.chomped = false; sh.bite = false; }
+}
+function netThrow(sh) {
+  sendAct('throw', [sh.i]);
+  if (!seller) wait(1.6).then(() => { sh.incoming = Math.max(0, sh.incoming - 1); });
+}
+async function doThrow(sh) {
+  if (!sh || S.busy || !arrived || ONLINE.where !== 'boat') return;
+  if (S.udance) stopDance();
+  await throwAt(sh);
+}
+// бросок партнёра: у него своя анимация, у нас клубника летит из его руки
+function peerThrow(i) {
+  const sh = sharks[i];
+  if (!sh || !sh.active || ONLINE.pw !== 'boat') return;
+  if (seller) sh.incoming++;
+  const r = vendor.root, tgt = aimAt(sh, 0.95);
+  { const lp = r.worldToLocal(tgt.clone()); vState.twist = clamp(Math.atan2(lp.x, lp.z), -2.4, 2.4); }
+  const berry = makeBerry(1.3); scene.add(berry); let released = false;
+  wait(0.2).then(() => task(0.42, (p) => {
+    vState.throwP = Math.max(0.001, p);
+    if (!released && p > 0.55) {
+      released = true; audio.whoosh();
+      const st = handPos(vendor); berry.position.copy(st);
+      task(0.95, (u) => {
+        berry.position.set(lerp(st.x, tgt.x, u), lerp(st.y, tgt.y + 0.9, u) + Math.sin(Math.PI * u) * 1.7, lerp(st.z, tgt.z, u));
+        berry.rotation.x += 0.3; berry.rotation.z += 0.2;
+      }).then(() => { scene.remove(berry); audio.plop(); landBerry(sh); });
+    }
+  }).then(() => { vState.throwP = 0; return wait(0.25); }).then(() => { vState.twist = 0; }));
+}
+
+// ---------- толчок, падение, плавание ----------
+async function doPush() {
+  if (ONLINE.where !== 'boat' || ONLINE.pw !== 'boat' || S.busy || T - ONLINE.lastPush < 1.2) return;
+  if (S.udance) stopDance();
+  ONLINE.lastPush = T; S.busy = true;
+  { hero.root.updateMatrixWorld(true); vendor.root.getWorldPosition(tmpA); const lp = hero.root.worldToLocal(tmpA.clone()); S.twist = clamp(Math.atan2(lp.x, lp.z), -2.4, 2.4); }
+  await wait(0.2);
+  audio.whoosh();
+  const kick = task(0.8, (p) => { S.kick = p; });
+  await wait(0.35); sendAct('push');
+  await kick; S.kick = 0; S.twist = 0; S.busy = false;
+}
+function gotPushed() {
+  if (ONLINE.where !== 'boat' || ONLINE.falling) return;
+  if (T - ONLINE.pushAt > 25) ONLINE.pushes = 0;
+  if (T - ONLINE.pushAt < 0.7) return;   // двойное нажатие не считаем
+  ONLINE.pushAt = T; ONLINE.pushes++;
+  task(0.8, (p) => { vState.kick = p; }).then(() => { vState.kick = 0; });
+  if (S.udance) stopDance();
+  if (ONLINE.pushes < 2) {
+    startShake(0.5, 0.28); audio.hey(myPitch()); say('h', 'Эй!', 1.4); sendSay('Эй!');
+  } else { ONLINE.pushes = 0; fallIn(); }
+}
+async function fallIn() {
+  if (ONLINE.where !== 'boat') return;
+  ONLINE.where = 'swim'; ONLINE.falling = true; ONLINE.slow = 0;
+  S.busy = false; S.throwP = 0; S.twist = 0; S.kick = 0; S.hold = false; basket.visible = false; setBerries(0);
+  hero.root.getWorldPosition(heroWorld);
+  const x0 = heroWorld.x, y0 = heroWorld.y, z0 = heroWorld.z, sd = seller ? 1 : -1, by = boat.rotation.y;
+  const x1 = x0 + sd * Math.sin(by) * 2.6, z1 = z0 + sd * Math.cos(by) * 2.6;
+  reparent(hero.root, scene);
+  S.ground = false; S.mode = 'flail'; S.clip = null; S.clipRate = 0; S.push = 0;
+  startShake(0.7, 0.4); audio.whoosh();
+  say('h', 'А-а-а!', 1.2); sendSay('А-а-а!'); sendAct('fell', [x1, z1]);
+  await task(0.8, (u) => { hero.root.position.set(lerp(x0, x1, u), lerp(y0, waveY(x1, z1, T) - 1.05, u) + Math.sin(Math.PI * u) * 1.4, lerp(z0, z1, u)); });
+  hero.root.position.x = x1; hero.root.position.z = z1;
+  audio.splash(1.4); burst(new V3(x1, 0.4, z1), [0x7fd6ee, 0xffffff, 0x1fa9ca], 22, 4);
+  ONLINE.falling = false;
+}
+function peerFell(x, z) {
+  if (ONLINE.pw !== 'boat' || !isFinite(x) || !isFinite(z)) return;
+  if (seller) ONLINE.buyerHas = false;
+  ONLINE.pw = 'swim'; ONLINE.rHop = true;
+  const r = vendor.root; reparent(r, scene); r.rotation.x = r.rotation.z = 0;
+  const from = r.position.clone();
+  audio.whoosh();
+  task(0.8, (u) => { r.position.set(lerp(from.x, x, u), lerp(from.y, waveY(x, z, T) - 1.05, u) + Math.sin(Math.PI * u) * 1.4, lerp(from.z, z, u)); }).then(() => {
+    r.position.x = x; r.position.z = z; ONLINE.rHop = false;
+    audio.splash(1.3); burst(new V3(x, 0.4, z), [0x7fd6ee, 0xffffff, 0x1fa9ca], 22, 4);
+  });
+}
+function swimTick(dt) {
+  if (ONLINE.where !== 'swim' || ONLINE.falling) return;
+  const mag = Math.min(1, Math.hypot(input.x, input.y)), p = hero.root.position;
+  ONLINE.slow = Math.max(0, ONLINE.slow - dt);
+  if (mag > 0.12) {
+    const wx = camFwd.x * input.y - camFwd.z * input.x, wz = camFwd.z * input.y + camFwd.x * input.x, wl = Math.hypot(wx, wz) || 1;
+    const dx = wx / wl, dz = wz / wl, sp = 2.8 * mag * (ONLINE.slow > 0 ? 0.35 : 1);
+    p.x += dx * sp * dt; p.z += dz * sp * dt; S.yaw = Math.atan2(dx, dz);
+  }
+  p.x = clamp(p.x, 2.0, 80); p.z = clamp(p.z, -30, 30);
+  p.y = Math.max(waveY(p.x, p.z, T) - 1.05 + Math.sin(T * 2.1) * 0.05, sandY(p.x));
+  hero.root.rotation.z = Math.sin(T * 3.3) * 0.2; hero.root.rotation.x = Math.sin(T * 2.6 + 1) * 0.12;
+  S.mode = 'flail';
+  if (p.x <= 3.2) landMe();
+}
+function landMe() {
+  ONLINE.where = 'beach'; S.mode = 'idle'; S.ground = true; S.clipRate = 0; ONLINE.slow = 0;
+  hero.root.rotation.x = hero.root.rotation.z = 0;
+  sendAct('landed'); toast('Выбрались на берег!', 2200); sayPhrase('Фух, доплыл' + (seller ? '' : 'а') + '!');
+}
+function onBitten() {
+  ONLINE.slow = 0.75; startShake(0.3, 0.14); audio.chomp(); say('h', 'Ай!', 0.9);
+  hero.root.getWorldPosition(heroWorld); burst(new V3(heroWorld.x, heroWorld.y + 0.6, heroWorld.z), [0xe5304c, 0xffffff, 0x7fd6ee], 10, 2.5);
+}
+function hostBite(sh, vic) {
+  if (vic.me) { onBitten(); sendAct('bite', [sh.i, 0]); } else { sendAct('bite', [sh.i, 1]); audio.chomp(); }
+}
+function peerBite(i, v) { if (v === 1) onBitten(); else audio.chomp(); }
+
+// ---------- возвращение к причалу ----------
+function hostDock() { sendAct('dock'); dockLocal(); }
+async function dockLocal() {
+  if (ONLINE.phase !== 'sea') return;
+  const meBoat = ONLINE.where === 'boat', peBoat = ONLINE.pw === 'boat';
+  ONLINE.phase = 'dock'; ONLINE.feeding = false; ONLINE.fedAll = false; ONLINE.rHop = peBoat; ONLINE.myHop = meBoat;
+  sharks.forEach((sh) => { sh.active = false; sh.root.visible = false; sh.chase = false; sh.snap = false; sh.t = null; sh.o = null; });
+  marker.visible = false; arrived = false; feedHandler = null; goBtn.hidden = true; pushBtn.hidden = true;
+  if (S.udance) stopDance();
+  const fx = boat.position.x, fz = boat.position.z, fy = boat.rotation.y;
+  await task(1.0, (p) => { boat.position.x = lerp(fx, BOAT_DOCK.x, p); boat.position.z = lerp(fz, BOAT_DOCK.z, p); boat.rotation.y = lerpAngle(fy, 0, p); }, ease.io);
+  boatV = 0;
+  const jobs = [];
+  if (meBoat) {
+    reparent(hero.root, scene); S.ground = false; S.push = 0; const sp = spotFor(seller);
+    S.yaw = Math.atan2(sp.x - hero.root.position.x, sp.z - hero.root.position.z);
+    jobs.push(hopObj(hero.root, new V3(sp.x, sandY(sp.x), sp.z), 0.9, 1.1));
+  }
+  if (peBoat) {
+    reparent(vendor.root, scene); const rp = spotFor(!seller);
+    jobs.push(hopObj(vendor.root, new V3(rp.x, sandY(rp.x), rp.z), 0.9, 1.0));
+  }
+  await Promise.all(jobs);
+  if (meBoat) { S.ground = true; S.mode = 'idle'; ONLINE.where = 'beach'; }
+  if (peBoat) ONLINE.pw = 'beach';
+  ONLINE.rHop = false; ONLINE.myHop = false; ONLINE.phase = 'beach'; ONLINE.buyerHas = false; ONLINE.left = false;
+  S.hold = false; basket.visible = false; setBerries(0); setSharksFed(0); S.thrown = 0;
+  toast('Рейс окончен! Можно сходить ещё раз.', 2800);
+}
+
+// ---------- события от партнёра ----------
+function onPeerAct(a, d) {
+  switch (a) {
+    case 'ask': if (seller) toast('Лера просит клубнику', 2600); break;
+    case 'give': peerGive(); break;
+    case 'depart': boardBoth(); break;
+    case 'feed': if (!seller && ONLINE.phase === 'sea') startFeedGuest(); break;
+    case 'throw': peerThrow(d[0] | 0); break;
+    case 'push': gotPushed(); break;
+    case 'fell': peerFell(+d[0], +d[1]); break;
+    case 'landed': ONLINE.pw = 'beach'; ONLINE.rHop = false; vendor.root.rotation.x = vendor.root.rotation.z = 0; if (seller) ONLINE.buyerHas = false; break;
+    case 'bite': peerBite(d[0] | 0, d[1]); break;
+    case 'dock': dockLocal(); break;
+  }
+}
+// снимок моря от продавца: лодка и три акулы
+function onWorld(w) {
+  if (seller || !Array.isArray(w) || w.length < 25 || ONLINE.phase !== 'sea') return;
+  ONLINE.bt = { x: w[0], z: w[1], ry: w[2] };
+  const f = w[3];
+  if ((f & 1) && !ONLINE.feeding) startFeedGuest();
+  arrived = !!(f & 2);
+  if ((f & 4) && !ONLINE.fedAll) { ONLINE.fedAll = true; toast('Все акулы сыты!', 2200); }
+  let full = 0;
+  sharks.forEach((sh, i) => {
+    const b = 4 + i * 7, fl = w[b + 6];
+    if (!(fl & 8)) return;
+    if (!sh.active) { sh.active = true; sh.root.visible = false; sh.snap = false; }
+    const t = { x: w[b], y: w[b + 1], z: w[b + 2], ry: w[b + 3], pt: w[b + 4], mo: w[b + 5], hr: !!(fl & 1) };
+    const fed = Math.min(3, Math.floor(fl / 16)), leap = !!(fl & 4);
+    if (sh.t) { const dtw = Math.max(0.03, T - sh.tAt); sh.vx = lerp(sh.vx || 0, (t.x - sh.t.x) / dtw, 0.5); sh.vz = lerp(sh.vz || 0, (t.z - sh.t.z) / dtw, 0.5); }
+    if (fed > sh.fed) { audio.chomp(); burst(new V3(t.x, 1.2, t.z), [0xffd166, 0xffffff, 0xe5304c], 14, 3); }
+    if (leap && !sh.lp) audio.splash(0.55);
+    sh.lp = leap; sh.fed = fed; sh.t = t; sh.tAt = T;
+    if (fed >= SH_NEED) full++;
+  });
+  if (full !== ONLINE.lastFull) { ONLINE.lastFull = full; setSharksFed(full); }
+}
+function sendWorld() {
+  const r2 = (v) => +(+v).toFixed(2);
+  const w = [r2(boat.position.x), r2(boat.position.z), r2(Math.atan2(Math.sin(boat.rotation.y), Math.cos(boat.rotation.y))), (ONLINE.feeding ? 1 : 0) + (arrived ? 2 : 0) + (ONLINE.fedAll ? 4 : 0)];
+  sharks.forEach((sh) => {
+    const o = sh.o;
+    if (!sh.active || !o) { w.push(0, 0, 0, 0, 0, 0, 0); return; }
+    w.push(r2(o.x), r2(o.y), r2(o.z), r2(Math.atan2(Math.sin(o.ry), Math.cos(o.ry))), r2(o.pt), r2(o.mo), (o.hr ? 1 : 0) + (sh.fed >= SH_NEED ? 2 : 0) + (sh.leap >= 0 ? 4 : 0) + 8 + 16 * Math.min(3, sh.fed));
+  });
+  ONLINE.sock.volatile.emit('g-w', { w });
+}
+
+// ---------- такт: управление, лодка, подсказки ----------
+function hostTick(dt) {
+  if (!seller || ONLINE.phase !== 'sea') return;
+  const bp = boat.position, dd = Math.hypot(bp.x - BOAT_DOCK.x, bp.z - BOAT_DOCK.z);
+  if (dd > 8) ONLINE.left = true;
+  if (ONLINE.where !== 'boat') {   // за рулём никого: лодка сама идёт к причалу
+    ONLINE.apWait -= dt;
+    if (ONLINE.apWait <= 0 && dd > 0.6) {
+      const dx = BOAT_DOCK.x - bp.x, dz = BOAT_DOCK.z - bp.z;
+      boat.rotation.y = lerpAngle(boat.rotation.y, Math.atan2(-dz, dx), 1 - Math.exp(-3 * dt));
+      const sp = Math.min(5, 1 + dd * 0.6); bp.x += dx / dd * sp * dt; bp.z += dz / dd * sp * dt;
+    }
+  } else ONLINE.apWait = 2.5;
+  if (!ONLINE.feeding && !ONLINE.fedAll && ONLINE.where === 'boat' && Math.hypot(bp.x - FEED_AT.x, bp.z - FEED_AT.z) < 4.2) startFeedHost();
+  const swimmers = ONLINE.where === 'swim' || ONLINE.pw === 'swim' || ONLINE.falling || ONLINE.rHop;
+  if (ONLINE.left && dd < 2.2 && !swimmers) hostDock();
+}
+function guestTick(dt) {
+  if (seller || ONLINE.phase !== 'sea' || !ONLINE.bt) return;
+  const t = ONLINE.bt, k = 1 - Math.exp(-12 * dt);
+  boat.position.x += (t.x - boat.position.x) * k; boat.position.z += (t.z - boat.position.z) * k;
+  boat.rotation.y = lerpAngle(boat.rotation.y, t.ry, k);
+}
+function computeAction() {
+  const A = ONLINE;
+  if (!A.peer) return null;
+  if (A.where === 'beach' && A.phase === 'beach') {
+    if (S.busy || A.myHop) return null;
+    if (!seller && S.berries === 0 && T > A.askUntil && peerNear(3.6)) return { label: 'Попросить клубнику', fn: askBerries };
+    if (seller && !A.buyerHas && peerNear(3.6)) return { label: 'Дать клубнику', fn: giveBerries };
+    if (seller && A.buyerHas && A.pw === 'beach' && boatDocked()) {
+      const hp = hero.root.position, rp = vendor.root.position;
+      if (Math.hypot(hp.x - DOCK_RING.x, hp.z - DOCK_RING.z) < 3.8 && Math.hypot(rp.x - DOCK_RING.x, rp.z - DOCK_RING.z) < 6) return { label: 'Отплыть', fn: departHost };
+    }
+    return null;
+  }
+  if (A.where === 'boat' && A.phase === 'sea' && A.feeding && arrived && !A.fedAll && S.berries > 0 && !S.busy) return { label: 'Кормить акулу', fn: () => doThrow(pickShark()), feed: true };
+  return null;
+}
+function guide() {
+  const A = ONLINE, other = otherName();
+  if (A.phase === 'beach' && A.where === 'beach') {
+    if (!seller) {
+      if (S.berries === 0) return { h: peerNear(3.6) ? 'Нажми «Попросить клубнику»' : 'Подойди к ' + other + 'у за клубникой', m: null };
+      return { h: 'Клубника у тебя! Идите к лодке, ' + other + ' отвезёт к акулам.', m: { x: DOCK_RING.x, z: DOCK_RING.z, ring: 1 } };
+    }
+    if (!A.buyerHas) return { h: peerNear(3.6) ? 'Нажмите «Дать клубнику»' : 'Ждите у лотка: Лера подойдёт за клубникой.', m: null };
+    return { h: 'Идите к лодке на берегу. Когда оба будете рядом, нажмите «Отплыть».', m: { x: DOCK_RING.x, z: DOCK_RING.z, ring: 1 } };
+  }
+  if (A.where === 'swim') return { h: 'Плыви к берегу! Акулы кусаются, но не съедят.', m: { x: 2.0, z: DOCK_RING.z, ring: 1.5 } };
+  if (A.where === 'boat') {
+    if (!A.feeding) return { h: seller ? 'Рули к красному кругу в море. Там акулы.' : other + ' везёт вас к акулам.', m: { x: FEED_AT.x, z: FEED_AT.z, ring: 4 } };
+    if (!arrived) return { h: 'Из глубины подплывают акулы…', m: null };
+    if (!A.fedAll) return { h: S.berries > 0 ? 'Нажми на акулу или на кнопку. Каждой нужно по две. Можно толкнуть друга к акулам!' : 'Клубника кончилась. Кормит ' + other + '.', m: null };
+    return { h: seller ? 'Все сыты! Плыви обратно к кольцу у берега.' : 'Все акулы сыты. ' + other + ' везёт домой.', m: { x: BOAT_DOCK.x, z: BOAT_DOCK.z, ring: 1.8 } };
+  }
+  if (A.phase === 'sea') return { h: 'Лодка вернётся к причалу. Подождите её.', m: null };
+  return null;
+}
+function refreshUi() {
+  const A = ONLINE;
+  document.body.classList.toggle('sea', A.phase === 'sea' || S.berries > 0);
+  const want = computeAction();
+  A.go = want ? want.fn : null; feedHandler = want && want.feed ? want.fn : null;
+  const lab = want ? want.label : null;
+  if (lab !== A.goLabel) { A.goLabel = lab; goBtn.hidden = !want; if (want) goBtn.textContent = lab; }
+  const showPush = A.peer && A.where === 'boat' && A.pw === 'boat' && A.phase === 'sea' && arrived && sharks.some((s) => s.active);
+  if (pushBtn.hidden === showPush) pushBtn.hidden = !showPush;
+  pushBtn.classList.toggle('dis', S.busy || T - A.lastPush < 1.2);
+  if (!A.peer) return;
+  const g = guide();
+  if (g && g.m) { marker.position.set(g.m.x, 0.14, g.m.z); marker.userData.ring = g.m.ring; marker.visible = true; } else marker.visible = false;
+  const text = g ? g.h : '';
+  if (text !== A.lastHint) { A.lastHint = text; setHint(text); }
+}
+function seaTick(dt) {
+  const A = ONLINE;
+  swimTick(dt); hostTick(dt); guestTick(dt);
+  const wantCtl = A.myHop || A.falling ? 'none' : A.where === 'swim' ? 'swim' : A.where === 'boat' ? (seller ? 'boat' : 'none') : 'walk';
+  if (ctl.mode !== wantCtl) ctl.mode = wantCtl;
+  const wantCam = A.where === 'swim' ? 'swim' : A.where === 'boat' ? (A.feeding && !A.fedAll ? 'feed' : 'boat') : 'walk';
+  if (A.camSet !== wantCam) { A.camSet = wantCam; camMode = wantCam; }
+  if (seller && A.phase === 'sea' && A.peer && A.sock && A.sock.connected) { A.sendW -= dt; if (A.sendW <= 0) { A.sendW = 0.1; sendWorld(); } }
+  A.uiT -= dt; if (A.uiT <= 0) { A.uiT = 0.15; refreshUi(); }
+}
+pushBtn.addEventListener('click', () => { audio.unlock(); doPush(); });
 
 Promise.all([loadRigged('hero2', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
   adoptHero(ch || makeCartoonHero()); shade(hero.root);
