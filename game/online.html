@@ -3565,7 +3565,7 @@ function kartBoxCheck(K, dt) {
   const dh = Math.abs(kAng(K.h - kartHT()));
   K.inBox = Math.abs(u) < arM.boxL / 2 - 0.15 && Math.abs(w) < arM.boxW / 2 - 0.05;
   K.alignOK = dh < 1.0;
-  if (K.inBox && K.alignOK && Math.abs(K.v) < 0.8) { K.boxT += dt; if (K.boxT > 0.45) { K.ready = true; kartNetKick(); audio.pop(); } } else K.boxT = 0;
+  if (K.inBox && Math.abs(K.v) < 1.3) { K.boxT += dt; if (K.boxT > 0.35) { K.ready = true; kartNetKick(); audio.pop(); } } else K.boxT = 0;   // направление не важно: в квадрате карт сам плавно выравнивается
 }
 function kartBig(t, secs) { RACE.big = t; RACE.bigT = secs; }
 function kSpeak(t) { try { if (!window.speechSynthesis) return; const u = new SpeechSynthesisUtterance(t); u.lang = 'ru-RU'; u.rate = 0.95; u.pitch = 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} }
@@ -3884,7 +3884,7 @@ function kartGuide() {
   if (R.ph === 'go') return { h: R.fin[KART.mine] ? 'Финиш! Ждём результат…' : 'Гонка! Круг ' + Math.min(KV.laps, Math.max(1, R.laps[KART.mine])) + ' из ' + KV.laps + '. 🍓 — кинуть клубникой в соперника.', m: null };
   if (R.ph === 'done') return { h: (R.msg || 'Заезд окончен') + '. Поезжай к красному квадрату для нового заезда.', m: null };
   if (M.ready) { const O = KART.ks[1 - KART.mine], pt = ONLINE.peer && ONLINE.pw === 'kart' && KART.peerK === O; return { h: pt ? 'Готово! Ждём, пока ' + other + ' встанет в свой квадрат…' : (ONLINE.peer ? 'Готово! ' + other + ' ещё не в картинге. Стартуем без соперника…' : 'Готово! Сейчас дадим старт.'), m: null }; }
-  if (M.inBox && !M.alignOK) return { h: 'Развернись по ходу трассы и встань в красный квадрат.', m: null };
+  if (M.inBox) return { h: 'Остановись в квадрате — отпусти газ.', m: null };
   return { h: 'Следуй за красной полоской к старту и остановись в красном квадрате.', m: null };
 }
 function kartCtlMode() {
@@ -3924,7 +3924,7 @@ function kartTick(dt) {
   if (KT.mode === 'in' && M.seated && hero.root.parent === M.g) { hero.root.rotation.x = hero.root.rotation.z = 0; }
   if (KT.peerK && ONLINE.pw === 'kart' && vendor.root.parent === KT.peerK.g) { vendor.root.rotation.x = vendor.root.rotation.z = 0; }
   raceTick(dt); kartShotsTick(dt);
-  kartRibbonUpdate(M, KT.mode === 'in' && M.seated && RACE.ph === 'idle' && !M.ready, dt);
+  kartRibbonUpdate(M, KT.mode === 'in' && M.seated && RACE.ph === 'idle' && !M.ready && !M.inBox, dt);
   if (audio.kart) audio.kart(KT.mode === 'in' ? Math.abs(M.v) / KV.max : (KT.peerK ? Math.abs(KT.peerK.v) / KV.max * 0.6 : -1), KT.mode === 'in' || !!KT.peerK);
   kartHudUpdate();
 }
