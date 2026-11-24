@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(function(){ if(!/[?&]debug/.test(location.search)) return; var L=[], el=null;
+function show(){ if(!el){ el=document.createElement('pre'); el.style.cssText='position:fixed;left:0;right:0;bottom:0;max-height:45vh;overflow:auto;margin:0;padding:6px;background:rgba(0,0,0,.85);color:#9f9;font:11px/1.25 monospace;z-index:99999;white-space:pre-wrap;pointer-events:none'; (document.body||document.documentElement).appendChild(el);} el.textContent=L.slice(-40).join('\n'); }
+function fmt(a){ try{ return a&&a.stack?String(a.stack).split('\n').slice(0,3).join(' | '):String(a); }catch(e){ return '?'; } }
+['info','warn','error'].forEach(function(k){ var o=console[k]; console[k]=function(){ try{ L.push(k+': '+[].map.call(arguments,fmt).join(' ').slice(0,420)); show(); }catch(e){} return o.apply(console,arguments); }; });
+window.addEventListener('error',function(e){ L.push('ERR '+e.message+' @'+(e.lineno||'')); show(); });
+window.addEventListener('unhandledrejection',function(e){ L.push('REJ '+fmt(e.reason)); show(); });
+L.push('debug on; UA '+navigator.userAgent.slice(0,90)); setTimeout(show,300);
+})();
+</script>
 <title>Клубничный рейс · онлайн</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3972,6 +3982,21 @@ body.online #kHome{right:196px;top:8px;padding:6px 12px;font-size:12px}
 body.online .pill{right:max(84px,calc(env(safe-area-inset-right,0px) + 78px))}
 #kExit{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:8px;z-index:20;pointer-events:auto;border:0;border-radius:999px;padding:6px 12px;background:rgba(18,57,91,.82);color:#fff;font:900 12px var(--body);box-shadow:0 3px 0 #0a2238}
 body.online #khud{left:50%;transform:translateX(-50%);top:8px}
+@media (max-height:560px){
+#lobby.sheet{top:4px;bottom:4px;align-items:center;padding:0 max(14px,env(safe-area-inset-right,0px)) 0 max(14px,env(safe-area-inset-left,0px))}
+#lobby .card{width:min(100%,640px);max-height:100%;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;column-gap:18px;align-content:center;padding:12px 18px 14px;border-radius:22px}
+#lobby .card h1{grid-column:1/-1;font-size:26px;margin:0 0 4px}
+#lobby .card p{margin:0 0 8px;font-size:13px;line-height:1.3}
+#lobby .card #lobbyP{grid-column:1/-1}
+#lobby .card .play{min-height:42px;font-size:17px}
+#lobby .card .play.alt{margin-top:10px}
+#lobby .card .or{grid-column:2;grid-row:3;margin:0 0 6px;font-size:12px;align-self:end}
+#lobby .card .row{grid-column:2;grid-row:4 / span 2}
+#lobby .card input{height:42px;font-size:19px}
+#lobby .card .err{grid-column:1/-1;margin:6px 0 0}
+#lobby .card [data-role=seller]{grid-column:1;grid-row:3}
+#lobby .card [data-role=buyer]{grid-column:1;grid-row:4}
+}
 body.kartin .stick{display:none!important}
 body.kartin .dances{display:none}
 body.kartin #kBtn{right:max(22px,env(safe-area-inset-right,0px));bottom:196px}
@@ -4003,6 +4028,7 @@ owSafe('арена', arenaInit);
 owSafe('карты', kartInit);
 
 Promise.all([loadRigged('hero2', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
+  console.info('DBG heroes: rigged hero=' + !!ch + ' vendor=' + !!vend2 + ' stall=' + !!stallModel + ' boat=' + !!boatModel + ' lounge=' + !!loungeModel);
   adoptHero(ch || makeCartoonHero()); shade(hero.root);
   if (vend2) { if (vendor.root.parent) vendor.root.parent.remove(vendor.root); vendor = vend2; stall.add(vendor.root); shade(vendor.root); }
   if (stallModel) {
