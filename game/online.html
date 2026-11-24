@@ -715,6 +715,12 @@ function rigTargets(st, T, o) {
   if (!kp) { A('RightArm', -xR, 0, zR); A('LeftArm', xL, 0, zL); A('RightForeArm', 0, 0, fR); A('LeftForeArm', 0, 0, fL); }
   const tw = cl(st.twist || 0, -0.9, 0.9);
   A('Spine', 0, tw * 0.3, 0); A('Spine1', 0, tw * 0.35, 0); A('Spine2', 0, tw * 0.35, 0);
+  if (st.cpose && st.cg > 0.001) {   // церемония: букет в сгибе руки / нюхание (поза победителя считается локально)
+    const P = st.cpose, g = st.cg, sw = st.cs || 0, H = P[0], Sn = P[1], V = (i) => H[i] + (Sn[i] - H[i]) * sw;
+    const S3 = (n, x, y, z) => { const a = o[n]; if (!a) return; a[0] = L(a[0], x, g); a[1] = L(a[1], y, g); a[2] = L(a[2], z, g); };
+    S3('RightArm', V(0), V(1), V(2)); S3('RightForeArm', V(3), 0, V(4)); S3('LeftArm', V(5), V(6), V(7)); S3('LeftForeArm', V(8), 0, V(9));
+    S3('Spine', 0, 0, V(10)); S3('Spine1', 0, 0, V(11)); S3('Head', 0, 0, V(12));
+  }
 }
 // </pose>
 const HERO_H = 1.85;
@@ -1159,6 +1165,7 @@ function updateCamera(dt, snap) {
   camera.position.set(camFocus.x + hx * zm, camFocus.y + oy * zm, camFocus.z + hz * zm);
   camera.lookAt(camFocus.x + camLk.x * cs + camLk.z * sn, camFocus.y + camLk.y, camFocus.z - camLk.x * sn + camLk.z * cs);
   applyShake(dt);
+  cerCam(dt);
   const hl = Math.hypot(hx, hz) || 1; camFwd.set(-hx / hl, 0, -hz / hl);
 }
 
@@ -4055,8 +4062,14 @@ const POD = { cx: 24.6, cz: 13.0, d: 1.5, st: [
   { dz: 1.4, w: 1.35, h: 0.32, n: '3', c: 0xc98a4b }] };
 const CER = { ready: false, dead: false, on: false, lock: false, brake: false, t: 0, win: -1, arr: -1, me: null, okG: null, mouse: null, bq: null, grp: null,
   m: { ph: 0, t: 0, wi: 0, x: 0, z: 0, yaw: 0, back: false }, given: false, givenT: 0, lastT: 0, py: [0, 0], danced: false, burstDone: false };
+const CAMC = { w: 0, init: false, p: null, l: null, tp: null, tl: null, pn: null, ln: null, dir: null };
 // W: путь мышонка от калитки к подиуму (локальные координаты арены)
-const CER_W = [[32.0, 7.5], [22.4, 8.6], [POD.cx - 1.75, POD.cz]];
+const CER_W = [[32.0, 7.5], [22.4, 8.6], [POD.cx - 1.4, POD.cz]];
+const MSC = 2.0, BSC = 1.0;   // зверёк крупнее вдвое
+// позы: букет в сгибе левой руки, правая поддерживает стебли («hold») и «нюхает» («sniff»); кости героя и напарника подобраны отдельно
+const CPOSE = {"54":[[0.1652,0.5163,0.6058,0.9933,1.3852,-0.173,-0.2615,0.007,-0.7683,1.5512,-0.04,-0.02,0.0],[0.1727,0.2938,0.9361,0.6487,1.1782,-0.1729,-0.3071,1.017,-0.6123,0.592,-0.22,-0.04,-0.16]],"52":[[0.4714,0.2843,0.3228,1.1328,0.6796,-0.2176,-0.1381,0.0795,-1.0111,0.8331,-0.04,-0.02,0.0],[0.492,0.0642,0.7188,0.7291,0.8072,-0.5608,0.0375,1.26,-0.1985,-0.2373,-0.22,-0.04,-0.16]]};
+const CPB = { hB: [-0.05, 0.17, 0.17], sB: [0.0, 0.15, 0.48], hA: [0.75, 0.62, 0.12], sA: [0.0, 0.93, -0.37] };
+(function () { ['hA', 'sA'].forEach((k) => { const a = CPB[k], l = Math.hypot(a[0], a[1], a[2]); a[0] /= l; a[1] /= l; a[2] /= l; }); })();
 
 function cerPodH(lx, lz) {
   for (let i = 0; i < POD.st.length; i++) { const s = POD.st[i]; if (Math.abs(lx - POD.cx) < POD.d / 2 + 0.12 && Math.abs(lz - (POD.cz + s.dz)) < s.w / 2 + 0.05) return s.h; }
@@ -4093,8 +4106,9 @@ function cerInit() {
   rg.rotation.x = -Math.PI / 2; rg.position.set(-POD.d / 2 - 1.15, 0.012, 0); rg.receiveShadow = true; grp.add(rg);
   scene.add(grp); CER.grp = grp;
   const mt = new THREE.MeshLambertMaterial({ map: arTex(MRD.mouse.tex, 4) }), bt = new THREE.MeshLambertMaterial({ map: arTex(MRD.rose.tex, 4), side: THREE.DoubleSide });
-  const mg = new THREE.Group(), mm = mrMesh(MRD.mouse.mesh, mt); mg.add(mm); mg.visible = false; scene.add(mg); CER.mouse = { g: mg, m: mm };
-  const bg = new THREE.Group(), bm = mrMesh(MRD.rose.mesh, bt); bg.add(bm); bg.visible = false; scene.add(bg); CER.bq = { g: bg, m: bm };
+  const mg = new THREE.Group(), mm = mrMesh(MRD.mouse.mesh, mt); mg.add(mm); mg.scale.setScalar(MSC); mg.visible = false; scene.add(mg); CER.mouse = { g: mg, m: mm };
+  const bg = new THREE.Group(), bm = mrMesh(MRD.rose.mesh, bt); bg.add(bm); bg.scale.setScalar(BSC); bg.visible = false; scene.add(bg); CER.bq = { g: bg, m: bm };
+    CAMC.p = new THREE.Vector3(); CAMC.l = new THREE.Vector3(); CAMC.tp = new THREE.Vector3(); CAMC.tl = new THREE.Vector3(); CAMC.pn = new THREE.Vector3(); CAMC.ln = new THREE.Vector3(); CAMC.dir = new THREE.Vector3();
   CER.ready = true;
 }
 
@@ -4164,6 +4178,7 @@ function cerEnd() {
   if (!CER.on) return;
   CER.on = false; CER.lock = false; CER.brake = false; CER.mouse.g.visible = false; CER.bq.g.visible = false;
   try { if (S.udance && CER.win === KART.mine) stopDance(); } catch (e) {}
+  try { S.cpose = null; S.cg = 0; vState.cpose = null; vState.cg = 0; } catch (e) {}
   if (S.mode === 'idle' || S.mode === 'walk') { S.clipRate = 0; }
   if (RACE.ph === 'done') RACE.doneT = Math.min(RACE.doneT, 0.3);
 }
@@ -4177,7 +4192,28 @@ function cerHands(ch, out) {
   } catch (e) {}
   ch.root.getWorldPosition(out); out.y += 1.0; return out;
 }
-const cerTmpA = new THREE.Vector3(), cerTmpB = new THREE.Vector3();
+const cerTmpA = new THREE.Vector3(), cerTmpB = new THREE.Vector3(), cerQa = new THREE.Quaternion(), cerQb = new THREE.Quaternion(), cerUp = new THREE.Vector3(0, 1, 0), cerAx = new THREE.Vector3();
+// где у победителя должен лежать букет: основание стеблей и ось (cs: 0 — в сгибе руки, 1 — у лица)
+function cerBqTarget(ch, cs, pos, quat) {
+  const hp = cerTmpB; let ok = false;
+  try { const n = ch.rigged && ch.B && ch.B.Hips && ch.B.Hips.node; if (n) { ch.root.updateMatrixWorld(true); hp.setFromMatrixPosition(n.matrixWorld); ok = true; } } catch (e) {}
+  if (!ok) { ch.root.getWorldPosition(hp); hp.y += 0.97; }
+  const sc = ch.root.scale.y || 1, yw = ch.root.rotation.y, c = Math.cos(yw), s = Math.sin(yw), L = (a, b) => a + (b - a) * cs;
+  const lx = L(CPB.hB[0], CPB.sB[0]), ly = L(CPB.hB[1], CPB.sB[1]), lz = L(CPB.hB[2], CPB.sB[2]);
+  pos.set(hp.x + (lx * c + lz * s) * sc, hp.y + ly * sc, hp.z + (-lx * s + lz * c) * sc);
+  cerAx.set(L(CPB.hA[0], CPB.sA[0]), L(CPB.hA[1], CPB.sA[1]), L(CPB.hA[2], CPB.sA[2])).normalize();
+  quat.setFromUnitVectors(cerUp, cerAx); cerQa.setFromAxisAngle(cerUp, yw); quat.premultiply(cerQa);
+  return pos;
+}
+// вес «нюханья»: поднимает букет к лицу, пара вдохов, возвращает в сгиб руки
+function cerSniffW(t) {
+  t -= 0.35; if (t < 0) return 0;
+  const sm = (u) => u * u * (3 - 2 * u), bob = (x) => 1 - 0.12 * (0.5 - 0.5 * Math.cos((x - 0.7) * 9));
+  if (t < 0.7) return sm(t / 0.7);
+  if (t < 1.9) return bob(t);
+  if (t < 2.8) return bob(1.9) * (1 - sm((t - 1.9) / 0.9));
+  return 0;
+}
 function cerWalk(dt, tx, tz, sp) {
   const p = hero.root.position, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
   if (d < 0.12) return true;
@@ -4207,14 +4243,13 @@ function cerMe(dt) {
     if (me.t > 0.6) { me.ph = 'stand'; me.t = 0; if (isWin && CER.arr < 0) { CER.arr = CER.t; } }
   } else if (me.ph === 'stand') {
     if (!S.udance) { S.yaw = lerpAngle(S.yaw, -Math.PI / 2, 1 - Math.exp(-7 * dt)); S.mode = 'idle'; if (!S.clip) S.clipRate = 0; }
-    if (isWin && CER.given && !CER.danced && T - CER.givenT > 0.2) { CER.danced = true; try { if (danceOK()) userDance(DANCES[2]); } catch (e) {} }
     // камера смотрит на подиум спереди
     if (performance.now() - (window.__camDragT || 0) > 1800) { camYaw = lerpAngle(camYaw, -Math.PI / 2, 1 - Math.exp(-1.8 * dt)); }
   }
 }
 function cerMouse(dt) {
   if (CER.arr < 0) return;
-  const mt = CER.t - CER.arr, m = CER.m, mo = CER.mouse, bq = CER.bq, wy = AR.plateY;
+  const mt = CER.t - CER.arr, m = CER.m, mo = CER.mouse, bq = CER.bq, wy = AR.plateY, ch = CER.win === KART.mine ? hero : vendor, wst = ch === hero ? S : vState;
   if (m.ph === 0 && mt > 0.2) { m.ph = 1; m.t = 0; m.wi = 1; m.x = CER_W[0][0]; m.z = CER_W[0][1]; m.yaw = Math.atan2(CER_W[1][0] - m.x, CER_W[1][1] - m.z); mo.g.visible = true; bq.g.visible = true; }
   if (m.ph === 0) return;
   m.t += dt;
@@ -4225,38 +4260,74 @@ function cerMouse(dt) {
     if (d < 0.1) { m.wi++; return false; }
     const st = Math.min(d, sp * dt); m.x += dx / d * st; m.z += dz / d * st; m.yaw = lerpAngle(m.yaw, Math.atan2(dx, dz), 1 - Math.exp(-12 * dt)); run = 1; return false;
   };
-  if (m.ph === 1) { if (go(CER_W, m.wi, 4.4)) { m.ph = 2; m.t = 0; } }
-  else if (m.ph === 2) { m.yaw = lerpAngle(m.yaw, Math.PI / 2, 1 - Math.exp(-10 * dt)); if (m.t > 0.6) { m.ph = 3; m.t = 0; m.p0 = new THREE.Vector3(); bq.g.getWorldPosition(m.p0); } }
-  else if (m.ph === 3) {   // передача букета
-    m.yaw = lerpAngle(m.yaw, Math.PI / 2, 1 - Math.exp(-10 * dt)); hop = Math.max(0, Math.sin(m.t * 9)) * 0.1;
-    const u = Math.min(1, m.t / 1.0), ch = CER.win === KART.mine ? hero : vendor;
-    cerHands(ch, cerTmpA); const fy = ch.root.rotation.y; cerTmpA.x += Math.sin(fy) * 0.12; cerTmpA.z += Math.cos(fy) * 0.12; cerTmpA.y -= 0.03;
-    const e = u * u * (3 - 2 * u); bq.g.position.set(m.p0.x + (cerTmpA.x - m.p0.x) * e, m.p0.y + (cerTmpA.y - m.p0.y) * e + Math.sin(Math.PI * u) * 0.5, m.p0.z + (cerTmpA.z - m.p0.z) * e);
-    bq.g.rotation.y = fy;
+  const sm = (u) => u * u * (3 - 2 * u);
+  let cg = 0, cs = 0;
+  if (m.ph === 1) { if (go(CER_W, m.wi, 5.4)) { m.ph = 2; m.t = 0; } }
+  else if (m.ph === 2) { m.yaw = lerpAngle(m.yaw, Math.PI / 2, 1 - Math.exp(-10 * dt)); if (m.t > 0.7) { m.ph = 3; m.t = 0; m.p0 = new THREE.Vector3(); bq.g.getWorldPosition(m.p0); m.q0 = bq.g.quaternion.clone(); } }
+  else if (m.ph === 3) {   // передача букета: зверёк подбрасывает его по дуге, победитель принимает
+    m.yaw = lerpAngle(m.yaw, Math.PI / 2, 1 - Math.exp(-10 * dt)); hop = Math.max(0, Math.sin(m.t * 9)) * 0.14;
+    const u = Math.min(1, m.t / 1.15), e = sm(u); cg = sm(Math.min(1, m.t / 0.8));
+    cerBqTarget(ch, 0, cerTmpA, cerQb);
+    bq.g.position.set(m.p0.x + (cerTmpA.x - m.p0.x) * e, m.p0.y + (cerTmpA.y - m.p0.y) * e + Math.sin(Math.PI * u) * 0.55, m.p0.z + (cerTmpA.z - m.p0.z) * e);
+    bq.g.quaternion.copy(m.q0).slerp(cerQb, e);
     if (u >= 1) {
       m.ph = 4; m.t = 0; CER.given = true; CER.givenT = T; audio.pop();
       try { burst(new V3(cerTmpA.x, cerTmpA.y + 0.3, cerTmpA.z), [0xff4f8b, 0xffd23f, 0xffffff, 0xe5304c], 40, 5); } catch (e2) {}
     }
   } else if (m.ph === 4) {   // радуется
-    hop = Math.abs(Math.sin(m.t * 8)) * 0.28; m.yaw += dt * 5;
-    if (m.t > 1.7) { m.ph = 5; m.t = 0; m.wi = CER_W.length - 2; m.back = true; }
+    hop = Math.abs(Math.sin(m.t * 8)) * 0.45; m.yaw += dt * 5;
+    if (m.t > 1.4) { m.ph = 5; m.t = 0; m.wi = CER_W.length - 2; m.back = true; }
   } else if (m.ph === 5) {   // убегает обратно
     const w = CER_W[m.wi];
     if (!w) { mo.g.visible = false; m.ph = 6; m.t = 0; }
-    else { const dx = w[0] - m.x, dz = w[1] - m.z, d = Math.hypot(dx, dz); if (d < 0.15) m.wi--; else { const st = Math.min(d, 5 * dt); m.x += dx / d * st; m.z += dz / d * st; m.yaw = lerpAngle(m.yaw, Math.atan2(dx, dz), 1 - Math.exp(-12 * dt)); run = 1; } }
+    else { const dx = w[0] - m.x, dz = w[1] - m.z, d = Math.hypot(dx, dz); if (d < 0.15) m.wi--; else { const st = Math.min(d, 6.2 * dt); m.x += dx / d * st; m.z += dz / d * st; m.yaw = lerpAngle(m.yaw, Math.atan2(dx, dz), 1 - Math.exp(-12 * dt)); run = 1; } }
     if (m.wi < 0) { mo.g.visible = false; m.ph = 6; m.t = 0; }
-  } else if (m.ph === 6) { if (m.t > 3.2) cerEnd(); }
-  if (run) hop = Math.abs(Math.sin(T * 11)) * 0.16;
+  } else if (m.ph === 6) { if (m.t > 4.2) cerEnd(); }
+  if (run) hop = Math.abs(Math.sin(T * 11)) * 0.3;
   mo.g.position.set(AR.ax + m.x, wy + hop, AR.az + m.z); mo.g.rotation.y = m.yaw; mo.g.rotation.z = run ? Math.sin(T * 11) * 0.09 : 0;
   mo.m.scale.set(1 + (run ? Math.sin(T * 22) * 0.03 : 0), 1 - (run ? Math.sin(T * 22) * 0.04 : 0), 1);
-  if (m.ph === 1 || m.ph === 2) {   // букет в лапках
+  if (m.ph === 1 || m.ph === 2) {   // букет в лапках зверька
     const s = Math.sin(m.yaw), c = Math.cos(m.yaw);
-    bq.g.position.set(mo.g.position.x + s * 0.21, mo.g.position.y + 0.13, mo.g.position.z + c * 0.21); bq.g.rotation.y = m.yaw;
-  } else if (m.ph === 5 || m.ph === 4 || m.ph === 6) { if (CER.given) { /* букет остаётся у победителя */ } }
-  if (CER.given) {   // у победителя в руках
-    const ch = CER.win === KART.mine ? hero : vendor; cerHands(ch, cerTmpB); const fy = ch.root.rotation.y;
-    bq.g.position.set(cerTmpB.x + Math.sin(fy) * 0.12, cerTmpB.y - 0.03, cerTmpB.z + Math.cos(fy) * 0.12); bq.g.rotation.y = fy;
+    bq.g.position.set(mo.g.position.x + s * 0.52, mo.g.position.y + 0.3, mo.g.position.z + c * 0.52); bq.g.quaternion.setFromAxisAngle(cerUp, m.yaw);
   }
+  if (CER.given) {   // букет у победителя: лежит в согнутой руке, на время поднимается к лицу
+    cg = 1; cs = cerSniffW(T - CER.givenT);
+    cerBqTarget(ch, cs, bq.g.position, bq.g.quaternion);
+  }
+  if (!CER.on) return;
+  // поза победителя считается у каждого игрока сама (по общему ходу церемонии) — по сети она не передаётся
+  try {
+    const P = ch.rigged && ch.all ? CPOSE[ch.all.length] : null;
+    wst.cpose = P || null; wst.cg = P ? cg : 0; wst.cs = cs;
+  } catch (e) {}
+}
+// ---------- съёмка: крупные планы ----------
+function cerCam(dt) {
+  if (!CER.ready || CER.dead) return;
+  try {
+    const C = CAMC, m = CER.m; let act = false;
+    if (CER.on && CER.arr >= 0 && m.ph >= 1 && m.ph <= 5 && !(CER.given && T - CER.givenT > 6.5)) {
+      const ch = CER.win === KART.mine ? hero : vendor, wy = AR.plateY, asp = Math.max(0.3, aspect || 1), wp = ch.root.position;
+      const mx = AR.ax + m.x, mz = AR.az + m.z;
+      if (m.ph === 1) {            // зверёк бежит с цветами: камера впереди него, крупно
+        const dx = Math.sin(m.yaw), dz = Math.cos(m.yaw), dd = clamp(1.05 / (0.52 * asp), 3.1, 4.8);
+        C.tp.set(mx + dx * dd + dz * 1.3, wy + 1.15, mz + dz * dd - dx * 1.3); C.tl.set(mx + dx * 0.2, wy + 0.95, mz + dz * 0.2); act = true;
+      } else if (m.ph <= 3 && !CER.given) {   // передача: сбоку, виден и зверёк, и победитель
+        const cx = (mx + wp.x) / 2, dd = clamp(1.45 / (0.52 * asp), 3.4, 7.4);
+        C.tp.set(cx, wy + 1.55, AR.az + POD.cz + dd); C.tl.set(cx, wy + 1.35, AR.az + POD.cz); act = true;
+      } else {                     // победитель нюхает букет: крупный план спереди-сбоку
+        const dd = clamp(0.8 / (0.52 * asp), 2.1, 3.5), ph = cerPodH(wp.x - AR.ax, wp.z - AR.az);
+        C.tp.set(wp.x - dd * 0.9, wy + ph + 1.75, wp.z + dd * 0.45); C.tl.set(wp.x, wy + ph + 1.4, wp.z); act = true;
+      }
+    }
+    if (!act && C.w <= 0.001) { C.init = false; return; }
+    camera.getWorldDirection(C.dir); C.pn.copy(camera.position); C.ln.copy(C.pn).addScaledVector(C.dir, 6);
+    if (act && !C.init) { C.init = true; C.p.copy(C.pn); C.l.copy(C.ln); }
+    if (act) { const k = 1 - Math.exp(-4.2 * dt); C.p.lerp(C.tp, k); C.l.lerp(C.tl, 1 - Math.exp(-6 * dt)); }
+    C.w = clamp(C.w + (act ? 1 : -1) * dt * (act ? 1.6 : 1.1), 0, 1);
+    const w = C.w * C.w * (3 - 2 * C.w);
+    camera.position.lerpVectors(C.pn, C.p, w); C.dir.lerpVectors(C.ln, C.l, w); camera.lookAt(C.dir);
+  } catch (e) { CER.dead = true; CAMC.w = 0; owErr('подиум-камера', e); }
 }
 function cerTick(dt) {
   if (!CER.ready || CER.dead) return;
