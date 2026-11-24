@@ -1793,7 +1793,7 @@ const audio = (() => {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ac = new AC();
       const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
       mst = ac.createGain(); mst.gain.value = muted ? 0 : 0.9; mst.connect(comp); comp.connect(ac.destination);
-      sfxB = ac.createGain(); sfxB.gain.value = 0.9; sfxB.connect(mst); musB = ac.createGain(); musB.gain.value = 0; musB.connect(mst); ambB = ac.createGain(); ambB.gain.value = 1; ambB.connect(mst);
+      sfxB = ac.createGain(); sfxB.gain.value = 0.9; sfxB.connect(mst); musB = ac.createGain(); musB.gain.value = 0; musB.connect(mst); ambB = ac.createGain(); ambB.gain.value = 0; ambB.connect(mst);
       nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       startAmbient();
     }
@@ -1890,7 +1890,6 @@ const audio = (() => {
     engG.gain.setTargetAtTime(aboard ? 0.06 + 0.09 * v : 0, t, 0.25); e1.frequency.setTargetAtTime(42 + 46 * v, t, 0.3); e2.frequency.setTargetAtTime(21 + 23 * v, t, 0.3);
     wakeG.gain.setTargetAtTime(aboard ? 0.02 + 0.14 * v : 0, t, 0.3);
     wavG.gain.setTargetAtTime(0.35 + 0.65 * clamp((camFocus.x + 14) / 16, 0, 1), t, 0.6);
-    gullT -= dt; if (gullT < 0) { gull(); gullT = 3.5 + Math.random() * 6.5; }
     P.music(musicFor());
   });
   return P;
@@ -2450,7 +2449,7 @@ function openSocket() {
     ONLINE.sock = s; let done = false;
     s.on('connect', () => { if (!done) { done = true; res(s); } else rejoin(); });
     s.on('connect_error', () => { if (!done) { done = true; ONLINE.sock = null; try { s.close(); } catch (e) {} rej(new Error('Нет связи с сервером. Попробуйте ещё раз.')); } });
-    s.on('disconnect', () => { ONLINE.peer = false; if (ONLINE.joined) { carPeerGone(); kartPeerGone(); hardReset(); ONLINE.lastHint = null; setHint('Связь потеряна, пробуем вернуться…'); } });
+    s.on('disconnect', () => { ONLINE.peer = false; try { voicePeer(false); } catch (e) {} if (ONLINE.joined) { carPeerGone(); kartPeerGone(); hardReset(); ONLINE.lastHint = null; setHint('Связь потеряна, пробуем вернуться…'); } });
     s.on('g-peer', (d) => onPeer(d && d.present));
     s.on('g-s', (d) => onPeerState(d));
     s.on('g-ev', (d) => onPeerEvent(d));
@@ -2477,6 +2476,7 @@ async function joinRoom(code) {
 
 function onPeer(present) {
   const was = ONLINE.peer; ONLINE.peer = !!present;
+  if (was !== !!present) { try { voicePeer(!!present); } catch (e) { owErr('голос-пир', e); } }
   if (ONLINE.started && was !== !!present) { if (!present) { carPeerGone(); kartPeerGone(); } hardReset(); if (present) carSyncPark(); }
   $('#share').hidden = !!present;
   if (present) { setHint(''); if (!was) toast(otherName() + ' в игре!', 2600); return; }
@@ -2491,7 +2491,8 @@ function onPeerState(d) {
 }
 function onPeerEvent(d) {
   if (!d) return;
-  if (d.t === 'say' && typeof d.text === 'string') { say('v', d.text, Math.max(2.6, 1.2 + d.text.length * 0.07)); chatLogAdd(NAMES.v, d.text, false); if (d.text === 'Эй!') audio.hey(peerPitch()); if (d.text.indexOf('🎤') === 0 && typeof voiceSpeak === 'function') voiceSpeak(d.text.slice(2)); }
+  if (d.t === 'say' && typeof d.text === 'string' && d.text.charCodeAt(0) === 126 && /^~[OA][0-9a-z]{6}/.test(d.text)) { try { voiceSig(d.text); } catch (e) { owErr('голос-сеть', e); } return; }
+  if (d.t === 'say' && typeof d.text === 'string') { say('v', d.text, Math.max(2.6, 1.2 + d.text.length * 0.07)); chatLogAdd(NAMES.v, d.text, false); if (d.text === 'Эй!') audio.hey(peerPitch()); }
   else if (d.t === 'act' && typeof d.a === 'string') onPeerAct(d.a, Array.isArray(d.d) ? d.d : []);
 }
 // удалённый игрок: плавно догоняем присланное положение и повторяем его позу и клип
@@ -3974,66 +3975,6 @@ body.portrait-lock #rotwarn{display:flex}`;
   });
   (document.getElementById('app') || document.body).appendChild(ex);
 }
-// ---------- голос: зажал 🎤, сказал, отпустил — реплика уходит собеседнику ----------
-// Сервер пересылает только текст, поэтому речь распознаётся на устройстве и уходит репликой с пометкой 🎤;
-// у собеседника она появляется облачком и озвучивается синтезатором речи.
-function voiceSpeak(t) {
-  try {
-    if (!window.speechSynthesis || !t || (audio.isMuted && audio.isMuted())) return;
-    const u = new SpeechSynthesisUtterance(t); u.lang = 'ru-RU'; u.rate = 1.02; u.pitch = ONLINE.role === 'seller' ? 1.15 : 0.9; speechSynthesis.speak(u);
-  } catch (e) {}
-}
-function micInit() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const st = document.createElement('style');
-  st.textContent = `body.online .dbtn.micb{position:absolute;left:max(56px,calc(env(safe-area-inset-left,0px) + 54px));top:8px;bottom:auto;font-size:19px;z-index:6;-webkit-user-select:none;user-select:none;touch-action:none}
-body.online .dbtn.micb.rec{background:rgba(229,48,76,.9);border-color:#fff;transform:scale(1.18);animation:micp 1s ease-in-out infinite}
-@keyframes micp{50%{box-shadow:0 0 0 9px rgba(229,48,76,.25)}}
-#micCap{position:absolute;left:max(104px,calc(env(safe-area-inset-left,0px) + 98px));top:8px;z-index:13;max-width:min(300px,calc(50vw - 112px));padding:7px 12px;border-radius:14px;background:rgba(18,57,91,.88);color:#fff;font:800 13px/1.25 var(--body);pointer-events:none;display:none}
-#micCap.on{display:block}`;
-  document.head.appendChild(st);
-  const app = document.getElementById('app') || document.body;
-  const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'micBtn'; btn.className = 'dbtn micb'; btn.textContent = '🎤'; btn.setAttribute('aria-label', 'Говорить: зажми и скажи'); app.appendChild(btn);
-  const cap = document.createElement('div'); cap.id = 'micCap'; app.appendChild(cap);
-  let rec = null, holding = false, acc = '', cur = '', hideT = 0, errCode = '';
-  const note = (t, ms) => { cap.textContent = t; cap.classList.add('on'); clearTimeout(hideT); if (ms) hideT = setTimeout(() => cap.classList.remove('on'), ms); };
-  const chunks = (t) => { const out = []; let rest = t.trim(); while (rest && out.length < 3) { if (rest.length <= 76) { out.push(rest); break; } let k = rest.lastIndexOf(' ', 76); if (k < 30) k = 76; out.push(rest.slice(0, k).trim()); rest = rest.slice(k).trim(); } return out; };
-  const sendText = (t) => {
-    t = t.replace(/\s+/g, ' ').trim(); if (!t) { note('Не расслышал — повтори', 1800); return; }
-    const parts = chunks(t); cap.classList.remove('on');
-    parts.forEach((p, i) => setTimeout(() => { chatSend('🎤 ' + p); }, i * 700));
-  };
-  const begin = () => {
-    if (holding) return;
-    if (!SR) { toast('Голосовой ввод не поддерживается этим браузером. Попробуй Chrome'); return; }
-    if (!ONLINE.joined) { toast('Сначала зайдите в комнату'); return; }
-    audio.unlock(); holding = true; acc = ''; cur = ''; errCode = ''; btn.classList.add('rec'); note('🎤 Слушаю…');
-    const run = () => {
-      let r; try { r = new SR(); } catch (e) { holding = false; btn.classList.remove('rec'); return; }
-      rec = r; r.lang = 'ru-RU'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
-      r.onresult = (e) => { let f = '', it = ''; for (let k = 0; k < e.results.length; k++) { const x = e.results[k]; if (x.isFinal) f += x[0].transcript + ' '; else it += x[0].transcript; } cur = (f + it).trim(); if (holding) note('🎤 ' + ((acc + ' ' + cur).trim() || 'Слушаю…')); };
-      r.onerror = (e) => { errCode = e.error || 'err'; if (errCode === 'not-allowed' || errCode === 'service-not-allowed') { holding = false; btn.classList.remove('rec'); note('Разреши доступ к микрофону для сайта в настройках браузера', 4200); } };
-      r.onend = () => {
-        acc = (acc + ' ' + cur).trim(); cur = '';
-        if (holding && errCode !== 'not-allowed' && errCode !== 'service-not-allowed') { errCode = ''; setTimeout(run, 60); return; }   // браузер сам оборвал, а палец ещё держит
-        if (rec === r) { rec = null; const t = acc; acc = ''; if (!errCode || t) sendText(t); else if (errCode === 'no-speech') note('Не расслышал — повтори', 1800); }
-      };
-      try { r.start(); } catch (e) { holding = false; btn.classList.remove('rec'); }
-    };
-    run();
-  };
-  const end = () => {
-    if (!holding) return; holding = false; btn.classList.remove('rec'); note('…', 0);
-    if (rec) { try { rec.stop(); } catch (e) { cap.classList.remove('on'); } } else cap.classList.remove('on');
-    setTimeout(() => { if (!holding && cap.textContent === '…') cap.classList.remove('on'); }, 2500);
-  };
-  btn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); try { btn.setPointerCapture(ev.pointerId); } catch (e) {} begin(); });
-  btn.addEventListener('pointerup', end); btn.addEventListener('pointercancel', end); btn.addEventListener('lostpointercapture', end);
-  btn.addEventListener('contextmenu', (e) => e.preventDefault());
-  window.addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) begin(); });
-  window.addEventListener('keyup', (e) => { if (e.code === 'KeyV') end(); });
-  window.__mic = { begin, end, sendText };
-}
 // ---------- раскладка экрана: слева ходьба/чат, справа танцы; в карте — стрелки ----------
 const KPAD = { u: 0, d: 0, l: 0, r: 0, ids: {} };
 function kPadApply() { input.x = KPAD.r - KPAD.l; input.y = KPAD.u - KPAD.d; }
@@ -4104,9 +4045,146 @@ body.kartin .kpad{display:flex}
   mkPad('kPadR', [['l', '◀', 'Влево'], ['r', '▶', 'Вправо']]);
 }
 
-owSafe('раскладка', layoutUI); owSafe('микрофон', micInit); owSafe('ориентация', orientInit);
+owSafe('раскладка', layoutUI); owSafe('ориентация', orientInit);
 owSafe('арена', arenaInit);
 owSafe('карты', kartInit);
+
+// ================= ГОЛОС: живой разговор как по телефону (WebRTC) =================
+// Звук идёт напрямую между игроками. Сервер умеет пересылать только короткие реплики, поэтому
+// «рукопожатие» (SDP) сжимается и уходит кусками по 72 знака в невидимых репликах «~…»; в чате они не показываются.
+const VOICE = {
+  on: false, stream: null, pc: null, el: null, muted: false, st: 'off', offer: null, asm: {}, q: [], qT: 0, sess: 0, lost: 0, gen: 0,
+  ice: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+    { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }],
+};
+const V_CH = 72;
+const vB36 = (n, w) => { let s = n.toString(36); while (s.length < w) s = '0' + s; return s; };
+async function vPack(str) {
+  let u = new TextEncoder().encode(str), tag = 'r';
+  try { if (window.CompressionStream) { const cs = new CompressionStream('deflate-raw'), w = cs.writable.getWriter(); w.write(u); w.close(); u = new Uint8Array(await new Response(cs.readable).arrayBuffer()); tag = 'z'; } } catch (e) { u = new TextEncoder().encode(str); tag = 'r'; }
+  let bin = ''; for (let i = 0; i < u.length; i += 0x2000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x2000));
+  return tag + btoa(bin);
+}
+async function vUnpack(s) {
+  const tag = s[0], bin = atob(s.slice(1)), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  if (tag === 'z') { const ds = new DecompressionStream('deflate-raw'), w = ds.writable.getWriter(); w.write(u); w.close(); return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer()); }
+  return new TextDecoder().decode(u);
+}
+function vSend(type, data) {   // кусками: ~ T ид(2) номер(2) всего(2) данные
+  const id = vB36(Math.floor(Math.random() * 1296), 2), n = Math.ceil(data.length / V_CH);
+  for (let i = 0; i < n; i++) VOICE.q.push('~' + type + id + vB36(i, 2) + vB36(n, 2) + data.slice(i * V_CH, (i + 1) * V_CH));
+  if (!VOICE.qT) VOICE.qT = setInterval(() => { const t = VOICE.q.shift(); if (!t) { clearInterval(VOICE.qT); VOICE.qT = 0; return; } sendSay(t); }, 125);
+}
+function voiceSig(text) {   // принят кусок
+  const m = /^~([OA])([0-9a-z]{2})([0-9a-z]{2})([0-9a-z]{2})(.*)$/.exec(text); if (!m) return false;
+  const key = m[1], id = m[2], i = parseInt(m[3], 36), n = parseInt(m[4], 36);
+  let a = VOICE.asm[key]; if (!a || a.id !== id) a = VOICE.asm[key] = { id, n, parts: [], got: 0, t: performance.now() };
+  if (!a.parts[i]) { a.parts[i] = m[5]; a.got++; }
+  if (a.got === a.n) {
+    delete VOICE.asm[key]; const joined = a.parts.join('');
+    vUnpack(joined).then((sdp) => (key === 'O' ? vGotOffer(id, sdp) : vGotAnswer(sdp))).catch((e) => { owErr('голос-sdp', e); });
+  }
+  return true;
+}
+function vSet(st, msg, ms) {
+  VOICE.st = st; const b = document.getElementById('micBtn'), c = document.getElementById('micCap');
+  if (b) { b.classList.toggle('vo-wait', st === 'wait' || st === 'conn'); b.classList.toggle('vo-live', st === 'live' && !VOICE.muted); b.classList.toggle('vo-mute', VOICE.muted && st !== 'off'); b.textContent = VOICE.muted && st !== 'off' ? '🔇' : '🎤'; }
+  if (c && msg) { c.textContent = msg; c.classList.add('on'); clearTimeout(VOICE.capT); if (ms) VOICE.capT = setTimeout(() => c.classList.remove('on'), ms); }
+}
+function vClosePc() {
+  const pc = VOICE.pc; VOICE.pc = null; VOICE.gen++;
+  if (pc) { try { pc.ontrack = pc.onconnectionstatechange = pc.oniceconnectionstatechange = null; pc.close(); } catch (e) {} }
+  if (VOICE.el) { try { VOICE.el.srcObject = null; } catch (e) {} }
+}
+function vNewPc() {
+  vClosePc(); const gen = VOICE.gen;
+  const pc = new RTCPeerConnection({ iceServers: VOICE.ice, bundlePolicy: 'max-bundle' }); VOICE.pc = pc;
+  VOICE.stream.getAudioTracks().forEach((t) => pc.addTrack(t, VOICE.stream));
+  pc.ontrack = (e) => {
+    if (!VOICE.el) { const a = document.createElement('audio'); a.autoplay = true; a.setAttribute('playsinline', ''); a.style.display = 'none'; document.body.appendChild(a); VOICE.el = a; }
+    VOICE.el.srcObject = e.streams[0] || new MediaStream([e.track]); const p = VOICE.el.play(); if (p && p.catch) p.catch(() => {});
+  };
+  pc.onconnectionstatechange = () => {
+    if (gen !== VOICE.gen) return; const s = pc.connectionState;
+    if (s === 'connected') { VOICE.lost = 0; vSet('live', 'На связи', 2200); }
+    else if (s === 'connecting') vSet('conn', 'Соединяю…');
+    else if (s === 'failed' || s === 'disconnected') {
+      vSet('wait', 'Связь прервалась, переподключаю…', 2500);
+      if (s === 'failed' || ++VOICE.lost > 0) setTimeout(() => { if (gen === VOICE.gen && VOICE.on && ONLINE.peer && pc.connectionState !== 'connected') vRetry(); }, 3000);
+    }
+  };
+  return pc;
+}
+const vGather = (pc) => new Promise((res) => {
+  if (pc.iceGatheringState === 'complete') return res();
+  const done = () => { pc.removeEventListener('icegatheringstatechange', ch); clearTimeout(tm); res(); };
+  const ch = () => { if (pc.iceGatheringState === 'complete') done(); }, tm = setTimeout(done, 3500);
+  pc.addEventListener('icegatheringstatechange', ch);
+});
+async function vOffer() {
+  if (!VOICE.on || !VOICE.stream || !ONLINE.peer || ONLINE.role !== 'seller') return;
+  try {
+    const pc = vNewPc(), gen = VOICE.gen; vSet('conn', 'Звоню…');
+    await pc.setLocalDescription(await pc.createOffer({ offerToReceiveAudio: true })); await vGather(pc);
+    if (gen !== VOICE.gen) return; vSend('O', await vPack(pc.localDescription.sdp));
+  } catch (e) { owErr('голос-оффер', e); vSet('wait', 'Не получилось позвонить', 3000); }
+}
+async function vGotOffer(id, sdp) {
+  VOICE.offer = { id, sdp };
+  if (!VOICE.on || !VOICE.stream) { toast(otherName() + ' зовёт поговорить — нажми 🎤', 4200); vSet('off'); return; }
+  await vAnswer();
+}
+async function vAnswer() {
+  const o = VOICE.offer; if (!o || !VOICE.stream || !VOICE.on) return; VOICE.offer = null;
+  try {
+    const pc = vNewPc(), gen = VOICE.gen; vSet('conn', 'Соединяю…');
+    await pc.setRemoteDescription({ type: 'offer', sdp: o.sdp }); await pc.setLocalDescription(await pc.createAnswer()); await vGather(pc);
+    if (gen !== VOICE.gen) return; vSend('A', await vPack(pc.localDescription.sdp));
+  } catch (e) { owErr('голос-ответ', e); vSet('wait', 'Не получилось соединиться', 3000); }
+}
+async function vGotAnswer(sdp) {
+  const pc = VOICE.pc; if (!pc || pc.signalingState !== 'have-local-offer') return;
+  try { await pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { owErr('голос-ответ2', e); }
+}
+function vRetry() { if (ONLINE.role === 'seller') vOffer(); else { vClosePc(); vSet('wait', 'Ждём звонок…'); } }
+async function voiceEnable() {
+  if (VOICE.on) return;
+  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Голосовая связь не поддерживается этим браузером', 3200); return; }
+  if (!ONLINE.joined) { toast('Сначала зайдите в комнату', 2200); return; }
+  try {
+    VOICE.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: false });
+  } catch (e) { vSet('off', 'Нет доступа к микрофону. Разреши его для сайта в настройках браузера', 4800); return; }
+  VOICE.on = true; VOICE.muted = false; vSet('wait', ONLINE.peer ? 'Подключаю…' : 'Микрофон включён, ждём собеседника', 2600);
+  if (VOICE.offer) await vAnswer(); else if (ONLINE.peer && ONLINE.role === 'seller') await vOffer();
+}
+function voiceToggleMute() {
+  VOICE.muted = !VOICE.muted; if (VOICE.stream) VOICE.stream.getAudioTracks().forEach((t) => { t.enabled = !VOICE.muted; });
+  vSet(VOICE.st, VOICE.muted ? 'Микрофон выключен' : 'Микрофон включён', 1800);
+}
+function voicePeer(present) {   // собеседник пришёл или ушёл
+  if (!present) { vClosePc(); VOICE.offer = null; VOICE.asm = {}; VOICE.q.length = 0; if (VOICE.on) vSet('wait', 'Собеседник вышел', 2400); return; }
+  if (VOICE.on) { if (ONLINE.role === 'seller') setTimeout(vOffer, 900); else vSet('wait', 'Ждём звонок…'); }
+}
+function voiceInit() {
+  const st = document.createElement('style');
+  st.textContent = `body.online .dbtn.micb{position:absolute;left:max(56px,calc(env(safe-area-inset-left,0px) + 54px));top:8px;bottom:auto;font-size:19px;z-index:6;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+body.online .dbtn.micb.vo-wait{opacity:.75;animation:micw 1.2s ease-in-out infinite}
+body.online .dbtn.micb.vo-live{background:rgba(60,170,90,.85);border-color:#fff;animation:micp 1.6s ease-in-out infinite}
+body.online .dbtn.micb.vo-mute{background:rgba(229,48,76,.9);border-color:#fff}
+@keyframes micp{50%{box-shadow:0 0 0 8px rgba(60,170,90,.25)}}
+@keyframes micw{50%{opacity:.4}}
+#micCap{position:absolute;left:max(104px,calc(env(safe-area-inset-left,0px) + 98px));top:8px;z-index:13;max-width:min(300px,calc(50vw - 112px));padding:7px 12px;border-radius:14px;background:rgba(18,57,91,.88);color:#fff;font:800 13px/1.25 var(--body);pointer-events:none;display:none}
+#micCap.on{display:block}`;
+  document.head.appendChild(st);
+  const app = document.getElementById('app') || document.body;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'micBtn'; btn.className = 'dbtn micb'; btn.textContent = '🎤'; btn.setAttribute('aria-label', 'Голосовая связь'); app.appendChild(btn);
+  const cap = document.createElement('div'); cap.id = 'micCap'; app.appendChild(cap);
+  btn.addEventListener('click', (e) => { e.preventDefault(); audio.unlock(); btn.blur(); if (!VOICE.on) voiceEnable(); else voiceToggleMute(); });
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) btn.click(); });
+  setInterval(() => { const now = performance.now(); Object.keys(VOICE.asm).forEach((k) => { if (now - VOICE.asm[k].t > 20000) delete VOICE.asm[k]; }); }, 5000);
+}
+owSafe('голос', voiceInit);
 
 Promise.all([loadRigged('hero2', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
   console.info('DBG heroes: rigged hero=' + !!ch + ' vendor=' + !!vend2 + ' stall=' + !!stallModel + ' boat=' + !!boatModel + ' lounge=' + !!loungeModel);
