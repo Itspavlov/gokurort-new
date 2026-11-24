@@ -1768,7 +1768,7 @@ document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.pre
 // ---------- звук: всё синтезируется на лету ----------
 const audio = (() => {
   let ac = null, mst, sfxB, musB, ambB, wavG, engG, e1, e2, wakeG, nb = null, muted = false, gullT = 2.5, tick = null, sty = null, nextT = 0, step = 0;
-  const P = {}, ok = (f) => (...a) => { try { return f(...a); } catch (e) { return undefined; } };
+  const P = {}; let audioErrN = 0; const ok = (f) => (...a) => { try { return f(...a); } catch (e) { if (audioErrN++ < 3) console.warn('audio err ' + (e && e.message)); return undefined; } };
   const noise = () => { const s = ac.createBufferSource(); s.buffer = nb; s.loop = true; return s; };
   const env = (g, t, a, d, peak) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
   const nz = (t, dur, type, f0, f1, peak, a = 0.01, bus = sfxB, Q = 1) => { const s = noise(), f = ac.createBiquadFilter(), g = ac.createGain(); f.type = type; f.Q.value = Q; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur); env(g, t, a, dur, peak); s.connect(f); f.connect(g); g.connect(bus); s.start(t, Math.random()); s.stop(t + dur + a + 0.05); };
@@ -1829,6 +1829,18 @@ const audio = (() => {
       const gg = ac.createGain(); gg.gain.value = gain; o.connect(bp); bp.connect(gg); gg.connect(g);
     });
     g.connect(sfxB); o.start(t); o.stop(t + d + 0.06);
+  });
+  // мотор машины: ровный гул, тон растёт со скоростью, с «переключением передач»
+  let cG = null, cO1 = null, cO2 = null;
+  P.car = ok((v, on) => {
+    if (!ac) return; const t = ac.currentTime;
+    if (!cG) {
+      cG = ac.createGain(); cG.gain.value = 0; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 1.1; lp.connect(cG); cG.connect(sfxB);
+      cO1 = ac.createOscillator(); cO2 = ac.createOscillator(); cO1.type = 'sawtooth'; cO2.type = 'triangle'; cO1.frequency.value = 40; cO2.frequency.value = 80; cO1.connect(lp); cO2.connect(lp); cO1.start(); cO2.start();
+    }
+    const gear = Math.min(3, Math.floor(v * 4)), part = v * 4 - gear, f = 38 + 34 * (gear === 3 ? 1 : part) + gear * 7;
+    cG.gain.setTargetAtTime(on ? 0.02 + 0.05 * v : 0, t, 0.15);
+    cO1.frequency.setTargetAtTime(f, t, 0.08); cO2.frequency.setTargetAtTime(f * 2.01, t, 0.08);
   });
   // гудок старта: два тона, длинный на «Поехали»
   P.horn = ok((long) => {
@@ -2479,7 +2491,7 @@ function onPeerState(d) {
 }
 function onPeerEvent(d) {
   if (!d) return;
-  if (d.t === 'say' && typeof d.text === 'string') { say('v', d.text, Math.max(2.6, 1.2 + d.text.length * 0.07)); chatLogAdd(NAMES.v, d.text, false); if (d.text === 'Эй!') audio.hey(peerPitch()); }
+  if (d.t === 'say' && typeof d.text === 'string') { say('v', d.text, Math.max(2.6, 1.2 + d.text.length * 0.07)); chatLogAdd(NAMES.v, d.text, false); if (d.text === 'Эй!') audio.hey(peerPitch()); if (d.text.indexOf('🎤') === 0 && typeof voiceSpeak === 'function') voiceSpeak(d.text.slice(2)); }
   else if (d.t === 'act' && typeof d.a === 'string') onPeerAct(d.a, Array.isArray(d.d) ? d.d : []);
 }
 // удалённый игрок: плавно догоняем присланное положение и повторяем его позу и клип
@@ -2999,7 +3011,7 @@ const CARDATA = {"q":10000.0,"tex":"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAA
 const CAR = { g: null, bodyG: null, x: OW_PARK.x, z: OW_PARK.z, h: OW_PARK.h, v: 0, vPrev: 0, steer: 0, spin: 0, mode: 'out', seq: null, d: [0, 0], dT: [0, 0], doors: [], steerG: [], spinG: [], blob: null,
   vmax: 24, vrev: 7, L: 2.7, seated: false, drv: false, declined: false, tx: 0, tz: 0, th: 0, tv: 0, pitch: 0, roll: 0, ready: false, dead: false, sx: 0, sh: 0 };
 const CAR_SEAT = [[0.4, 0.5, -0.42], [-0.4, 0.5, -0.42]];   // [водитель, пассажир]
-const CAR_DOORX = [1.0, -1.0], CAR_DOORZ = [-0.1, -0.1], CAR_SC = 0.9;
+const CAR_DOORX = [1.0, -1.0], CAR_DOORZ = [-0.1, -0.1], CAR_SC = 0.9, CAR_VK = 0.88;   // продавец выше героини: чуть меньше, чтобы голова не торчала из крыши
 const CAR_UI = {};
 const carLocal = (wx, wz) => { const dx = wx - CAR.x, dz = wz - CAR.z, c = Math.cos(CAR.h), s = Math.sin(CAR.h); return [dx * c - dz * s, dx * s + dz * c]; };
 const carWorld = (lx, lz) => { const c = Math.cos(CAR.h), s = Math.sin(CAR.h); return [CAR.x + lx * c + lz * s, CAR.z - lx * s + lz * c]; };
@@ -3176,7 +3188,7 @@ function carPassengerLeave(manual) {
 function carPeerSeat(tag) {
   const i = tag === 'car' ? 0 : 1;
   if (ONLINE.pw === 'car' && ONLINE.pseat === i) return;
-  reparent(vendor.root, CAR.g); carScale(vendor.root, CAR_SC); ONLINE.pw = 'car'; ONLINE.pseat = i; vendor.root.visible = true;
+  reparent(vendor.root, CAR.g); carScale(vendor.root, CAR_SC * CAR_VK); ONLINE.pw = 'car'; ONLINE.pseat = i; vendor.root.visible = true;
   carSetPos(vendor.root, carSeatPos(i)); vendor.root.rotation.set(0, 0, 0); vState.mode = 'sit'; vState.clip = null; vState.clipRate = 0;
   if (i === 1) CAR.dT[1] = 0;
 }
@@ -3297,7 +3309,7 @@ function carTick(dt) {
   if (ONLINE.pw === 'car' && vendor.root.parent === C.g) carSetPos(vendor.root, carSeatPos(ONLINE.pseat));
 }
 function carFrame(dt) {
-  try { carTick(dt); } catch (e) {
+  try { carTick(dt); if (audio.car) { const ride = CAR.mode === 'in' || CAR.mode === 'pboard' || CAR.mode === 'pexit'; audio.car(Math.min(1, Math.abs(CAR.v) / CAR.vmax), ride && CAR.seated !== undefined); } } catch (e) {
     CAR.dead = true; owErr('машина-кадр', e);
     try { if (hero.root.parent !== scene) reparent(hero.root, scene); carScale(hero.root, 1); S.ground = true; S.mode = 'idle'; CAR.mode = 'out'; CAR.seated = false; CAR_UI.btn.hidden = true; } catch (x) {}
   }
@@ -3962,6 +3974,66 @@ body.portrait-lock #rotwarn{display:flex}`;
   });
   (document.getElementById('app') || document.body).appendChild(ex);
 }
+// ---------- голос: зажал 🎤, сказал, отпустил — реплика уходит собеседнику ----------
+// Сервер пересылает только текст, поэтому речь распознаётся на устройстве и уходит репликой с пометкой 🎤;
+// у собеседника она появляется облачком и озвучивается синтезатором речи.
+function voiceSpeak(t) {
+  try {
+    if (!window.speechSynthesis || !t || (audio.isMuted && audio.isMuted())) return;
+    const u = new SpeechSynthesisUtterance(t); u.lang = 'ru-RU'; u.rate = 1.02; u.pitch = ONLINE.role === 'seller' ? 1.15 : 0.9; speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function micInit() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const st = document.createElement('style');
+  st.textContent = `body.online .dbtn.micb{position:absolute;left:max(56px,calc(env(safe-area-inset-left,0px) + 54px));top:8px;bottom:auto;font-size:19px;z-index:6;-webkit-user-select:none;user-select:none;touch-action:none}
+body.online .dbtn.micb.rec{background:rgba(229,48,76,.9);border-color:#fff;transform:scale(1.18);animation:micp 1s ease-in-out infinite}
+@keyframes micp{50%{box-shadow:0 0 0 9px rgba(229,48,76,.25)}}
+#micCap{position:absolute;left:max(104px,calc(env(safe-area-inset-left,0px) + 98px));top:8px;z-index:13;max-width:min(300px,calc(50vw - 112px));padding:7px 12px;border-radius:14px;background:rgba(18,57,91,.88);color:#fff;font:800 13px/1.25 var(--body);pointer-events:none;display:none}
+#micCap.on{display:block}`;
+  document.head.appendChild(st);
+  const app = document.getElementById('app') || document.body;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'micBtn'; btn.className = 'dbtn micb'; btn.textContent = '🎤'; btn.setAttribute('aria-label', 'Говорить: зажми и скажи'); app.appendChild(btn);
+  const cap = document.createElement('div'); cap.id = 'micCap'; app.appendChild(cap);
+  let rec = null, holding = false, acc = '', cur = '', hideT = 0, errCode = '';
+  const note = (t, ms) => { cap.textContent = t; cap.classList.add('on'); clearTimeout(hideT); if (ms) hideT = setTimeout(() => cap.classList.remove('on'), ms); };
+  const chunks = (t) => { const out = []; let rest = t.trim(); while (rest && out.length < 3) { if (rest.length <= 76) { out.push(rest); break; } let k = rest.lastIndexOf(' ', 76); if (k < 30) k = 76; out.push(rest.slice(0, k).trim()); rest = rest.slice(k).trim(); } return out; };
+  const sendText = (t) => {
+    t = t.replace(/\s+/g, ' ').trim(); if (!t) { note('Не расслышал — повтори', 1800); return; }
+    const parts = chunks(t); cap.classList.remove('on');
+    parts.forEach((p, i) => setTimeout(() => { chatSend('🎤 ' + p); }, i * 700));
+  };
+  const begin = () => {
+    if (holding) return;
+    if (!SR) { toast('Голосовой ввод не поддерживается этим браузером. Попробуй Chrome'); return; }
+    if (!ONLINE.joined) { toast('Сначала зайдите в комнату'); return; }
+    audio.unlock(); holding = true; acc = ''; cur = ''; errCode = ''; btn.classList.add('rec'); note('🎤 Слушаю…');
+    const run = () => {
+      let r; try { r = new SR(); } catch (e) { holding = false; btn.classList.remove('rec'); return; }
+      rec = r; r.lang = 'ru-RU'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
+      r.onresult = (e) => { let f = '', it = ''; for (let k = 0; k < e.results.length; k++) { const x = e.results[k]; if (x.isFinal) f += x[0].transcript + ' '; else it += x[0].transcript; } cur = (f + it).trim(); if (holding) note('🎤 ' + ((acc + ' ' + cur).trim() || 'Слушаю…')); };
+      r.onerror = (e) => { errCode = e.error || 'err'; if (errCode === 'not-allowed' || errCode === 'service-not-allowed') { holding = false; btn.classList.remove('rec'); note('Разреши доступ к микрофону для сайта в настройках браузера', 4200); } };
+      r.onend = () => {
+        acc = (acc + ' ' + cur).trim(); cur = '';
+        if (holding && errCode !== 'not-allowed' && errCode !== 'service-not-allowed') { errCode = ''; setTimeout(run, 60); return; }   // браузер сам оборвал, а палец ещё держит
+        if (rec === r) { rec = null; const t = acc; acc = ''; if (!errCode || t) sendText(t); else if (errCode === 'no-speech') note('Не расслышал — повтори', 1800); }
+      };
+      try { r.start(); } catch (e) { holding = false; btn.classList.remove('rec'); }
+    };
+    run();
+  };
+  const end = () => {
+    if (!holding) return; holding = false; btn.classList.remove('rec'); note('…', 0);
+    if (rec) { try { rec.stop(); } catch (e) { cap.classList.remove('on'); } } else cap.classList.remove('on');
+    setTimeout(() => { if (!holding && cap.textContent === '…') cap.classList.remove('on'); }, 2500);
+  };
+  btn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); try { btn.setPointerCapture(ev.pointerId); } catch (e) {} begin(); });
+  btn.addEventListener('pointerup', end); btn.addEventListener('pointercancel', end); btn.addEventListener('lostpointercapture', end);
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) begin(); });
+  window.addEventListener('keyup', (e) => { if (e.code === 'KeyV') end(); });
+  window.__mic = { begin, end, sendText };
+}
 // ---------- раскладка экрана: слева ходьба/чат, справа танцы; в карте — стрелки ----------
 const KPAD = { u: 0, d: 0, l: 0, r: 0, ids: {} };
 function kPadApply() { input.x = KPAD.r - KPAD.l; input.y = KPAD.u - KPAD.d; }
@@ -3974,7 +4046,7 @@ body.online .dances{left:auto;right:max(10px,env(safe-area-inset-right,0px));top
 body.online .pill{top:8px;right:max(10px,env(safe-area-inset-right,0px));padding:6px 12px;font-size:12px}
 body.online .dbtn.chatb{left:max(10px,env(safe-area-inset-left,0px));top:8px;bottom:auto}
 body.online .chatlog{left:max(10px,env(safe-area-inset-left,0px));top:54px;bottom:auto;width:min(270px,36vw);max-height:128px;overflow:hidden;justify-content:flex-start}
-body.online .chatbar{left:max(58px,calc(env(safe-area-inset-left,0px) + 52px));right:auto;top:8px;bottom:auto;width:min(360px,calc(50vw - 66px))}
+body.online .chatbar{left:max(104px,calc(env(safe-area-inset-left,0px) + 98px));right:auto;top:8px;bottom:auto;width:min(340px,calc(50vw - 112px))}
 body.online #carBtn{right:76px;bottom:24px}
 body.online .pushb{right:76px;bottom:84px}
 body.online #kBtn{right:76px;bottom:24px;height:46px}
@@ -4023,7 +4095,7 @@ body.kartin .kpad{display:flex}
   mkPad('kPadR', [['l', '◀', 'Влево'], ['r', '▶', 'Вправо']]);
 }
 
-owSafe('раскладка', layoutUI); owSafe('ориентация', orientInit);
+owSafe('раскладка', layoutUI); owSafe('микрофон', micInit); owSafe('ориентация', orientInit);
 owSafe('арена', arenaInit);
 owSafe('карты', kartInit);
 
