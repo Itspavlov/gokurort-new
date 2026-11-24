@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <script>
 (function(){ if(!/[?&]debug/.test(location.search)) return; var L=[], el=null;
 function show(){ if(!el){ el=document.createElement('pre'); el.style.cssText='position:fixed;left:0;right:0;bottom:0;max-height:45vh;overflow:auto;margin:0;padding:6px;background:rgba(0,0,0,.85);color:#9f9;font:11px/1.25 monospace;z-index:99999;white-space:pre-wrap;pointer-events:none'; (document.body||document.documentElement).appendChild(el);} el.textContent=L.slice(-40).join('\n'); }
@@ -3872,7 +3872,7 @@ function kartHudUpdate() {
   U.btn.hidden = !bt; if (bt && U.btn.textContent !== bt) U.btn.textContent = bt;
   const sb = KART.mode === 'in' && M.seated; U.berry.hidden = !sb; U.berry.classList.toggle('dis', T < KART.berryCd || M.crash > 0);
   const canTp = hero.root.parent === scene && ctl.mode === 'walk' && KART.mode === 'out' && CAR.mode === 'out' && ONLINE.joined && ONLINE.where === 'beach' && ONLINE.phase === 'beach';
-  U.home.hidden = !(canTp && kartAtBeach()); if (!U.home.hidden && U.home.textContent !== '🏁 В картинг') U.home.textContent = '🏁 В картинг';
+  U.home.hidden = true;   // кнопки телепорта нет: до картинга только доехать
 }
 function kartGuide() {
   if (!KART.ready) return null;
@@ -4069,6 +4069,10 @@ body.online #khud{left:50%;transform:translateX(-50%);top:8px}
 #lobby .card [data-role=seller]{grid-column:1;grid-row:3}
 #lobby .card [data-role=buyer]{grid-column:1;grid-row:4}
 }
+#lobby.typing .card h1,#lobby.typing .card #lobbyP,#lobby.typing .card .or,#lobby.typing .card [data-role]{display:none}
+#lobby.typing .card{grid-template-columns:1fr}
+#lobby.typing .card .row{grid-column:1;grid-row:auto}
+#lobby.typing.sheet{align-items:flex-start;top:4px}
 body.kartin .stick{display:none!important}
 body.kartin .dances{display:none}
 body.kartin #kBtn{right:max(22px,env(safe-area-inset-right,0px));bottom:196px}
@@ -4091,6 +4095,11 @@ body.kartin .kpad{display:flex}
       b.addEventListener('contextmenu', (e) => e.preventDefault());
     });
   };
+  { const lob = document.getElementById('lobby'); let tt = 0;
+    if (lob) {
+      document.addEventListener('focusin', (e) => { if (e.target && e.target.id === 'codeIn') { clearTimeout(tt); lob.classList.add('typing'); setTimeout(() => { try { e.target.scrollIntoView({ block: 'center' }); } catch (er) {} }, 250); } });
+      document.addEventListener('focusout', (e) => { if (e.target && e.target.id === 'codeIn') { clearTimeout(tt); tt = setTimeout(() => lob.classList.remove('typing'), 450); } });
+    } }
   mkPad('kPadL', [['u', '▲', 'Газ'], ['d', '▼', 'Назад']]);
   mkPad('kPadR', [['l', '◀', 'Влево'], ['r', '▶', 'Вправо']]);
 }
