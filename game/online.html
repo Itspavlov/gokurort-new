@@ -2577,7 +2577,7 @@ function enter(role, code, peer) {
     basket.visible = false; ctl.mode = 'walk'; camMode = 'walk'; camYaw = camYawS = CAM_TABLE_YAW; camSwing = 0;
     buildDances(seller ? ['dance', 'laugh'] : ['dance01', 'dance02', 'dance03', 'dance04', 'dance05', 'dance06'], seller ? ['♪', '😄'] : null);
   }
-  $('#lobby').hidden = true; $('#hud').hidden = false;
+  $('#lobby').hidden = true; $('#hud').hidden = false; try { voiceEnable(); } catch (e) { owErr('голос-вход', e); }
   const link = location.origin + location.pathname + '?r=' + code;
   ONLINE.link = link;
   if (!peer) { setHint('Ждём ' + (seller ? 'покупателя' : 'продавца') + '. Код комнаты ' + code + '. Нажмите «Пригласить».'); }
@@ -4053,7 +4053,7 @@ owSafe('карты', kartInit);
 // Звук идёт напрямую между игроками. Сервер умеет пересылать только короткие реплики, поэтому
 // «рукопожатие» (SDP) сжимается и уходит кусками по 72 знака в невидимых репликах «~…»; в чате они не показываются.
 const VOICE = {
-  on: false, stream: null, pc: null, el: null, muted: false, st: 'off', offer: null, asm: {}, q: [], qT: 0, sess: 0, lost: 0, gen: 0,
+  on: false, stream: null, pc: null, el: null, talk: false, denied: false, ready: null, st: 'off', offer: null, asm: {}, q: [], qT: 0, sess: 0, lost: 0, gen: 0,
   ice: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
     { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }],
 };
@@ -4076,7 +4076,8 @@ function vSend(type, data) {   // кусками: ~ T ид(2) номер(2) вс
   if (!VOICE.qT) VOICE.qT = setInterval(() => { const t = VOICE.q.shift(); if (!t) { clearInterval(VOICE.qT); VOICE.qT = 0; return; } sendSay(t); }, 125);
 }
 function voiceSig(text) {   // принят кусок
-  const m = /^~([OA])([0-9a-z]{2})([0-9a-z]{2})([0-9a-z]{2})(.*)$/.exec(text); if (!m) return false;
+  const m = /^~([OAR])([0-9a-z]{2})([0-9a-z]{2})([0-9a-z]{2})(.*)$/.exec(text); if (!m) return false;
+  if (m[1] === 'R') { if (ONLINE.role === 'seller' && VOICE.on) setTimeout(vOffer, 200); return true; }
   const key = m[1], id = m[2], i = parseInt(m[3], 36), n = parseInt(m[4], 36);
   let a = VOICE.asm[key]; if (!a || a.id !== id) a = VOICE.asm[key] = { id, n, parts: [], got: 0, t: performance.now() };
   if (!a.parts[i]) { a.parts[i] = m[5]; a.got++; }
@@ -4086,10 +4087,10 @@ function voiceSig(text) {   // принят кусок
   }
   return true;
 }
-function vSet(st, msg, ms) {
+function vSet(st, msg, ms = 2500) {
   VOICE.st = st; const b = document.getElementById('micBtn'), c = document.getElementById('micCap');
-  if (b) { b.classList.toggle('vo-wait', st === 'wait' || st === 'conn'); b.classList.toggle('vo-live', st === 'live' && !VOICE.muted); b.classList.toggle('vo-mute', VOICE.muted && st !== 'off'); b.textContent = VOICE.muted && st !== 'off' ? '🔇' : '🎤'; }
-  if (c && msg) { c.textContent = msg; c.classList.add('on'); clearTimeout(VOICE.capT); if (ms) VOICE.capT = setTimeout(() => c.classList.remove('on'), ms); }
+  if (b) { b.classList.toggle('vo-wait', st === 'wait' || st === 'conn'); b.classList.toggle('vo-live', st === 'live' && !VOICE.talk); b.classList.toggle('vo-talk', VOICE.talk); b.classList.toggle('vo-deny', VOICE.denied); }
+  if (c && msg) { c.textContent = msg; c.classList.add('on'); clearTimeout(VOICE.capT); if (ms) VOICE.capT = setTimeout(() => { if (VOICE.denied) { c.textContent = 'Микрофон не разрешён — нажми 🎤'; c.classList.add('on'); } else c.classList.remove('on'); }, ms); }
 }
 function vClosePc() {
   const pc = VOICE.pc; VOICE.pc = null; VOICE.gen++;
@@ -4099,7 +4100,7 @@ function vClosePc() {
 function vNewPc() {
   vClosePc(); const gen = VOICE.gen;
   const pc = new RTCPeerConnection({ iceServers: VOICE.ice, bundlePolicy: 'max-bundle' }); VOICE.pc = pc;
-  VOICE.stream.getAudioTracks().forEach((t) => pc.addTrack(t, VOICE.stream));
+  if (VOICE.stream) VOICE.stream.getAudioTracks().forEach((t) => pc.addTrack(t, VOICE.stream)); else pc.addTransceiver('audio', { direction: 'recvonly' });
   pc.ontrack = (e) => {
     if (!VOICE.el) { const a = document.createElement('audio'); a.autoplay = true; a.setAttribute('playsinline', ''); a.style.display = 'none'; document.body.appendChild(a); VOICE.el = a; }
     VOICE.el.srcObject = e.streams[0] || new MediaStream([e.track]); const p = VOICE.el.play(); if (p && p.catch) p.catch(() => {});
@@ -4122,8 +4123,9 @@ const vGather = (pc) => new Promise((res) => {
   pc.addEventListener('icegatheringstatechange', ch);
 });
 async function vOffer() {
-  if (!VOICE.on || !VOICE.stream || !ONLINE.peer || ONLINE.role !== 'seller') return;
+  if (!VOICE.on || !ONLINE.peer || ONLINE.role !== 'seller') return;
   try {
+    await VOICE.ready; if (!VOICE.on || !ONLINE.peer) return;
     const pc = vNewPc(), gen = VOICE.gen; vSet('conn', 'Звоню…');
     await pc.setLocalDescription(await pc.createOffer({ offerToReceiveAudio: true })); await vGather(pc);
     if (gen !== VOICE.gen) return; vSend('O', await vPack(pc.localDescription.sdp));
@@ -4131,11 +4133,11 @@ async function vOffer() {
 }
 async function vGotOffer(id, sdp) {
   VOICE.offer = { id, sdp };
-  if (!VOICE.on || !VOICE.stream) { toast(otherName() + ' зовёт поговорить — нажми 🎤', 4200); vSet('off'); return; }
+  if (!VOICE.on) { voiceEnable(); return; }
   await vAnswer();
 }
 async function vAnswer() {
-  const o = VOICE.offer; if (!o || !VOICE.stream || !VOICE.on) return; VOICE.offer = null;
+  if (!VOICE.on) return; await VOICE.ready; const o = VOICE.offer; if (!o || !VOICE.on) return; VOICE.offer = null;
   try {
     const pc = vNewPc(), gen = VOICE.gen; vSet('conn', 'Соединяю…');
     await pc.setRemoteDescription({ type: 'offer', sdp: o.sdp }); await pc.setLocalDescription(await pc.createAnswer()); await vGather(pc);
@@ -4146,31 +4148,43 @@ async function vGotAnswer(sdp) {
   const pc = VOICE.pc; if (!pc || pc.signalingState !== 'have-local-offer') return;
   try { await pc.setRemoteDescription({ type: 'answer', sdp }); } catch (e) { owErr('голос-ответ2', e); }
 }
-function vRetry() { if (ONLINE.role === 'seller') vOffer(); else { vClosePc(); vSet('wait', 'Ждём звонок…'); } }
-async function voiceEnable() {
+function vRetry() { if (ONLINE.role === 'seller') vOffer(); else { vClosePc(); vSet('wait', 'Подключаю…'); vSend('R', ''); } }
+async function voiceEnable() {   // при входе в игру: сразу просим микрофон и держим связь открытой
   if (VOICE.on) return;
-  if (!window.RTCPeerConnection || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Голосовая связь не поддерживается этим браузером', 3200); return; }
-  if (!ONLINE.joined) { toast('Сначала зайдите в комнату', 2200); return; }
-  try {
-    VOICE.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: false });
-  } catch (e) { vSet('off', 'Нет доступа к микрофону. Разреши его для сайта в настройках браузера', 4800); return; }
-  VOICE.on = true; VOICE.muted = false; vSet('wait', ONLINE.peer ? 'Подключаю…' : 'Микрофон включён, ждём собеседника', 2600);
+  if (!window.RTCPeerConnection) { toast('Голосовая связь не поддерживается этим браузером', 3200); return; }
+  VOICE.on = true; VOICE.ready = vMic();
+  vSet('wait', ONLINE.peer ? 'Подключаю…' : 'Ждём собеседника…', 2600);
+  await VOICE.ready;
   if (VOICE.offer) await vAnswer(); else if (ONLINE.peer && ONLINE.role === 'seller') await vOffer();
 }
-function voiceToggleMute() {
-  VOICE.muted = !VOICE.muted; if (VOICE.stream) VOICE.stream.getAudioTracks().forEach((t) => { t.enabled = !VOICE.muted; });
-  vSet(VOICE.st, VOICE.muted ? 'Микрофон выключен' : 'Микрофон включён', 1800);
+async function vMic() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nomedia');
+    VOICE.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }, video: false });
+    VOICE.stream.getAudioTracks().forEach((t) => { t.enabled = VOICE.talk; }); VOICE.denied = false; vSet(VOICE.st);
+  } catch (e) { VOICE.stream = null; VOICE.denied = true; vSet(VOICE.st, 'Нет доступа к микрофону: ты слышишь собеседника, а он тебя нет. Нажми 🎤 и разреши доступ', 6000); }
+}
+async function voiceRetryMic() {   // нажали 🎤 после отказа
+  await vMic(); if (!VOICE.stream) return;
+  if (ONLINE.peer) { if (ONLINE.role === 'seller') vOffer(); else vSend('R', ''); }
+}
+function voiceTalk(on) {   // зажал — говоришь, отпустил — тишина (собеседнику ничего нажимать не надо)
+  if (on) { VOICE.talk = true; if (VOICE.stream) VOICE.stream.getAudioTracks().forEach((t) => { t.enabled = true; }); vSet(VOICE.st); return; }
+  VOICE.talk = false; vSet(VOICE.st);
+  setTimeout(() => { if (!VOICE.talk && VOICE.stream) VOICE.stream.getAudioTracks().forEach((t) => { t.enabled = false; }); }, 220);   // хвост слова не обрезаем
 }
 function voicePeer(present) {   // собеседник пришёл или ушёл
   if (!present) { vClosePc(); VOICE.offer = null; VOICE.asm = {}; VOICE.q.length = 0; if (VOICE.on) vSet('wait', 'Собеседник вышел', 2400); return; }
-  if (VOICE.on) { if (ONLINE.role === 'seller') setTimeout(vOffer, 900); else vSet('wait', 'Ждём звонок…'); }
+  if (VOICE.on) { if (ONLINE.role === 'seller') setTimeout(vOffer, 900); else vSet('wait', 'Подключаю…'); }
 }
 function voiceInit() {
   const st = document.createElement('style');
-  st.textContent = `body.online .dbtn.micb{position:absolute;left:max(56px,calc(env(safe-area-inset-left,0px) + 54px));top:8px;bottom:auto;font-size:19px;z-index:6;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  st.textContent = `body.online .dbtn.micb{position:absolute;left:max(56px,calc(env(safe-area-inset-left,0px) + 54px));top:8px;bottom:auto;font-size:19px;z-index:6;-webkit-user-select:none;user-select:none;touch-action:none}
 body.online .dbtn.micb.vo-wait{opacity:.75;animation:micw 1.2s ease-in-out infinite}
 body.online .dbtn.micb.vo-live{background:rgba(60,170,90,.85);border-color:#fff;animation:micp 1.6s ease-in-out infinite}
-body.online .dbtn.micb.vo-mute{background:rgba(229,48,76,.9);border-color:#fff}
+body.online .dbtn.micb.vo-talk{background:rgba(229,48,76,.92);border-color:#fff;transform:scale(1.18);animation:micr .7s ease-in-out infinite}
+body.online .dbtn.micb.vo-deny{border-style:dashed;border-color:#ffb3bd;opacity:.85}
+@keyframes micr{50%{box-shadow:0 0 0 10px rgba(229,48,76,.3)}}
 @keyframes micp{50%{box-shadow:0 0 0 8px rgba(60,170,90,.25)}}
 @keyframes micw{50%{opacity:.4}}
 #micCap{position:absolute;left:max(104px,calc(env(safe-area-inset-left,0px) + 98px));top:8px;z-index:13;max-width:min(300px,calc(50vw - 112px));padding:7px 12px;border-radius:14px;background:rgba(18,57,91,.88);color:#fff;font:800 13px/1.25 var(--body);pointer-events:none;display:none}
@@ -4179,9 +4193,17 @@ body.online .dbtn.micb.vo-mute{background:rgba(229,48,76,.9);border-color:#fff}
   const app = document.getElementById('app') || document.body;
   const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'micBtn'; btn.className = 'dbtn micb'; btn.textContent = '🎤'; btn.setAttribute('aria-label', 'Голосовая связь'); app.appendChild(btn);
   const cap = document.createElement('div'); cap.id = 'micCap'; app.appendChild(cap);
-  btn.addEventListener('click', (e) => { e.preventDefault(); audio.unlock(); btn.blur(); if (!VOICE.on) voiceEnable(); else voiceToggleMute(); });
+  const down = (ev) => {
+    ev.preventDefault(); audio.unlock();
+    if (!VOICE.on) { voiceEnable(); return; }
+    if (!VOICE.stream) { voiceRetryMic(); return; }
+    try { btn.setPointerCapture(ev.pointerId); } catch (e) {} voiceTalk(true);
+  };
+  const up = () => voiceTalk(false);
+  btn.addEventListener('pointerdown', down); btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up); btn.addEventListener('lostpointercapture', up);
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
-  window.addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) btn.click(); });
+  window.addEventListener('keydown', (e) => { if (e.code === 'KeyV' && !e.repeat && !(e.target && e.target.tagName === 'INPUT') && VOICE.on && VOICE.stream) voiceTalk(true); });
+  window.addEventListener('keyup', (e) => { if (e.code === 'KeyV') voiceTalk(false); });
   setInterval(() => { const now = performance.now(); Object.keys(VOICE.asm).forEach((k) => { if (now - VOICE.asm[k].t > 20000) delete VOICE.asm[k]; }); }, 5000);
 }
 owSafe('голос', voiceInit);
