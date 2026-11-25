@@ -890,7 +890,12 @@ async function loadRigged(base, animFile, height, walkRate) {
     const ch = makeRiggedHero(buf, meta, tex, height, walkRate);
     try { ch.clips = await loadClips(animFile); } catch (e) { console.warn('anim failed', e); }
     return ch;
-  } catch (e) { console.warn('model failed', base, e); return null; }
+  } catch (e) {
+    console.warn('model failed', base, e);
+    loadRigged.tries = loadRigged.tries || {};
+    if ((loadRigged.tries[base] = (loadRigged.tries[base] || 0) + 1) <= 2) { await new Promise((r) => setTimeout(r, 1500)); return loadRigged(base, animFile, height, walkRate); }   // мобильная сеть: ещё попытка
+    return null;
+  }
 }
 // ларёк: статичная модель
 async function loadStaticModel(name, scale) {
@@ -2884,8 +2889,11 @@ function musicFor() {
   return pick(S.clip) || (ONLINE.peer && vendor.root.visible ? pick(vState.clip) : null) || (S.mode === 'dance' ? 'dance01' : null);
 }
 
-// вход в комнату: роль решает, чьей моделью играем
+// вход в комнату: роль решает, чьей моделью играем. Ждём загрузку персонажей, иначе запомнится временная фигура
+let MODELS_READY = false, PENDING_ENTER = null;
+setTimeout(() => { if (!MODELS_READY) { MODELS_READY = true; if (PENDING_ENTER) { const a = PENDING_ENTER; PENDING_ENTER = null; enter(a[0], a[1], a[2]); } } }, 30000);
 function enter(role, code, peer) {
+  if (!MODELS_READY) { PENDING_ENTER = [role, code, peer]; try { $('#lobbyP').textContent = 'Загружаем персонажей…'; } catch (e) {} return; }
   ONLINE.role = role; ONLINE.code = code; ONLINE.joined = true; ONLINE.peer = !!peer; seller = role === 'seller';
   NAMES.h = seller ? 'Тарас' : 'Лера'; NAMES.v = seller ? 'Лера' : 'Тарас';
   if (!ONLINE.started) {
@@ -4949,6 +4957,7 @@ owSafe('подиум', cerInit);
 Promise.all([loadRigged('hero2', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
   console.info('DBG heroes: rigged hero=' + !!ch + ' vendor=' + !!vend2 + ' stall=' + !!stallModel + ' boat=' + !!boatModel + ' lounge=' + !!loungeModel);
   adoptHero(ch || makeCartoonHero()); shade(hero.root);
+  setTimeout(() => { MODELS_READY = true; if (PENDING_ENTER) { const a = PENDING_ENTER; PENDING_ENTER = null; enter(a[0], a[1], a[2]); } }, 0);
   if (vend2) { if (vendor.root.parent) vendor.root.parent.remove(vendor.root); vendor = vend2; stall.add(vendor.root); shade(vendor.root); }
   if (stallModel) {
     for (let i = stall.children.length - 1; i >= 0; i--) if (stall.children[i] !== vendor.root) stall.remove(stall.children[i]);
