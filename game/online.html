@@ -412,6 +412,48 @@ GFX.hillsHD = (hills) => {
     if (scene.fog && scene.fog.isFog) { scene.fog.near = 90; scene.fog.far = 420; }   // дальше видно: горы не тонут в дымке
   } catch (e) { console.warn('hills hd fail', e); }
 };
+// Персонажи HD: кожа (мягкий блеск + тёплое рассеяние), волосы (глянец), ткань (матовая с отливом), рельеф из текстуры; контактная тень под ногами
+GFX.charHD = (lam) => {
+  if (!GFX.hd || /[?&]chars=old/.test(location.search) || !lam || !lam.map) return lam;
+  try {
+    const m = new THREE.MeshPhysicalMaterial({ map: lam.map, color: 0xe2e2e2, skinning: true, side: THREE.DoubleSide, roughness: 0.85, metalness: 0, envMapIntensity: 0.9,
+    });
+    m.color.convertSRGBToLinear();
+    m.onBeforeCompile = (s) => {
+      s.fragmentShader = 'float cSk, cHr, cWt;\n' + s.fragmentShader
+        .replace('#include <map_fragment>', `#include <map_fragment>
+  {
+    vec3 tc = diffuseColor.rgb; float mx = max(tc.r, max(tc.g, tc.b)), mn = min(tc.r, min(tc.g, tc.b)), sat = (mx - mn) / max(mx, 1e-4), lum = dot(tc, vec3(0.2126, 0.7152, 0.0722));
+    cSk = smoothstep(0.22, 0.38, sat) * (1.0 - smoothstep(0.7, 0.85, sat)) * step(tc.b, tc.g) * step(tc.g, tc.r) * smoothstep(0.06, 0.14, lum) * (1.0 - smoothstep(0.6, 0.8, lum));
+    cHr = smoothstep(0.25, 0.45, sat) * step(tc.b, tc.r) * (1.0 - smoothstep(0.04, 0.09, lum)) * (1.0 - cSk);
+    cWt = smoothstep(0.45, 0.7, lum) * (1.0 - smoothstep(0.1, 0.25, sat));
+  }`)
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(mix(mix(0.86, 0.62, cWt), 0.5, cSk), 0.58, cHr);')
+        .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n metalnessFactor = 0.35 * cHr;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += diffuseColor.rgb * vec3(0.55, 0.16, 0.10) * 0.11 * cSk;')   // свет под кожей: тени на лице тёплые, а не серые
+        ;
+    };
+    m.customProgramCacheKey = () => 'charHD';
+    return m;
+  } catch (e) { console.warn('char hd fail', e); return lam; }
+};
+GFX.blobs = [];
+GFX.charTick = () => {
+  if (!GFX.hd || typeof hero === 'undefined') return;
+  if (!GFX.blobMat) {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 31);
+    gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.25)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    GFX.blobMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+    GFX.blobMat.toneMapped = false;
+    for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), GFX.blobMat); b.rotation.x = -Math.PI / 2; b.renderOrder = 1; scene.add(b); GFX.blobs.push(b); }
+  }
+  [hero, typeof vendor !== 'undefined' ? vendor : null].forEach((ch, i) => {
+    const b = GFX.blobs[i]; if (!ch || !ch.root) { b.visible = false; return; }
+    const r = ch.root, p = r.position, gy = typeof sandY === 'function' ? sandY(p.x) : 0;
+    const on = r.parent === scene && r.visible && Math.abs(p.y - gy) < 0.25 && p.x < 1.8;   // только на суше и на ногах
+    b.visible = on; if (on) { b.position.set(p.x, gy + 0.015, p.z); }
+  });
+};
 
 const SUN_OFF = new THREE.Vector3(-8, 14, 10).multiplyScalar(1.5);
 const shade = (obj, cast = true, recv = true) => { obj.traverse((o) => { if (o.isMesh) { o.castShadow = cast; o.receiveShadow = recv; } }); return obj; };
@@ -944,7 +986,7 @@ function makeRiggedHero(buf, meta, tex, height, walkRate) {
   meta.bones.forEach((b, i) => { if (b.parent >= 0) nodes[b.parent].add(nodes[i]); });
   const sc = height / meta.H;
   const root = new THREE.Group(), rig = new THREE.Group(), model = new THREE.Group(); root.add(rig); rig.add(model);
-  const material = new THREE.MeshLambertMaterial({ map: tex, color: 0xd2d2d2, skinning: true, side: THREE.DoubleSide });
+  const material = GFX.charHD(new THREE.MeshLambertMaterial({ map: tex, color: 0xd2d2d2, skinning: true, side: THREE.DoubleSide }));
   const body = new THREE.SkinnedMesh(g, material);
   body.frustumCulled = false; body.add(nodes[0]); model.add(body);
   model.updateMatrixWorld(true);
@@ -2167,7 +2209,7 @@ function frame(now) {
   hero.root.getWorldPosition(heroWorld);
   blob.visible = !sun.castShadow && hero.root.parent === scene && heroWorld.x < 2.4;
   blob.position.set(heroWorld.x, sandY(heroWorld.x) + 0.03, heroWorld.z);
-  owTick(dt);
+  owTick(dt); try { GFX.charTick(); } catch (e) {}
   updateCamera(dt, false); updateBubbles();
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
