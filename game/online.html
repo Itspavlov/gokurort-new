@@ -200,6 +200,35 @@ let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); }
 catch (e) { failBox.hidden = false; return; }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+// ================= ГРАФИКА: режим HD (физические материалы, правильный свет) — часть A: до создания материалов =================
+const GFX = (() => { let q = 'hd', e = 1, p = { get: () => null }; try { p = new URLSearchParams(location.search); q = p.get('q') || localStorage.getItem('gfx') || (((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2) ? 'low' : 'hd'); if (p.get('enc') === '0') e = 0; } catch (err) {} const n = (k, d) => { const v = parseFloat(p.get(k)); return isNaN(v) ? d : v; }; return { q, hd: q !== 'low', enc: e, ex: n('ex', 0.66), sat: n('sat', 1.4), sun: n('sun', 1.5), hemi: n('hemi', 0.25), env: n('env', 0.5) }; })();
+if (GFX.hd) {
+  try {
+    const Sm = THREE.MeshStandardMaterial, Pc = THREE.MeshPhysicalMaterial, Bm = THREE.MeshBasicMaterial;
+    const srgbCol = (m) => { if (!GFX.enc) return; if (m.color) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); };
+    // цвета вершин хранятся в sRGB: переводим в линейное пространство прямо в шейдере
+    const vcFix = (m) => { if (!GFX.enc || !m.vertexColors) return; const old = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { if (old) old(sh, r); sh.vertexShader = sh.vertexShader.replace('#include <color_vertex>', '#if defined( USE_COLOR_ALPHA )\n vColor = vec4( pow( color.rgb, vec3( 2.2 ) ), color.a );\n#elif defined( USE_COLOR )\n vColor.xyz = pow( color.xyz, vec3( 2.2 ) );\n#endif'); }; };
+    THREE.MeshLambertMaterial = function (p) {
+      p = Object.assign({}, p); delete p.reflectivity; delete p.combine;
+      const m = new Sm(Object.assign({ roughness: 0.92, metalness: 0, envMapIntensity: GFX.env }, p)); srgbCol(m); vcFix(m); m.userData.lite = ['L', p]; return m;
+    };
+    THREE.MeshLambertMaterial.prototype = Sm.prototype;
+    THREE.MeshPhongMaterial = function (p) {   // глянец: лак с отражением неба
+      p = Object.assign({}, p); const sh = p.shininess || 40; delete p.specular; delete p.shininess; delete p.reflectivity; delete p.combine;
+      const m = new Pc(Object.assign({ roughness: Math.max(0.18, 0.62 - sh / 160), metalness: 0.12, clearcoat: 0.9, clearcoatRoughness: 0.12, envMapIntensity: 1.1 }, p)); srgbCol(m); vcFix(m); m.userData.lite = ['P', p]; return m;
+    };
+    THREE.MeshPhongMaterial.prototype = Pc.prototype;
+    THREE.MeshBasicMaterial = function (p) { const m = new Bm(p); srgbCol(m); vcFix(m); return m; };
+    THREE.MeshBasicMaterial.prototype = Bm.prototype;
+    if (GFX.enc) {   // все текстуры игры — цветовые (sRGB)
+      Object.defineProperty(THREE.Texture.prototype, 'encoding', { get() { return this._e === undefined ? THREE.sRGBEncoding : this._e; }, set(v) { this._e = v === THREE.LinearEncoding ? THREE.sRGBEncoding : v; }, configurable: true });
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    }
+    { const ch = THREE.ShaderChunk.tonemapping_pars_fragment, k = 'return saturate( color );'; const i = ch.indexOf(k); if (i > 0 && ch.indexOf('ACESFilmicToneMapping') < i) THREE.ShaderChunk.tonemapping_pars_fragment = ch.slice(0, i) + 'float lm = dot( color, vec3( 0.2126, 0.7152, 0.0722 ) ); color = mix( vec3( lm ), color, ' + GFX.sat.toFixed(3) + ' ); ' + ch.slice(i); }
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = GFX.enc ? GFX.ex : 0.95;
+  } catch (e) { GFX.hd = false; console.warn('gfx hd off', e); }
+}
+
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xd8f0f2, 70, 270);
 const camera = new THREE.PerspectiveCamera(55, 1, 0.2, 650);
@@ -209,6 +238,34 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 { const sc = sun.shadow.camera; sc.left = -15; sc.right = 15; sc.top = 15; sc.bottom = -15; sc.near = 1; sc.far = 80; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04; }
 scene.add(sun.target);
+// ================= ГРАФИКА HD, часть B: небо-окружение, свет, тени =================
+if (GFX.hd) {
+  try {
+    // небо для отражений и мягкого света: градиент от песка к зениту + диск солнца (яркость выше 1, как в HDR)
+    const skyS = new THREE.Scene(), g = new THREE.SphereGeometry(40, 32, 20), cols = [];
+    const P = g.attributes.position, cz = new THREE.Color(0x4f93de), ch = new THREE.Color(0xcfe6f2), cg = new THREE.Color(0xd8c9a2), cc = new THREE.Color();
+    for (let i = 0; i < P.count; i++) {
+      const y = P.getY(i) / 40;
+      if (y >= 0) cc.copy(ch).lerp(cz, Math.pow(y, 0.55)); else cc.copy(ch).lerp(cg, Math.min(1, -y * 3.2));
+      if (GFX.enc) cc.convertSRGBToLinear(); cols.push(cc.r, cc.g, cc.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    skyS.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    const sunM = new THREE.Mesh(new THREE.SphereGeometry(2.6, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })); sunM.material.color.setRGB(40, 36, 28); sunM.position.copy(sun.position).normalize().multiplyScalar(34); skyS.add(sunM);
+    const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(skyS, 0.03).texture; pm.dispose();
+    let hemi = null; scene.children.forEach((o) => { if (o.isHemisphereLight) hemi = o; });
+    if (hemi) hemi.intensity = GFX.hemi;
+    sun.intensity = GFX.sun; sun.color.set(0xfff2da);
+    if (GFX.enc && scene.fog) scene.fog.color.convertSRGBToLinear();
+    sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.035;
+    GFX.hemi = hemi;
+    try {   // мягкая виньетка по краям кадра (почти бесплатно: обычный градиент поверх холста)
+      const v = document.createElement('div'); v.id = 'gfxVig'; v.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 56%, rgba(8,18,40,0.34) 100%);';
+      canvas.parentNode.insertBefore(v, canvas.nextSibling);
+    } catch (e2) {}
+  } catch (e) { console.warn('gfx env fail', e); }
+}
+
 const SUN_OFF = new THREE.Vector3(-8, 14, 10).multiplyScalar(1.5);
 const shade = (obj, cast = true, recv = true) => { obj.traverse((o) => { if (o.isMesh) { o.castShadow = cast; o.receiveShadow = recv; } }); return obj; };
 let aspect = 1;
@@ -1934,7 +1991,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
   runTasks(dt); updateControl(dt); danceTick(dt); audio.update(dt); netTick(dt); carFrame(dt); kartFrame(dt);
   sun.target.position.copy(camFocus); sun.position.copy(camFocus).add(SUN_OFF); sun.target.updateMatrixWorld();
-  if (!perf.done && ++perf.n > 60) { perf.t += dt; if (perf.n === 210) { if (perf.t / 150 > 0.034) { sun.castShadow = false; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); resize(); } perf.done = true; } }
+  if (!perf.done && ++perf.n > 60) { perf.t += dt; if (perf.n === 210) { if (perf.t / 150 > 0.034) { try { if (GFX.hd) localStorage.setItem('gfx', 'low'); } catch (e) {} sun.castShadow = false; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); resize(); } perf.done = true; } }
   const yx = hero.rigged ? S.twist - clamp(S.twist, -0.9, 0.9) : 0;
   hero.root.rotation.y = lerpAngle(hero.root.rotation.y, S.yaw + yx, 1 - Math.exp(-9 * dt));
   if (S.ground && hero.root.parent === scene) hero.root.position.y = sandY(hero.root.position.x);
@@ -3033,7 +3090,7 @@ function buildCar() {
   bodyG.add(carPartMesh(P.body, paint));
   const doorMat = new THREE.MeshPhongMaterial({ color: 0xe794b0, specular: 0x5a5e66, shininess: 60, side: THREE.DoubleSide });   // дверь: гладкая розовая краска без текстуры
   ['DL', 'DR'].forEach((k) => {   // двери: шарнир у передней кромки, левая (+x) раскрывается наружу поворотом в минус
-    const dm = carPartMesh(P[k], doorMat); try { dm.geometry.computeVertexNormals(); } catch (e) {}
+    const dm = carPartMesh(P[k], doorMat); try { const gg = dm.geometry; gg.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(gg.attributes.position.count * 3), 3)); gg.computeVertexNormals(); } catch (e) {}
     const pv = new THREE.Group(); pv.position.set(P[k].pv[0], P[k].pv[1], P[k].pv[2]); pv.add(dm); bodyG.add(pv); CAR.doors.push(pv);
   });
   ['FL', 'FR', 'RL', 'RR'].forEach((k) => {   // колёса: поворот руля (steerG) + вращение (spinG)
