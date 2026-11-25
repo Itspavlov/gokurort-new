@@ -3442,7 +3442,7 @@ function carUI() {
   window.addEventListener('keydown', (e) => { if (e.repeat || (e.target && e.target.tagName === 'INPUT')) return; if (e.code === 'KeyF' && !b.hidden) b.click(); });
 }
 function carPress() {
-  if (CAR.mode === 'out') carBoard();
+  if (CAR.mode === 'out') { if (ONLINE.pcar === 'car') { CAR.declined = false; carPassengerBoard(); } else carBoard(); }
   else if (CAR.mode === 'in') { if (CAR.drv) carExit(); else carPassengerLeave(true); }
 }
 
@@ -3465,7 +3465,7 @@ function carWalkPush(p) {
 
 // ---- условия ----
 const carCanSit = () => CAR.ready && !CAR.dead && CAR.mode === 'out' && hero.root.parent === scene && ctl.mode === 'walk' && !S.busy && !S.kick && !S.seated && !ONLINE.myHop && !ONLINE.falling &&
-  ONLINE.where === 'beach' && ONLINE.phase === 'beach' && (ONLINE.pw === 'beach' || !ONLINE.peer || RC.peer) && RC.mode === 'out';
+  ONLINE.where === 'beach' && ONLINE.phase === 'beach' && (ONLINE.pw === 'beach' || !ONLINE.peer || RC.peer) && RC.mode === 'out' && ONLINE.pcar !== 'car';
 const carSeatPos = (i) => ({ x: CAR_SEAT[i][0], y: CAR_SEAT[i][1], z: CAR_SEAT[i][2] });
 const carHop = (from, to, u, arc) => ({ x: from.x + (to.x - from.x) * u, y: from.y + (to.y - from.y) * u + Math.sin(Math.PI * u) * arc, z: from.z + (to.z - from.z) * u });
 const carSetPos = (o, p) => { o.position.x = p.x; o.position.y = p.y; o.position.z = p.z; };
@@ -3514,8 +3514,7 @@ function carSeqTick(dt) {
     } else if (q.ph === 2) {                            // водитель ждёт соседа, пассажир ждёт закрытия двери
       if (me === 0) {
         const here = ONLINE.peer && ONLINE.pw === 'beach' && vendor.root.visible && ONLINE.where === 'beach' && ONLINE.phase === 'beach';
-        if (here && q.t < 5.5) { const w = carLocal(vendor.root.position.x, vendor.root.position.z); C.dT[1] = Math.hypot(w[0] - CAR_DOORX[1], w[1] - CAR_DOORZ[1]) < 3.2 ? 1 : 0; return; }
-        if (ONLINE.peer && q.t < 1.0) return;
+        if (here && q.t < 5.5) { const w = carLocal(vendor.root.position.x, vendor.root.position.z), nearDoor = Math.hypot(w[0] - CAR_DOORX[1], w[1] - CAR_DOORZ[1]) < 3.2; C.dT[1] = nearDoor ? 1 : 0; if (nearDoor || ONLINE.pcar === 'carp') return; }
       }
       C.dT[0] = C.dT[1] = 0; q.ph = 3; q.t = 0;
     } else if (q.ph === 3) {
@@ -3586,9 +3585,9 @@ function carOnPeer(d) {
     if (tag === 'car') { CAR.tx = d.x; CAR.tz = d.z; CAR.th = d.yaw; CAR.tv = d.r; }
     if (tag === 'car' && !was && CAR.mode === 'out') {   // сосед сел за руль: сначала ставим машину как у него, потом садимся
       if (Math.hypot(CAR.x - d.x, CAR.z - d.z) > 0.3 || Math.abs(Math.atan2(Math.sin(CAR.h - d.yaw), Math.cos(CAR.h - d.yaw))) > 0.1) { CAR.x = d.x; CAR.z = d.z; CAR.h = d.yaw; }
-      carPassengerBoard();
+      // сам не садимся: пассажир — только по кнопке «Сесть рядом»
     }
-    if (tag === 'car' && (CAR.mode === 'in' || CAR.mode === 'pboard') && !CAR.drv && CAR.seated) carPeerSeat('car');
+    if (tag === 'car' && !CAR.drv && (CAR.mode === 'out' || CAR.seated)) carPeerSeat('car');   // партнёр за рулём — сидит на месте водителя
     else if (tag === 'carp' && CAR.drv && CAR.seated) carPeerSeat('carp');
   } else if (ONLINE.pcar) {
     const was = ONLINE.pcar; ONLINE.pcar = null; CAR.declined = false;
@@ -3642,7 +3641,7 @@ function carTick(dt) {
     if (ONLINE.peer && vendor.root.visible && vendor.root.parent === scene && ONLINE.pw === 'beach') for (let i = 0; i < 2; i++) if (near(vendor.root.position.x, vendor.root.position.z, i)) C.dT[i] = 1;
   }
   carSeqTick(dt);
-  const remote = !C.drv && ONLINE.pcar === 'car' && (C.mode === 'in' || C.mode === 'pboard' || C.mode === 'pexit');
+  const remote = !C.drv && ONLINE.pcar === 'car';
   if (C.mode === 'in' && C.drv) {
     const thr = input.y, vt = thr > 0.08 ? thr * C.vmax : thr < -0.08 ? thr * C.vrev : 0;
     const rate = Math.abs(thr) <= 0.08 ? 2.6 : (vt * C.v < 0 || Math.abs(vt) < Math.abs(C.v) ? 12 : 6.5);
@@ -3669,7 +3668,8 @@ function carTick(dt) {
     const still = Math.abs(C.v) < 0.8; CAR_UI.btn.hidden = !still; if (still) CAR_UI.btn.textContent = 'Выйти';
   } else if (C.mode === 'out') {
     const nearHero = hero.root.parent === scene && ctl.mode === 'walk' && !S.busy && (() => { const l = carLocal(hero.root.position.x, hero.root.position.z); return Math.abs(l[0]) < 3.6 && Math.abs(l[1]) < 4.0; })();
-    const ok = nearHero && carCanSit(); CAR_UI.btn.hidden = !ok; if (ok) CAR_UI.btn.textContent = 'Сесть';
+    const peerDrives = ONLINE.pcar === 'car' && Math.abs(CAR.v) < 0.8 && hero.root.parent === scene && ctl.mode === 'walk' && !S.busy && RC.mode === 'out' && (typeof KART === 'undefined' || KART.mode === 'out');
+    const ok = nearHero && (carCanSit() || peerDrives); CAR_UI.btn.hidden = !ok; if (ok) CAR_UI.btn.textContent = peerDrives ? 'Сесть рядом' : 'Сесть';
   } else CAR_UI.btn.hidden = true;
   // положение и вид
   const g = C.g; g.position.x = C.x; g.position.z = C.z; g.position.y = sandY(C.x) + 0.02; g.rotation.y = C.h;
@@ -4183,7 +4183,7 @@ function raceTick(dt) {
     R.waitT += dt;
     if (peerThere) {
       if (O.ready && seller && R.waitT > 0.6) kartStartSeq(false);          // продавец (Тарас) — судья
-    } else if (R.waitT > (ONLINE.peer ? 9 : 1.4)) { R.solo = true; kartStartSeq(true); }
+    } else if (R.waitT > (ONLINE.peer ? 25 : 1.4)) { R.solo = true; kartStartSeq(true); }
     return;
   }
   if (R.ph === 'count') {
@@ -4272,8 +4272,18 @@ function kartPeerGone() {
 function kartOnSync(d) {
   if (!KART.ready || KART.dead || !Array.isArray(d)) return;
   const code = d[0] | 0, i = d[1] | 0;
-  if (code === 102) { if (KART.mode === 'in' && KART.ks[KART.mine].ready) { RACE.solo = false; kartStartSeq(true); } }
-  else if (code === 103) { if (i !== KART.mine && (i === 0 || i === 1)) RACE.laps[i] = Math.min(KV.laps, d[2] | 0); }
+  if (code === 102) {   // старт от судьи: запускаем всегда, даже если свой заезд не закрыт или карт не отмечен готовым
+    if (KART.mode === 'in') { if (RACE.ph !== 'idle') { RACE.ph = 'idle'; KART.ks.forEach((K) => { K.cross = 0; K.maxCross = 0; K.pLast = -1; }); } KART.ks[KART.mine].ready = true; RACE.solo = false; kartStartSeq(true); }
+  }
+  else if (code === 103) {
+    if (i !== KART.mine && (i === 0 || i === 1)) {
+      RACE.laps[i] = Math.min(KV.laps, d[2] | 0);
+      if (KART.mode === 'in' && (RACE.ph === 'idle' || RACE.ph === 'count')) {   // у меня гонка не стартовала, а партнёр уже едет: подхватываем
+        RACE.ph = 'go'; RACE.t0 = T - Math.max(0, +d[3] || 0); RACE.solo = false; RACE.fin[KART.mine] = 0; RACE.laps[KART.mine] = 0;
+        const M = KART.ks[KART.mine]; M.cross = 0; M.maxCross = 0; M.pLast = -1; M.ready = false; kartBig('Поехали!', 1.4);
+      }
+    }
+  }
   else if (code === 104) { if (i !== KART.mine && (i === 0 || i === 1)) { RACE.laps[i] = KV.laps; RACE.fin[i] = Math.max(1, Math.round((+d[2] || 0) * 1000)); RACE.finT = T; } }
   else if (code === 106) kartShotNet(d);
 }
