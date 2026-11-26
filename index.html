@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script>
+    // ЗАКРЫТЫЙ ДОСТУП на время разработки. Чтобы открыть сайт всем, поставь OPEN = true (и выложи).
+    // Для себя: открой yugiyugi.ru/?dev=КЛЮЧ один раз, браузер запомнит. Это лёгкая защита от посторонних, не пароль.
+    (function () {
+        var OPEN = false, KEY = '8386366590da62ba';
+        if (OPEN) return;
+        try {
+            var u = new URL(location.href), k = u.searchParams.get('dev');
+            if (k === KEY) { localStorage.setItem('yy-dev', KEY); u.searchParams.delete('dev'); history.replaceState(null, '', u.pathname + u.search + u.hash); return; }
+            if (localStorage.getItem('yy-dev') === KEY) return;
+        } catch (e) {}
+        document.open();
+        document.write('<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Юги Юги — скоро открытие</title></head><body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#FBF3E4;color:#3b2f22;font-family:-apple-system,Segoe UI,Roboto,sans-serif;text-align:center;padding:24px;box-sizing:border-box"><div><img src="icons/icon-192.png" width="96" height="96" alt="" style="border-radius:22px"><h1 style="font-size:26px;margin:18px 0 8px">Юги Юги</h1><p style="font-size:17px;margin:0;opacity:.75">Скоро открытие. Мы готовим кое-что особенное.</p></div></body></html>');
+        document.close();
+        try { window.stop(); } catch (e) {}
+        throw new Error('closed');
+    })();
+    </script>
+    <script>
     // лёгкий режим отрисовки. Вручную: ?lite=bf,fl,bs,mx,bl,mk,im выключает отдельные эффекты, ?lite=0 возвращает всё и отключает автовыбор,
     // ?lite=auto возвращает автовыбор. Автоматически: на слабых телефонах (до 4 ядер, до 4 ГБ памяти или включена экономия трафика)
     // выключается размытие под нижней панелью и всплывающими окнами: оно самое дорогое для слабой видеокарты.
