@@ -203,7 +203,7 @@ try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true,
 catch (e) { failBox.hidden = false; return; }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 // ================= ГРАФИКА: режим HD (физические материалы, правильный свет) — часть A: до создания материалов =================
-const GFX = (() => { let q = 'hd', e = 1, p = { get: () => null }; try { p = new URLSearchParams(location.search); q = p.get('q') || (localStorage.getItem('gfx') === 'low:17' ? 'low' : '') || (((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2) ? 'low' : 'hd'); if (p.get('enc') === '0') e = 0; } catch (err) {} const n = (k, d) => { const v = parseFloat(p.get(k)); return isNaN(v) ? d : v; }; return { q, hd: q !== 'low', enc: e, ex: n('ex', 0.66), sat: n('sat', 1.4), sun: n('sun', 1.5), hemi: n('hemi', 0.25), env: n('env', 0.5) }; })();
+const GFX = (() => { let q = 'hd', e = 1, p = { get: () => null }; try { p = new URLSearchParams(location.search); q = p.get('q') || (localStorage.getItem('gfx') === 'low:18' ? 'low' : '') || (((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 2) ? 'low' : 'hd'); if (p.get('enc') === '0') e = 0; } catch (err) {} const n = (k, d) => { const v = parseFloat(p.get(k)); return isNaN(v) ? d : v; }; return { q, hd: q !== 'low', enc: e, ex: n('ex', 0.66), sat: n('sat', 1.4), sun: n('sun', 1.5), hemi: n('hemi', 0.25), env: n('env', 0.5) }; })();
 if (GFX.hd) {
   try {
     const Sm = THREE.MeshStandardMaterial, Pc = THREE.MeshPhysicalMaterial, Bm = THREE.MeshBasicMaterial;
@@ -1098,7 +1098,7 @@ function animateRigged(ch, dt, st) {
   if (st.mode === 'walk' || st.mode === 'cheer' || st.mode === 'dance' || st.mode === 'clap' || st.mode === 'wave' || st.mode === 'flail') st.ph += dt * (st.mode === 'walk' ? 9.5 : st.mode === 'dance' ? 6.5 : 9);
   rigTargets(st, T, ch.tgt);
   if (ch.gait && (st.mode === 'idle' || st.mode === 'walk') && !st.throwP && !st.kick && !st.give && !st.push && !st.hold) { const g = ch.tgt; g.LeftArm[0] -= 0.14; g.RightArm[0] += 0.14; g.LeftArm[1] += 0.06; g.RightArm[1] -= 0.06; g.LeftForeArm[2] += 0.1; g.RightForeArm[2] += 0.1; const tw = -0.25; g.LeftForeArm[1] += tw; g.RightForeArm[1] -= tw; g.LeftHand[1] += tw * 0.4; g.RightHand[1] -= tw * 0.4; }
-  const anim = clip || gaitOn || idleOn, k = 1 - Math.exp(-(gaitOn ? (ch.gaitW = Math.min(1, (ch.gaitW || 0) + dt * 3)) * 60 + 14 : anim ? 14 : 12) * dt), keepHand = anim && (want === 'walk' || gaitOn) && st.hold;
+  const anim = clip || gaitOn || idleOn, k = 1 - Math.exp(-(gaitOn ? ((ch.gaitW = Math.min(1, (ch.gaitW || 0) + dt * 2.5)) < 1 ? 7 : 22) : anim ? 10 : 12) * dt), keepHand = anim && (want === 'walk' || gaitOn) && st.hold;
   for (let i = 0; i < ch.all.length; i++) {
     const b = ch.all[i], c = ch.cq[i];
     let t = QI;
@@ -1980,9 +1980,9 @@ function updateControl(dt) {
   else if (ctl.mode === 'walk' && hero.root.parent === scene) {
     if (mag > 0.12) {
       const wx = camFwd.x * input.y - camFwd.z * input.x, wz = camFwd.z * input.y + camFwd.x * input.x, wl = Math.hypot(wx, wz) || 1;
-      const dx = wx / wl, dz = wz / wl, sp = (hero.gait ? 2.1 : 3.4) * mag, p = hero.root.position;
+      const dx = wx / wl, dz = wz / wl, sp = (S.vs = (S.vs || 0) + ((hero.gait ? 1.45 : 3.4) * mag - (S.vs || 0)) * Math.min(1, dt * 5)), p = hero.root.position;
       p.x += dx * sp * dt; p.z += dz * sp * dt; S.yaw = Math.atan2(dx, dz); S.mode = 'walk'; if (!S.clip) S.clipRate = walkRateOf(sp);
-    } else if (S.mode === 'walk') { S.mode = 'idle'; if (!S.clip) S.clipRate = 0; }
+    } else if (S.mode === 'walk') { S.mode = 'idle'; S.vs = 0; if (!S.clip) S.clipRate = 0; }
     const p = hero.root.position;
     p.x = clamp(p.x, -296, 3.5); p.z = clamp(p.z, -138, 138); carWalkPush(p);
     if (seller) {   // продавец ходит за прилавком, но сквозь него не проходит
@@ -2245,7 +2245,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
   runTasks(dt); updateControl(dt); danceTick(dt); audio.update(dt); netTick(dt); carFrame(dt); car2Frame(dt); kartFrame(dt); try { templeFrame(dt); } catch (e) { if (!TM.err) { TM.err = 1; console.warn('temple', e); } }
   sun.target.position.copy(camFocus); sun.position.copy(camFocus).add(SUN_OFF); sun.target.updateMatrixWorld();
-  if (!perf.done && ++perf.n > 60) { perf.t += dt; if (perf.n === 210) { if (perf.t / 150 > 0.034) { try { if (GFX.hd) localStorage.setItem('gfx', 'low:17'); } catch (e) {} sun.castShadow = false; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); resize(); } perf.done = true; } }
+  if (!perf.done && ++perf.n > 60) { perf.t += dt; if (perf.n === 210) { if (perf.t / 150 > 0.034) { try { if (GFX.hd && perf.t / 150 > 0.06) localStorage.setItem('gfx', 'low:18'); } catch (e) {} sun.castShadow = false; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); resize(); } perf.done = true; } }
   const yx = hero.rigged ? S.twist - clamp(S.twist, -0.9, 0.9) : 0;
   hero.root.rotation.y = lerpAngle(hero.root.rotation.y, S.yaw + yx, 1 - Math.exp(-9 * dt));
   if (S.ground && hero.root.parent === scene) hero.root.position.y = groundY(hero.root.position.x, hero.root.position.z);
