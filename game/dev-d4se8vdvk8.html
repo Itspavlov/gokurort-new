@@ -1094,6 +1094,7 @@ function animateRigged(ch, dt, st) {
   if (gaitOn) gaitPose(ch, dt); else ch.gaitW = 0;
   const idleOn = !!(ch.idle && !gaitOn && !clip && st.mode === 'idle' && !st.hold && !st.throwP && !st.kick && !st.give && !st.push && !st.twist);
   if (idleOn) idlePose(ch, dt);
+  ch.mixOn = gaitOn || idleOn;
   if (st.mode === 'walk' || st.mode === 'cheer' || st.mode === 'dance' || st.mode === 'clap' || st.mode === 'wave' || st.mode === 'flail') st.ph += dt * (st.mode === 'walk' ? 9.5 : st.mode === 'dance' ? 6.5 : 9);
   rigTargets(st, T, ch.tgt);
   if (ch.gait && (st.mode === 'idle' || st.mode === 'walk') && !st.throwP && !st.kick && !st.give && !st.push && !st.hold) { const g = ch.tgt; g.LeftArm[0] -= 0.14; g.RightArm[0] += 0.14; g.LeftArm[1] += 0.06; g.RightArm[1] -= 0.06; g.LeftForeArm[2] += 0.1; g.RightForeArm[2] += 0.1; const tw = -0.25; g.LeftForeArm[1] += tw; g.RightForeArm[1] -= tw; g.LeftHand[1] += tw * 0.4; g.RightHand[1] -= tw * 0.4; }
@@ -1105,7 +1106,7 @@ function animateRigged(ch, dt, st) {
     const sg = (c[0] * t[0] + c[1] * t[1] + c[2] * t[2] + c[3] * t[3]) < 0 ? -1 : 1;
     c[0] += (sg * t[0] - c[0]) * k; c[1] += (sg * t[1] - c[1]) * k; c[2] += (sg * t[2] - c[2]) * k; c[3] += (sg * t[3] - c[3]) * k;
     const l = Math.hypot(c[0], c[1], c[2], c[3]) || 1; c[0] /= l; c[1] /= l; c[2] /= l; c[3] /= l;
-    const cc = ch.curl && ch.curl[i] ? qmul(c, ch.curl[i]) : c; const q = poseLocal(b.q, b.wqp, cc, true); b.node.quaternion.set(q[0], q[1], q[2], q[3]);
+    const cc = ch.curl && ch.curl[i] && !ch.mixOn ? qmul(c, ch.curl[i]) : c; const q = poseLocal(b.q, b.wqp, cc, true); b.node.quaternion.set(q[0], q[1], q[2], q[3]);
   }
   const th = anim ? ch.th : [0, 0, 0];
   for (let i = 0; i < 3; i++) ch.hc[i] += (th[i] - ch.hc[i]) * k;
