@@ -999,7 +999,7 @@ function makeRiggedHero(buf, meta, tex, height, walkRate) {
   meta.bones.forEach((b, i) => { B[b.name] = { node: nodes[i], q: b.q, wqp: b.parent >= 0 ? meta.bones[b.parent].wq : [0, 0, 0, 1] }; });
   const all = meta.bones.map((b, i) => ({ name: b.name, node: nodes[i], q: b.q, wqp: b.parent >= 0 ? meta.bones[b.parent].wq : [0, 0, 0, 1], proc: RIG_BONES.indexOf(b.name) >= 0 }));
   return { root, rig, model, rigged: true, B, all, cq: all.map(() => [0, 0, 0, 1]), tq: all.map(() => [0, 0, 0, 1]), th: [0, 0, 0], hc: [0, 0, 0], hipsP: meta.bones[0].p.slice(), clips: null, clipName: null, clipT: 0, walkRate, cur: {}, tgt: {}, sc, head: B.Head.node, handR: B.RightHand.node, handL: B.LeftHand.node,
-    gait: (meta.gait2 && /[?&]walk=old/.test(location.search) ? (meta.gait = meta.gait2) : meta.gait) ? Object.assign(meta.gait, { bi: meta.gait.bones.map((n) => meta.bones.findIndex((b) => b.name === n)) }) : null, gd: 0, gx: null, gz: 0, sitDrop: -(meta.bones[0].p[1] * sc - 0.14), legs: [], arms: [], up: model, armK: 1, handLocal: new V3(), real: true };
+    gait: (meta.gait2 && /[?&]walk=old/.test(location.search) ? (meta.gait = meta.gait2) : meta.gait3 && /[?&]walk=relaxed/.test(location.search) ? (meta.gait = meta.gait3) : meta.gait) ? Object.assign(meta.gait, { bi: meta.gait.bones.map((n) => meta.bones.findIndex((b) => b.name === n)) }) : null, curl: meta.curl || null, gd: 0, gx: null, gz: 0, sitDrop: -(meta.bones[0].p[1] * sc - 0.14), legs: [], arms: [], up: model, armK: 1, handLocal: new V3(), real: true };
 }
 const b64buf = (t) => { const b = atob(t.trim()), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
 const loadTex = (u) => new Promise((res, rej) => new THREE.TextureLoader().load(u, (t) => { t.flipY = false; t.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1); res(t); }, undefined, rej));
@@ -1084,7 +1084,7 @@ function animateRigged(ch, dt, st) {
   if (gaitOn) gaitPose(ch, dt);
   if (st.mode === 'walk' || st.mode === 'cheer' || st.mode === 'dance' || st.mode === 'clap' || st.mode === 'wave' || st.mode === 'flail') st.ph += dt * (st.mode === 'walk' ? 9.5 : st.mode === 'dance' ? 6.5 : 9);
   rigTargets(st, T, ch.tgt);
-  if (ch.gait && (st.mode === 'idle' || st.mode === 'walk') && !st.throwP && !st.kick && !st.give && !st.push && !st.hold) { const g = ch.tgt; g.LeftArm[0] -= 0.14; g.RightArm[0] += 0.14; g.LeftArm[1] += 0.06; g.RightArm[1] -= 0.06; g.LeftForeArm[2] += 0.1; g.RightForeArm[2] += 0.1; }
+  if (ch.gait && (st.mode === 'idle' || st.mode === 'walk') && !st.throwP && !st.kick && !st.give && !st.push && !st.hold) { const g = ch.tgt; g.LeftArm[0] -= 0.14; g.RightArm[0] += 0.14; g.LeftArm[1] += 0.06; g.RightArm[1] -= 0.06; g.LeftForeArm[2] += 0.1; g.RightForeArm[2] += 0.1; const tw = 0.8; g.LeftForeArm[1] += tw; g.RightForeArm[1] -= tw; g.LeftHand[1] += tw * 0.4; g.RightHand[1] -= tw * 0.4; }
   const anim = clip || gaitOn, k = 1 - Math.exp(-(anim ? 14 : 12) * dt), keepHand = anim && (want === 'walk' || gaitOn) && st.hold;
   for (let i = 0; i < ch.all.length; i++) {
     const b = ch.all[i], c = ch.cq[i];
@@ -1093,7 +1093,7 @@ function animateRigged(ch, dt, st) {
     const sg = (c[0] * t[0] + c[1] * t[1] + c[2] * t[2] + c[3] * t[3]) < 0 ? -1 : 1;
     c[0] += (sg * t[0] - c[0]) * k; c[1] += (sg * t[1] - c[1]) * k; c[2] += (sg * t[2] - c[2]) * k; c[3] += (sg * t[3] - c[3]) * k;
     const l = Math.hypot(c[0], c[1], c[2], c[3]) || 1; c[0] /= l; c[1] /= l; c[2] /= l; c[3] /= l;
-    const q = poseLocal(b.q, b.wqp, c, true); b.node.quaternion.set(q[0], q[1], q[2], q[3]);
+    const cc = ch.curl && ch.curl[i] ? qmul(c, ch.curl[i]) : c; const q = poseLocal(b.q, b.wqp, cc, true); b.node.quaternion.set(q[0], q[1], q[2], q[3]);
   }
   const th = anim ? ch.th : [0, 0, 0];
   for (let i = 0; i < 3; i++) ch.hc[i] += (th[i] - ch.hc[i]) * k;
