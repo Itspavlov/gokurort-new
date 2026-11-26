@@ -1099,7 +1099,7 @@ function animateRigged(ch, dt, st) {
   for (let i = 0; i < 3; i++) ch.hc[i] += (th[i] - ch.hc[i]) * k;
   ch.B.Hips.node.position.set(ch.hipsP[0] + ch.hc[0], ch.hipsP[1] + ch.hc[1], ch.hipsP[2] + ch.hc[2]);
   const bob = anim ? 0 : st.mode === 'clap' ? Math.abs(Math.sin(st.ph * 0.75)) * 0.03 : st.mode === 'walk' ? Math.abs(Math.cos(st.ph)) * 0.05 : st.mode === 'cheer' ? Math.abs(Math.sin(st.ph)) * 0.1 : st.mode === 'dance' ? Math.abs(Math.sin(st.ph)) * 0.07 : 0;
-  const yy = (st.mode === 'sit' || st.mode === 'kart' || st.mode === 'lotus' || st.mode === 'pour' || st.mode === 'drink' ? ch.sitDrop : 0) + (st.mode === 'lotus' || st.mode === 'pour' || st.mode === 'drink' ? -0.2 : 0) + (st.mode === 'nails' ? 0.075 : 0) + bob;
+  const yy = (st.mode === 'sit' || st.mode === 'kart' || st.mode === 'lotus' || st.mode === 'pour' || st.mode === 'drink' ? ch.sitDrop : 0) + (st.mode === 'lotus' || st.mode === 'pour' || st.mode === 'drink' ? (ch.gait ? 0 : -0.2) : 0) + (st.mode === 'nails' ? 0.075 : 0) + ((st.mode === 'sit' || st.mode === 'kart') && ch.gait ? -0.1 : 0) + bob;
   ch.rig.position.y += (yy - ch.rig.position.y) * k;
 }
 let vendor = makeCharacter({ skin: 0xe8b78f, skinD: 0xd49a74, hair: 0x2b1e17, top: 0xffb703, sleeve: 0xffb703, cuff: 0xffd166, pants: 0x3a5f8f, shoes: 0x6b4a2a, hat: 0xe9c46a });
