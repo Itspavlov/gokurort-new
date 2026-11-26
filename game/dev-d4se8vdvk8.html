@@ -5929,7 +5929,7 @@ function cerPost() {
 }
 owSafe('подиум', cerInit);
 
-Promise.all([loadRigged('hero2', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
+Promise.all([loadRigged(/[?&]lera=old/.test(location.search) ? 'hero2' : 'hero4', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
   console.info('DBG heroes: rigged hero=' + !!ch + ' vendor=' + !!vend2 + ' stall=' + !!stallModel + ' boat=' + !!boatModel + ' lounge=' + !!loungeModel);
   adoptHero(ch || makeCartoonHero()); shade(hero.root);
   setTimeout(() => { MODELS_READY = true; if (PENDING_ENTER) { const a = PENDING_ENTER; PENDING_ENTER = null; enter(a[0], a[1], a[2]); } }, 0);
