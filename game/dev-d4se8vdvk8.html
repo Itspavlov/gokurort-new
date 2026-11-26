@@ -999,7 +999,7 @@ function makeRiggedHero(buf, meta, tex, height, walkRate) {
   meta.bones.forEach((b, i) => { B[b.name] = { node: nodes[i], q: b.q, wqp: b.parent >= 0 ? meta.bones[b.parent].wq : [0, 0, 0, 1] }; });
   const all = meta.bones.map((b, i) => ({ name: b.name, node: nodes[i], q: b.q, wqp: b.parent >= 0 ? meta.bones[b.parent].wq : [0, 0, 0, 1], proc: RIG_BONES.indexOf(b.name) >= 0 }));
   return { root, rig, model, rigged: true, B, all, cq: all.map(() => [0, 0, 0, 1]), tq: all.map(() => [0, 0, 0, 1]), th: [0, 0, 0], hc: [0, 0, 0], hipsP: meta.bones[0].p.slice(), clips: null, clipName: null, clipT: 0, walkRate, cur: {}, tgt: {}, sc, head: B.Head.node, handR: B.RightHand.node, handL: B.LeftHand.node,
-    gait: meta.gait ? Object.assign(meta.gait, { bi: meta.gait.bones.map((n) => meta.bones.findIndex((b) => b.name === n)) }) : null, gd: 0, gx: null, gz: 0, sitDrop: -(meta.bones[0].p[1] * sc - 0.14), legs: [], arms: [], up: model, armK: 1, handLocal: new V3(), real: true };
+    gait: (meta.gait2 && /[?&]walk=old/.test(location.search) ? (meta.gait = meta.gait2) : meta.gait) ? Object.assign(meta.gait, { bi: meta.gait.bones.map((n) => meta.bones.findIndex((b) => b.name === n)) }) : null, gd: 0, gx: null, gz: 0, sitDrop: -(meta.bones[0].p[1] * sc - 0.14), legs: [], arms: [], up: model, armK: 1, handLocal: new V3(), real: true };
 }
 const b64buf = (t) => { const b = atob(t.trim()), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; };
 const loadTex = (u) => new Promise((res, rej) => new THREE.TextureLoader().load(u, (t) => { t.flipY = false; t.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1); res(t); }, undefined, rej));
@@ -1062,7 +1062,7 @@ function gaitPose(ch, dt) {
   if (ch.gx === null) { ch.gx = p.x; ch.gz = p.z; }
   let dd = Math.hypot(p.x - ch.gx, p.z - ch.gz); ch.gx = p.x; ch.gz = p.z;
   if (dd > 1.5) dd = 0; if (dd < dt * 0.35) dd = dt * 0.9;
-  ch.gd = (ch.gd + dd / (G.cyc * ch.sc)) % 1;
+  ch.gd = (ch.gd + Math.min(dd / (G.cyc * ch.sc), dt * (G.cap || 9))) % 1;
   const D = G.D, N = G.N; let j = 0; while (j < N - 1 && D[j + 1] <= ch.gd) j++;
   const f = (j + (ch.gd - D[j]) / Math.max(1e-6, D[j + 1] - D[j])) % N, i0 = Math.floor(f), i1 = (i0 + 1) % N, u = f - i0;
   for (let b = 0; b < ch.tq.length; b++) { const o = ch.tq[b]; o[0] = o[1] = o[2] = 0; o[3] = 1; }
@@ -1073,7 +1073,7 @@ function gaitPose(ch, dt) {
     for (let m = 0; m < 4; m++) o[m] = a[m] + (sg * c[m] - a[m]) * u;
     const l = Math.hypot(o[0], o[1], o[2], o[3]) || 1; for (let m = 0; m < 4; m++) o[m] /= l;
   }
-  ch.th[0] = 0; ch.th[1] = G.hy[i0] + (G.hy[i1] - G.hy[i0]) * u; ch.th[2] = G.hz[i0] + (G.hz[i1] - G.hz[i0]) * u;
+  ch.th[0] = G.hx ? G.hx[i0] + (G.hx[i1] - G.hx[i0]) * u : 0; ch.th[1] = G.hy[i0] + (G.hy[i1] - G.hy[i0]) * u; ch.th[2] = G.hz[i0] + (G.hz[i1] - G.hz[i0]) * u;
 }
 const QI = [0, 0, 0, 1], HAND_BONES = ['RightArm', 'RightForeArm', 'RightHand'];
 function animateRigged(ch, dt, st) {
