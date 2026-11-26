@@ -608,7 +608,7 @@ const clouds = [];
     const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
     ct = new THREE.CanvasTexture(cv);
   } catch (e) {}
-  const sm = new THREE.SpriteMaterial({ map: ct, color: 0xffffff, transparent: true, opacity: 0.92, fog: false, depthWrite: false });
+  const sm = new THREE.SpriteMaterial({ map: ct, color: 0xf4f7fb, transparent: true, opacity: 0.8, fog: false, depthWrite: false }); sm.toneMapped = false;
   for (let i = 0; i < 12; i++) {
     const g = new THREE.Group();
     for (let k = 0; k < 7; k++) { const sp = new THREE.Sprite(sm); const w = 12 + hash2(i, k) * 12; sp.scale.set(w, w * (0.5 + hash2(k, i) * 0.2), 1); sp.position.set((k - 3) * 5 + hash2(i, k + 4) * 3, hash2(k, i + 2) * 2.2, hash2(i + 3, k) * 3); g.add(sp); }
@@ -3240,7 +3240,7 @@ function templeBuild() {
   }
 
   // ---------- храм ----------
-  const T = new THREE.Group(); T.position.set(TP.x, TP.FY, TP.cz); root.add(T);
+  const T = new THREE.Group(); T.position.set(TP.x, TP.FY, TP.cz); root.add(T); root.updateMatrixWorld(true);
   const hW = TP.W / 2, hD = TP.D / 2, WH = TP.WH, th = 0.45;
   const tl = []; const addT = (list, m, o) => { if (!list.length) return null; const ms = new THREE.Mesh(tpMerge(list), m); ms.castShadow = !(o && o.noCast); ms.receiveShadow = true; if (o && o.order) ms.renderOrder = o.order; T.add(ms); return ms; };
   const box = new THREE.BoxGeometry(1, 1, 1);
