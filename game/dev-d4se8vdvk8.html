@@ -3689,7 +3689,21 @@ function tmSetSnd(v, seq) {
   if (v[0] === 'm') tmMusPlay(v.slice(1)); else tmMusStop();
 }
 // ---------- музыка из интернета (Audius: бесплатные полные треки) ----------
-const AUD = 'https://api.audius.co/v1', AUD_APP = 'klubnichny-reys';
+const AUD_HOSTS = ['https://api.audius.co', 'https://discoveryprovider.audius.co', 'https://discoveryprovider2.audius.co', 'https://discoveryprovider3.audius.co'], AUD_APP = 'klubnichny-reys';
+let AUD = (() => { try { return localStorage.getItem('audHost') || AUD_HOSTS[0]; } catch (e) { return AUD_HOSTS[0]; } })() + '/v1';
+// у части операторов один адрес сервиса не открывается — пробуем запасные и запоминаем рабочий
+function audGet(path) {
+  const order = [AUD.replace(/\/v1$/, '')].concat(AUD_HOSTS.filter((h) => h + '/v1' !== AUD));
+  const tryAt = (i) => {
+    if (i >= order.length) return Promise.reject(new Error('offline'));
+    const ctl = window.AbortController ? new AbortController() : null, tm = setTimeout(() => ctl && ctl.abort(), 7000);
+    return fetch(order[i] + '/v1' + path + (path.indexOf('?') < 0 ? '?' : '&') + 'app_name=' + AUD_APP, ctl ? { signal: ctl.signal } : {})
+      .then((r) => { clearTimeout(tm); if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then((j) => { if (order[i] + '/v1' !== AUD) { AUD = order[i] + '/v1'; try { localStorage.setItem('audHost', order[i]); } catch (e) {} } return j; })
+      .catch(() => { clearTimeout(tm); return tryAt(i + 1); });
+  };
+  return tryAt(0);
+}
 const MZ = { el: null, id: null, title: '', box: null, vol: 0 };
 function tmMusEl() {
   if (!MZ.el) { MZ.el = new Audio(); MZ.el.loop = true; MZ.el.preload = 'auto'; MZ.el.volume = 0; MZ.el.addEventListener('error', () => { if (MZ.id) toast('Трек не загрузился — выбери другой', 2600); }); }
@@ -3697,18 +3711,44 @@ function tmMusEl() {
 }
 function tmMusPlay(id) {
   if (!/^[0-9A-Za-z]{3,12}$/.test(id)) return;
-  const el = tmMusEl(); if (MZ.id !== id) { MZ.id = id; el.src = AUD + '/tracks/' + id + '/stream?app_name=' + AUD_APP; MZ.title = ''; fetch(AUD + '/tracks/' + id + '?app_name=' + AUD_APP).then((r) => r.json()).then((j) => { if (MZ.id === id && j && j.data && j.data.title) { MZ.title = j.data.title + ' — ' + (j.data.user && j.data.user.name || ''); tmMusUI(); } }).catch(() => {}); }
+  const el = tmMusEl();
+  if (MZ.id !== id) {
+    MZ.id = id; el.muted = false; MZ.retry = 1e15; MZ.title = ''; el.pause();
+    const setSrc = () => { if (MZ.id !== id) return; el.src = AUD + '/tracks/' + id + '/stream?app_name=' + AUD_APP; MZ.retry = 0; };
+    // сначала находим рабочий адрес сервиса (он же даёт название трека), потом ставим поток
+    audGet('/tracks/' + id).then((j) => { if (MZ.id === id && j && j.data && j.data.title) MZ.title = j.data.title + ' — ' + (j.data.user && j.data.user.name || ''); setSrc(); tmMusUI(); })
+      .catch(() => { setSrc(); if (MZ.id === id) toast('Музыкальный сервис не открывается в этой сети — попробуй Wi‑Fi или VPN', 3500); });
+  }
   tmMusUI();
 }
 function tmMusStop() { MZ.id = null; MZ.title = ''; if (MZ.el) { MZ.el.pause(); MZ.el.removeAttribute('src'); try { MZ.el.load(); } catch (e) {} } tmMusUI(); }
 // громкость: играет только в зале, плавно; уважает кнопку звука
 function tmMusTick(dt, inZal) {
-  if (!MZ.el || !MZ.id) return;
+  if (!MZ.el || !MZ.id) { tmMusLock(false); return; }
   const want = inZal && !(audio.isMuted && audio.isMuted()) ? 0.8 : 0;
   MZ.vol += (want - MZ.vol) * Math.min(1, dt * 2.5); MZ.el.volume = Math.max(0, Math.min(1, MZ.vol));
-  if (want > 0 && MZ.el.paused) { const p = MZ.el.play(); if (p && p.catch) p.catch(() => {}); }
-  else if (want === 0 && MZ.vol < 0.02 && !MZ.el.paused) MZ.el.pause();
+  const now = performance.now();
+  if (want > 0 && MZ.el.paused && !MZ.pend && now > (MZ.retry || 0)) {
+    MZ.pend = true; const p = MZ.el.play();
+    if (p && p.then) p.then(() => { MZ.pend = false; tmMusLock(false); }).catch((e) => { MZ.pend = false; MZ.retry = performance.now() + 1500; if (e && e.name === 'NotAllowedError') tmMusLock(true); });
+    else MZ.pend = false;
+  } else if (want === 0) { tmMusLock(false); if (MZ.vol < 0.02 && !MZ.el.paused) MZ.el.pause(); }
 }
+// телефон не дал включить звук без касания (трек включил партнёр): просим одно касание
+function tmMusLock(on) {
+  if (on && !MZ.lock) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'glass'; b.textContent = '🎵 Нажми, чтобы слышать музыку';
+    b.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);z-index:31;height:48px;padding:0 20px;border-radius:999px;font-size:16px;pointer-events:auto';
+    const go = (e) => { if (e) { e.preventDefault(); e.stopPropagation(); } try { audio.unlock(); } catch (x) {} if (MZ.el) { MZ.retry = 0; const p = MZ.el.play(); if (p && p.then) p.then(() => tmMusLock(false)).catch(() => {}); } };
+    b.addEventListener('pointerdown', go); b.addEventListener('click', (e) => { e.preventDefault(); if (e.detail === 0) go(); });
+    document.body.appendChild(b); MZ.lock = b;
+  } else if (!on && MZ.lock) { MZ.lock.remove(); MZ.lock = null; }
+}
+// первое касание по экрану «разрешает» плееру играть позже без касания (для трека от партнёра)
+(() => {
+  const prime = () => { removeEventListener('pointerdown', prime, true); try { const el = tmMusEl(); if (!MZ.id) { el.muted = true; el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA='; const p = el.play(); const done = () => { el.pause(); el.muted = false; if (!MZ.id) el.removeAttribute('src'); }; if (p && p.then) p.then(done).catch(done); else done(); } } catch (e) {} };
+  addEventListener('pointerdown', prime, true);
+})();
 const tmFmtT = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 function tmMusOpen() {
   if (!MZ.box) {
@@ -3735,8 +3775,7 @@ function tmMusOpen() {
 }
 function tmMusSearch(q) {
   const L = MZ.box.querySelector('#mzList'); L.innerHTML = '<i style="opacity:.7">Ищу…</i>';
-  const url = q ? AUD + '/tracks/search?query=' + encodeURIComponent(q) + '&limit=25&app_name=' + AUD_APP : AUD + '/tracks/trending?time=week&limit=25&app_name=' + AUD_APP;
-  fetch(url).then((r) => r.json()).then((j) => {
+  audGet(q ? '/tracks/search?query=' + encodeURIComponent(q) + '&limit=25' : '/tracks/trending?time=week&limit=25').then((j) => {
     const a = (j && j.data || []).filter((t) => t && t.id && t.is_streamable !== false);
     L.innerHTML = a.length ? '' : '<i style="opacity:.7">Ничего не нашлось — попробуй по-другому</i>';
     a.forEach((t) => {
@@ -3751,7 +3790,7 @@ function tmMusSearch(q) {
       L.appendChild(d);
     });
     tmMusUI();
-  }).catch(() => { L.innerHTML = '<i style="opacity:.7">Нет связи с музыкальным сервисом</i>'; });
+  }).catch(() => { L.innerHTML = '<i style="opacity:.7">Музыкальный сервис Audius не открывается в этой сети. Попробуй другой интернет (Wi‑Fi / мобильный) или VPN.</i>'; });
 }
 function tmMusUI() {
   if (!MZ.box) return;
