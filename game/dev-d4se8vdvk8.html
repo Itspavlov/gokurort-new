@@ -1576,7 +1576,7 @@ const showCard = (id) => new Promise((res) => { const el = $(id); el.hidden = fa
 
 // ---------- облачка с репликами ----------
 const bubsEl = $('#bubs'), bubs = { v: null, h: null, s: null }, bp = new V3(); let bubShark = null;
-const NAMES = { v: 'Тарас', h: 'Лера', s: 'Акула' };
+const NAMES = { v: 'Тарас', h: 'Sunshine', s: 'Акула' };
 const ICON_Y = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.500 4.500L19 7.500" fill="none" stroke="#fff" stroke-width="3.400" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICON_N = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="#fff" stroke-width="3.400" stroke-linecap="round"/></svg>';
 function bubAnchor(who, out) {
@@ -1587,7 +1587,7 @@ function bubAnchor(who, out) {
 }
 function hideBub(who) { const el = bubs[who]; if (el) { el.remove(); bubs[who] = null; } }
 function clearBubs() { hideBub('v'); hideBub('h'); hideBub('s'); }
-const bubClass = (who) => (NAMES[who] === 'Лера' ? 'h' : NAMES[who] === 'Тарас' ? 'v' : who);
+const bubClass = (who) => (NAMES[who] === 'Sunshine' ? 'h' : NAMES[who] === 'Тарас' ? 'v' : who);
 function showBub(who, html) {
   hideBub(who);
   const el = document.createElement('div'); el.className = 'bub ' + bubClass(who); el.dataset.name = NAMES[who] || ''; el.innerHTML = html; bubsEl.appendChild(el);
@@ -1791,7 +1791,7 @@ async function decide() {
   S.busy = true; goBtn.hidden = true; setHint('');
   await wait(1.1);
   const near = sharks.reduce((b, x) => (!b || x.root.position.distanceToSquared(boat.position) < b.root.position.distanceToSquared(boat.position)) ? x : b, null);
-  if (near) { near.R1 = 3.0; audio.swish(); await wait(1.6); await talk('s', 'Лера, кидай нам этого вкусненького блондина!', near); near.R1 = SH_CFG[near.i].R1; }
+  if (near) { near.R1 = 3.0; audio.swish(); await wait(1.6); await talk('s', 'Sunshine, кидай нам этого вкусненького блондина!', near); near.R1 = SH_CFG[near.i].R1; }
   await ask('h', 'Кинуть его к акулам?', { dodge: true, pleas: { 2: 'Он же вкусный!', 4: 'Акулы просят!' } });
   await pushVendor();
 }
@@ -1919,7 +1919,7 @@ async function meetVendor() {
   camMode = 'talk'; swingCam(0);
   // приветствие друг друга
   S.clip = 'greet'; await talk('h', 'Привет, Тарас!');
-  await talk('v', 'Привет, Лера!');
+  await talk('v', 'Привет, Sunshine!');
   S.clip = null;
   await talk('h', 'Можно мне клубнику в шоколаде? С кокосом.');
   await talk('v', 'Да, хорошо, с кокосом сделаю.');
@@ -3918,11 +3918,12 @@ const shL2W = (lx, lz) => [SH.x - lx, SH.z - lz];           // поворот н
 const shW2L = (x, z) => [SH.x - x, SH.z - z];
 const shFmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 // ---------- сохранённое: деньги, купленное, что надето ----------
-// у Леры и у Тараса свой гардероб, деньги общие на устройстве
+// у Sunshine и у Тараса свой гардероб, деньги общие на устройстве
+// после перезапуска всегда исходная розовая джерси (купленные остаются в гардеробе)
 const SHS = (() => {
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const fix = (r) => { if (!Array.isArray(r.owned)) r.owned = ['base']; if (r.owned.indexOf('base') < 0) r.owned.push('base'); if (r.owned.indexOf(r.wear) < 0) r.wear = 'base'; return r; };
-  return { money: +g('csr_money', 0) || 0, l: fix({ owned: g('csr_owned', ['base']), wear: g('csr_wear', 'base') }), t: fix({ owned: g('csr_owned_t', ['base']), wear: g('csr_wear_t', 'base') }) };
+  return { money: +g('csr_money', 0) || 0, l: fix({ owned: g('csr_owned', ['base']), wear: 'base' }), t: fix({ owned: g('csr_owned_t', ['base']), wear: 'base' }) };
 })();
 const shT = () => !!(seller && ONLINE.joined);          // я — Тарас
 const SR = () => (shT() ? SHS.t : SHS.l);
@@ -4149,7 +4150,7 @@ function shMirrorRender() {
   renderer.shadowMap.autoUpdate = au; M.visible = true;
 }
 
-// ---------- манекены и кассир (нужна модель Леры) ----------
+// ---------- манекены и кассир (нужна модель Sunshine) ----------
 const SH_MAN = [ // локально: x, z, поворот (0 — лицом на улицу), джерси
   [3.55, -1.15, 0, 'pink'], [5.45, -1.15, 0, 'sexdriver'], [-3.55, -1.15, 0, 'teal'], [-5.45, -1.15, 0, 'red'],
   [2.8, -4.3, 0, 'black'], [-2.8, -4.3, 0, 'pink'],
@@ -4319,7 +4320,7 @@ function shopCam(cp, f) {
   cp.x = w[0]; cp.z = w[1]; cp.y = clamp(cp.y, 0.9, SH.H - 0.2);
 }
 
-// ---------- одежда на Лере и на Тарасе ----------
+// ---------- одежда на Sunshine и на Тарасе ----------
 const shIsT = (ch) => ch === (ONLINE.vend0 || (ONLINE.started ? null : vendor));
 function shApplyOutfit(ch, id) {
   if (!ch || !ch.body || !ch.rigged || !ch.body.material) return;
@@ -4351,7 +4352,7 @@ function shCashierSay(t) { toast('Кассир: ' + t, 3200); }
 // ---------- продажа клубники Тарасу у лотка: уговорить два раза ----------
 const SELL_L = ['Тарас, купи стаканчик клубники! Всего 2 500.', 'Ну пожалуйста! Свежая, в шоколаде!', 'Последний раз прошу — купи, не пожалеешь!'];
 const SELL_T = ['Не, не хочу.', 'Хм… дороговато как-то.', 'Ладно, уговорила! Держи 2 500.'];
-const SELL_L2 = ['Лера, купи стаканчик клубники! Всего 2 500.', 'Ну купи! Свежая, в шоколаде!', 'Последний раз предлагаю — бери, не пожалеешь!'];
+const SELL_L2 = ['Sunshine, купи стаканчик клубники! Всего 2 500.', 'Ну купи! Свежая, в шоколаде!', 'Последний раз предлагаю — бери, не пожалеешь!'];
 const SELL_T2 = ['Не, не хочу.', 'Хм… дороговато как-то.', 'Ладно, уговорил! Держи 2 500.'];
 const shSL = (taras) => (taras ? SELL_L2 : SELL_L), shST = (taras) => (taras ? SELL_T2 : SELL_T);
 function shTarasSays(t) { if (ONLINE.peer && vendor.root.visible) say('v', t, 2.6); else toast(NAMES.v + ': ' + t, 2600); }
@@ -4383,7 +4384,7 @@ function shopFrame(dt) {
   SH.doors.forEach((d, i) => { const tx = d.userData.x0 + (open ? (i ? 1.2 : -1.2) : 0); d.position.x += (tx - d.position.x) * Math.min(1, dt * 6); });
   // зеркало: только когда героиня внутри, через кадр
   if (SH.mirror) { SH.mirror.visible = dist < 30 && !!(GFX && GFX.hd); if (inside && SH.mirror.visible && SH.frameN % 2 === 0) { try { shMirrorRender(); } catch (e) { if (!SH.err++) console.warn('mirror', e); } } }
-  // свой наряд на Лере
+  // свой наряд на Sunshine
   const me = shMine();
   if (me && me.body && me.outfit === undefined) shApplyOutfit(me, SR().wear);
   if (ONLINE.peer && !SH.peerWas) SH.outT = 1.5; SH.peerWas = !!ONLINE.peer;
@@ -4422,7 +4423,7 @@ function shopFrame(dt) {
         if (SH.tryId) {
           const j = shJ(SH.tryId);
           b = ['Купить «' + j.name + '» · ' + shFmt(SH_PRICE) + ' ₽', () => {
-            if (SHS.money < SH_PRICE) { shCashierSay('Не хватает ' + shFmt(SH_PRICE - SHS.money) + ' ₽. Продай клубнику ' + (shT() ? 'Лере' : 'Тарасу') + ' у лотка — 2 500 за стаканчик.'); return; }
+            if (SHS.money < SH_PRICE) { shCashierSay('Не хватает ' + shFmt(SH_PRICE - SHS.money) + ' ₽. Продай клубнику ' + (shT() ? 'Sunshine' : 'Тарасу') + ' у лотка — 2 500 за стаканчик.'); return; }
             SHS.money -= SH_PRICE; SR().owned.push(j.id); SR().wear = j.id; SH.tryId = null; shSave(); shMoney(); shSendOutfit();
             shCashierSay('Спасибо за покупку! «' + j.name + '» — твоя.'); try { audio.pop(); hero.root.getWorldPosition(heroWorld); burst(new V3(heroWorld.x, heroWorld.y + 1.7, heroWorld.z), [0xe23d8b, 0xffffff, 0x7ee2a0], 20, 3.2); } catch (e) {}
           }];
@@ -4455,7 +4456,7 @@ document.body.classList.add('online');
 const ONLINE = { role: null, code: null, sock: null, peer: false, joined: false, started: false, rx: null, sendT: 0, idle: 0, lastSent: '', char0: null, vend0: null };
 const SERVER_URL = window.TELL_SERVER_URL || new URLSearchParams(location.search).get('server') || location.origin;
 const ERR_TEXT = { 'no-room': 'Такой комнаты нет. Проверьте код.', 'full-room': 'В комнате уже двое.', full: 'Сервер занят, попробуйте позже.', rate: 'Слишком часто, подождите минуту.', 'in-room': 'Вы уже в комнате.' };
-const otherName = () => (ONLINE.role === 'seller' ? 'Лера' : 'Тарас');
+const otherName = () => (ONLINE.role === 'seller' ? 'Sunshine' : 'Тарас');
 
 function lobbyErr(t) { const e = $('#lobbyErr'); e.textContent = t || ''; e.hidden = !t; lobbyBusy(false); }
 function lobbyBusy(b) { document.querySelectorAll('#lobby button').forEach((x) => { x.disabled = b; }); }
@@ -4588,7 +4589,7 @@ setTimeout(() => { if (!MODELS_READY) { MODELS_READY = true; if (PENDING_ENTER) 
 function enter(role, code, peer) {
   if (!MODELS_READY) { PENDING_ENTER = [role, code, peer]; try { $('#lobbyP').textContent = 'Загружаем персонажей…'; } catch (e) {} return; }
   ONLINE.role = role; ONLINE.code = code; ONLINE.joined = true; ONLINE.peer = !!peer; seller = role === 'seller';
-  NAMES.h = seller ? 'Тарас' : 'Лера'; NAMES.v = seller ? 'Лера' : 'Тарас';
+  NAMES.h = seller ? 'Тарас' : 'Sunshine'; NAMES.v = seller ? 'Sunshine' : 'Тарас';
   if (!ONLINE.started) {
     ONLINE.started = true; ONLINE.char0 = hero; ONLINE.vend0 = vendor;
     if (seller) { adoptHero(ONLINE.vend0); vendor = ONLINE.char0; }
@@ -4897,7 +4898,7 @@ async function dockLocal() {
 // ---------- события от партнёра ----------
 function onPeerAct(a, d) {
   switch (a) {
-    case 'ask': if (seller) toast('Лера просит клубнику', 2600); break;
+    case 'ask': if (seller) toast('Sunshine просит клубнику', 2600); break;
     case 'give': peerGive(); break;
     case 'depart': boardBoth(); break;
     case 'feed': if (!seller && ONLINE.phase === 'sea') startFeedGuest(); break;
@@ -4997,7 +4998,7 @@ function guide() {
       if (S.berries === 0) return { h: peerNear(NEAR_GIVE) ? 'Нажми «Попросить клубнику»' : 'Подойди к ' + other + 'у за клубникой', m: null };
       return { h: 'Клубника у тебя! Идите к лодке, ' + other + ' отвезёт к акулам.', m: { x: DOCK_RING.x, z: DOCK_RING.z, ring: 1 } };
     }
-    if (!A.buyerHas) return { h: peerNear(NEAR_GIVE) ? 'Нажмите «Дать клубнику»' : 'Ждите у лотка. Когда Лера подойдёт ближе, появится «Дать клубнику».', m: null };
+    if (!A.buyerHas) return { h: peerNear(NEAR_GIVE) ? 'Нажмите «Дать клубнику»' : 'Ждите у лотка. Когда Sunshine подойдёт ближе, появится «Дать клубнику».', m: null };
     return { h: 'Идите к лодке на берегу. Когда оба будете рядом, нажмите «Отплыть».', m: { x: DOCK_RING.x, z: DOCK_RING.z, ring: 1 } };
   }
   if (A.where === 'swim') return { h: 'Плыви к берегу! Акулы кусаются, но не съедят.', m: { x: 2.0, z: DOCK_RING.z, ring: 1.5 } };
@@ -5222,7 +5223,7 @@ function carSeqTick(dt) {
       if (q.t > 0.3 && C.d[0] < 0.2 && C.d[1] < 0.2 || q.t > 1.4) {
         C.mode = 'in'; C.seq = null;
         if (me === 0) { setHint('Едем! Стик — газ и руль. Остановишься — появится «Выйти».'); setTimeout(() => setHint(''), 6500); if (ONLINE.pw === 'car') toast(otherName() + ' сел' + (ONLINE.role === 'seller' ? 'а' : '') + ' рядом', 1800); }
-        else toast('Едем с ' + (seller ? 'Лерой' : 'Тарасом'), 1800);
+        else toast('Едем с ' + (seller ? 'Sunshine' : 'Тарасом'), 1800);
       }
     }
   } else if (C.mode === 'exit' || C.mode === 'pexit') {
@@ -5425,7 +5426,7 @@ const KHIP = [0, 0.305, -0.12];                     // где у сидящег�
 const KROOT = [0, 0.2, -0.14];                      // грубо: куда прыгает герой (потом точно по тазу)
 const KNR = (() => { const l = Math.hypot(0.2, 0.98); return [0, 0.2 / l, 0.98 / l]; })();
 const KV = { max: 13, rev: 3.5, acc: 8, brk: 15, grass: 4.5, L: 1.15, laps: 3 };
-const K_NAMES = ['Тарас', 'Лера'];
+const K_NAMES = ['Тарас', 'Sunshine'];
 const KART = { ready: false, dead: false, mode: 'out', mine: 0, ks: [], seq: null, ui: {}, berryCd: 0, shots: [], peerK: null, ribT: 0, rib: null, field: [null, null], paint: null, ghost: 0 };
 const RACE = { ph: 'idle', t: 0, t0: 0, laps: [0, 0], fin: [0, 0], winner: -1, doneT: 0, finT: 0, waitT: 0, said: 0, big: '', bigT: 0, solo: false, goAt: 0, msg: '' };
 
@@ -5724,7 +5725,7 @@ function raceResolve(announce) {
   if (w >= 0) cerStart(w);
   const solo = !ONLINE.peer || R.solo;
   if (solo) { kartBig('Заезд окончен! ' + kFmt(R.fin[me]), 5); R.msg = 'Время ' + kFmt(R.fin[me]); }
-  else { kartBig(w === me ? 'Ты победил!' : 'Победил' + (K_NAMES[w] === 'Лера' ? 'а ' : ' ') + K_NAMES[w] + '!', 5); R.msg = (w === me ? 'Победа! ' : K_NAMES[w] + ' первый. ') + (R.fin[me] ? 'Твоё время ' + kFmt(R.fin[me]) : ''); }
+  else { kartBig(w === me ? 'Ты победил!' : 'Победил' + (K_NAMES[w] === 'Sunshine' ? 'а ' : ' ') + K_NAMES[w] + '!', 5); R.msg = (w === me ? 'Победа! ' : K_NAMES[w] + ' первый. ') + (R.fin[me] ? 'Твоё время ' + kFmt(R.fin[me]) : ''); }
   if (announce && audio.horn) audio.horn(false);
   if (w === me && !solo && audio.pop) { audio.pop(); }
 }
@@ -5933,7 +5934,7 @@ function kartUI() {
   const app = document.getElementById('app') || document.body, mk = (tag, id, cls) => { const e = document.createElement(tag); e.id = id; if (cls) e.className = cls; app.appendChild(e); return e; };
   const b = mk('button', 'kBtn', 'kbtn'); b.type = 'button'; b.hidden = true;
   const bb = mk('button', 'kBerry', 'kbtn'); bb.type = 'button'; bb.hidden = true; bb.innerHTML = '<span class="em">🍓</span><span>Кинуть</span>'; bb.setAttribute('aria-label', 'Кинуть клубникой');
-  const hud = mk('div', 'khud'); hud.hidden = true; hud.innerHTML = '<div class="kt"><span id="ktime">0:00.0</span><span id="klap">КРУГ 1/3</span></div><div class="kr" id="kr0"><b>Тарас</b><i id="kl0">0/3</i></div><div class="kr" id="kr1"><b>Лера</b><i id="kl1">0/3</i></div>';
+  const hud = mk('div', 'khud'); hud.hidden = true; hud.innerHTML = '<div class="kt"><span id="ktime">0:00.0</span><span id="klap">КРУГ 1/3</span></div><div class="kr" id="kr0"><b>Тарас</b><i id="kl0">0/3</i></div><div class="kr" id="kr1"><b>Sunshine</b><i id="kl1">0/3</i></div>';
   const big = mk('div', 'kbig'); big.hidden = true;
   const hm = mk('button', 'kHome'); hm.type = 'button'; hm.hidden = true;
   Object.assign(KART.ui, { btn: b, berry: bb, hud, big, home: hm, time: hud.querySelector('#ktime'), lap: hud.querySelector('#klap'), r0: hud.querySelector('#kr0'), r1: hud.querySelector('#kr1'), l0: hud.querySelector('#kl0'), l1: hud.querySelector('#kl1') });
