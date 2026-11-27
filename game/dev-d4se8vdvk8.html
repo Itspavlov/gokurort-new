@@ -4156,9 +4156,24 @@ const SH_MAN = [ // локально: x, z, поворот (0 — лицом н�
   [2.8, -4.3, 0, 'black'], [-2.8, -4.3, 0, 'pink'],
 ];
 function shLera() { const c = (ONLINE && ONLINE.char0) || hero; return c && c.srcMeta && c.srcMeta.idle && c.body ? c : null; }
+// телефоны: облегчённые текстуры (1024 / 512) — меньше памяти видеокарты; при сбое — повтор
+const SH_LITE = (() => { try { return /[?&]lite=1/.test(location.search) || (!/[?&]lite=0/.test(location.search) && ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent))); } catch (e) { return false; } })();
+const shFile = (f) => (SH_LITE && /^(hero4_|vendor_|mann_)/.test(f) ? f.replace(/\.jpg$/, '_m.jpg') : f);
 function shTex(file, cb) {
   if (SH.texCache[file]) { if (cb) SH.texCache[file].then(cb); return SH.texCache[file]; }
-  const p = loadTex(file).catch(() => null); SH.texCache[file] = p; if (cb) p.then(cb); return p;
+  const f = shFile(file), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const p = loadTex(f).catch(() => wait(1200).then(() => loadTex(f + '?r=' + Date.now()))).catch(() => (f !== file ? loadTex(file) : null)).catch(() => null)
+    .then((t) => { if (!t) { delete SH.texCache[file]; console.warn('shop tex fail', file); } return t; });
+  SH.texCache[file] = p; if (cb) p.then(cb); return p;
+}
+// освобождаем текстуру одежды, которую больше никто не носит
+function shFreeTex(t) {
+  if (!SH_LITE || !t) return;
+  const users = [hero, vendor, SH.cashier, GD.c].filter(Boolean);
+  if (users.some((c) => c.body && (c.body.material.map === t || c.baseMap === t))) return;
+  if (SH.man.some((m) => m.g.children[0].children[0].material.map === t)) return;
+  for (const k in SH.texCache) SH.texCache[k].then((x) => { if (x === t) delete SH.texCache[k]; });
+  try { t.dispose(); } catch (e) {}
 }
 function shPeople() {
   const L = shLera(); if (!L || SH.ready) return;
@@ -4326,8 +4341,12 @@ function shApplyOutfit(ch, id) {
   if (!ch || !ch.body || !ch.rigged || !ch.body.material) return;
   const j = shJ(id); if (ch.outfit === id) return; ch.outfit = id;
   if (!ch.baseMap) ch.baseMap = ch.body.material.map;
-  if (j.id === 'base') { ch.body.material.map = ch.baseMap; return; }
-  shTex(shIsT(ch) ? 'vendor_' + j.id + '.jpg' : j.file, (t) => { if (t && ch.outfit === id) ch.body.material.map = t; });
+  const prev = ch.body.material.map;
+  if (j.id === 'base') { ch.body.material.map = ch.baseMap; if (prev !== ch.baseMap) shFreeTex(prev); return; }
+  shTex(shIsT(ch) ? 'vendor_' + j.id + '.jpg' : j.file, (t) => {
+    if (!t) { if (ch === hero && ch.outfit === id) { ch.outfit = undefined; toast('Не удалось загрузить одежду — попробуй ещё раз', 2600); } return; }
+    if (ch.outfit !== id) return; const old = ch.body.material.map; ch.body.material.map = t; if (old !== t && old !== ch.baseMap) shFreeTex(old);
+  });
 }
 function shMine() { return hero; }
 function shSendOutfit() { if (ONLINE.joined && ONLINE.peer) { SH.outT = 6; try { sendNet('outfit', [SH_J.findIndex((j) => j.id === (SH.tryId || SR().wear))]); } catch (e) {} } }
