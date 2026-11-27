@@ -193,7 +193,7 @@ body.online.sea .chips { display: flex; }
 <div id="astL"><div>Клубничный рейс</div><i><b id="astB"></b></i><small id="astT">Загрузка…</small></div>
 <script>
 (function () {
-  var F = {"PINE": "data/PINE.0af3e763.json", "ARD": "data/ARD.ad4449e6.json", "ARD~h": "data/ARD_h.daa445d8.json", "AHD~h": "data/AHD_h.772d910e.json", "TPA~h": "data/TPA_h.df7019bf.json", "SHA": "data/SHA.b6ff692f.json", "CAR": "data/CAR.f42cabfa.json", "CAR2": "data/CAR2.8b0a8beb.json", "KD~h": "data/KD_h.f186e217.json", "HD~h": "data/HD_h.a9f83bc5.json", "MRD~h": "data/MRD_h.dab4e98b.json", "GFXA": "data/GFXA.1d4272a8.json"}, CORE = ["PINE", "ARD", "SHA", "CAR", "CAR2", "GFXA"], SZ = {"PINE": 99247, "ARD": 50394, "ARD~h": 2574806, "AHD~h": 155583, "TPA~h": 460330, "SHA": 75, "CAR": 1116640, "CAR2": 1263079, "KD~h": 964705, "HD~h": 357576, "MRD~h": 1305597, "GFXA": 175090};
+  var F = {"PINE": "data/PINE.0af3e763.json", "ARD": "data/ARD.ad4449e6.json", "ARD~h": "data/ARD_h.daa445d8.json", "AHD~h": "data/AHD_h.772d910e.json", "TPA~h": "data/TPA_h.df7019bf.json", "SHA": "data/SHA.b6ff692f.json", "CAR": "data/CAR.f42cabfa.json", "CAR2": "data/CAR2.8b0a8beb.json", "KD~h": "data/KD_h.f186e217.json", "HD~h": "data/HD_h.a9f83bc5.json", "MRD~h": "data/MRD_h.dab4e98b.json", "GFXA": "data/GFXA.83ffd1a1.json"}, CORE = ["PINE", "ARD", "SHA", "CAR", "CAR2", "GFXA"], SZ = {"PINE": 99247, "ARD": 50394, "ARD~h": 2574806, "AHD~h": 155583, "TPA~h": 460330, "SHA": 75, "CAR": 1116640, "CAR2": 1263079, "KD~h": 964705, "HD~h": 357576, "MRD~h": 1305597, "GFXA": 282}; window.ANIMF = {"anim.json": {"core": "data/anim_core.6571c5fa.json", "dance05": "data/anim_dance05.26195637.json", "dance01": "data/anim_dance01.5f538ab2.json", "dance02": "data/anim_dance02.b93ea288.json", "dance03": "data/anim_dance03.61ed2c3f.json", "dance04": "data/anim_dance04.7bb4e301.json", "dance06": "data/anim_dance06.cb33e7d7.json"}, "vanim.json": {"core": "data/vanim_core.0154225f.json", "dance": "data/vanim_dance.9d9bf4fd.json"}};
   window.AST = {}; Object.keys(F).forEach(function (k) { var t = k.split('~')[0]; if (!AST[t]) AST[t] = {}; });
   var got = {};
   function one(n, prog) {
@@ -301,7 +301,7 @@ if (GFX.hd) {
   try {
     const p = new URLSearchParams(location.search), num = (k, d) => { const v = parseFloat(p.get(k)); return isNaN(v) ? d : v; };
     GFX.skyg = num('skyg', 1.0); GFX.detk = num('detk', 1.0);
-    if (p.get('sky') !== '0') {
+    if (p.get('sky') === 'hdri') {
       // --- окружение: маленькая HDR-панорама (RGBE) -> PMREM ---
       const raw = atob(GFXA.env), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i);
       const et = new THREE.DataTexture(u8, GFXA.envW, GFXA.envH, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -638,7 +638,7 @@ const clouds = [];
     const g = new THREE.Group();
     for (let k = 0; k < 7; k++) { const sp = new THREE.Sprite(sm); const w = 12 + hash2(i, k) * 12; sp.scale.set(w, w * (0.5 + hash2(k, i) * 0.2), 1); sp.position.set((k - 3) * 5 + hash2(i, k + 4) * 3, hash2(k, i + 2) * 2.2, hash2(i + 3, k) * 3); g.add(sp); }
     g.position.set(-90 + i * 24 + (i % 3) * 6, 24 + (i % 4) * 4, -58 - (i % 3) * 18);
-    if (!GFX.sky) scene.add(g); clouds.push(g);
+    clouds.push(g);
   }
 }
 
@@ -810,6 +810,21 @@ function instanced(geo, material, list, cast = true) {
     bulbs.forEach((o, i) => { d.position.set(o.x, o.y, o.z); d.updateMatrix(); im.setMatrixAt(i, d.matrix); }); im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; dgrp.add(im); }
   // зонтики над двумя столами
   [1, 4].forEach((i) => { const w = dW(tables[i][0], tables[i][1]); makeUmbrella(w.x, w.z, false); });
+}
+// лёгкий лежак (рама + матрас), в единицах модели (масштаб 2.05 задаётся при расстановке)
+function makeLounger() {
+  const parts = [], k = 1 / 2.05;
+  const B = (w, h, d, x, y, z, rz, col) => { const g = new THREE.BoxGeometry(w * k, h * k, d * k); if (rz) g.rotateZ(rz); g.translate(x * k, y * k, z * k); const c = new THREE.Color(col), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); parts.push(g.toNonIndexed()); };
+  const fr = 0xc9ced4, cu = 0xf4f1ea, st = 0x2f8fb8;
+  B(1.28, 0.05, 0.66, -0.25, 0.36, 0, 0, fr); B(0.66, 0.05, 0.66, 0.62, 0.62, 0, 0.72, fr);           // рама сиденья и спинки
+  B(1.24, 0.07, 0.6, -0.25, 0.42, 0, 0, cu); B(0.64, 0.07, 0.6, 0.6, 0.68, 0, 0.72, cu);             // матрас
+  for (let i = 0; i < 4; i++) B(0.035, 0.075, 0.61, -0.75 + i * 0.36, 0.425, 0, 0, st);              // полоски на матрасе
+  [[-0.85, -0.29], [-0.85, 0.29], [0.3, -0.29], [0.3, 0.29]].forEach(([x, z]) => B(0.05, 0.36, 0.05, x, 0.18, z, 0, fr));
+  let n = 0; parts.forEach((g) => { n += g.attributes.position.count; });
+  const P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = new Float32Array(n * 3); let o = 0;
+  parts.forEach((g) => { P.set(g.attributes.position.array, o * 3); N.set(g.attributes.normal.array, o * 3); C.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; });
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
 }
 // лежаки под навесом в 10 м прямо перед киоском
 const LNG = { x: ST_POS.x + ST_S * 10, z: ST_POS.z + ST_C * 10 };
@@ -1036,7 +1051,7 @@ async function loadRigged(base, animFile, height, walkRate) {
       loadTex(base + '.jpg'),
     ]);
     const ch = makeRiggedHero(buf, meta, tex, height, walkRate);
-    try { ch.clips = await loadClips(animFile); } catch (e) { console.warn('anim failed', e); }
+    ch.animFile = animFile; try { ch.clips = await loadClips(animFile); } catch (e) { console.warn('anim failed', e); }
     return ch;
   } catch (e) {
     console.warn('model failed', base, e);
@@ -1063,9 +1078,17 @@ async function loadStaticModel(name, scale) {
     m.scale.setScalar(scale * meta.pscale); return m;
   } catch (e) { console.warn(name + ' model failed', e); return null; }
 }
+let CLIPDEC = null; const CLIPQ = {};
+function clipFetch(ch, nm) {
+  const af = typeof ANIMF !== 'undefined' && ch.animFile && ANIMF[ch.animFile]; if (!af || !af[nm] || !CLIPDEC) return;
+  const key = ch.animFile + ':' + nm; if (CLIPQ[key]) return; CLIPQ[key] = 1;
+  fetch(af[nm]).then((r) => r.json()).then((c) => { ch.clips[nm] = { n: c.n, loop: c.loop, q: CLIPDEC(c.q, Int16Array, 1 / 32767), h: CLIPDEC(c.h, Int16Array, 1 / 1000) }; }).catch(() => { delete CLIPQ[key]; });
+}
 async function loadClips(file) {
-  const j = await fetch(file).then((r) => { if (!r.ok) throw new Error('anim'); return r.json(); });
+  const af = typeof ANIMF !== 'undefined' && ANIMF[file];
+  const j = await fetch(af ? af.core : file).then((r) => { if (!r.ok) throw new Error('anim'); return r.json(); });
   const dec = (b64, Arr, k) => { const b = atob(b64), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); const a = new Int16Array(u.buffer), o = new Float32Array(a.length); for (let i = 0; i < a.length; i++) o[i] = a[i] * k; return o; };
+  CLIPDEC = dec;
   const out = {};
   for (const nm in j.clips) { const c = j.clips[nm]; out[nm] = { n: c.n, loop: c.loop, q: dec(c.q, Int16Array, 1 / 32767), h: dec(c.h, Int16Array, 1 / 1000) }; }
   return out;
@@ -1113,7 +1136,7 @@ function idlePose(ch, dt) {
 const QI = [0, 0, 0, 1], HAND_BONES = ['RightArm', 'RightForeArm', 'RightHand'];
 function animateRigged(ch, dt, st) {
   const gaitOn = !!(ch.gait && !st.clip && st.mode === 'walk');
-  const want = st.clip || (st.mode === 'walk' && !gaitOn ? 'walk' : null), clip = want && ch.clips ? ch.clips[want] : null;
+  const want = st.clip || (st.mode === 'walk' && !gaitOn ? 'walk' : null), clip = want && ch.clips ? ch.clips[want] : null; if (want && ch.clips && !clip) clipFetch(ch, want);
   if (want !== ch.clipName) { ch.clipName = want; ch.clipT = 0; }
   if (clip) { ch.clipT += dt * (st.clipRate || (want === 'walk' ? ch.walkRate : 1)); clipPose(clip, ch.clipT, ch.tq, ch.th); }
   if (gaitOn) gaitPose(ch, dt); else ch.gaitW = 0;
@@ -2310,11 +2333,36 @@ function zoneNear(z) {
   const rx = typeof ONLINE !== 'undefined' && ONLINE.peer ? ONLINE.rx : null;
   return !!(rx && Math.hypot(rx.x - z.x, rx.z - z.z) < z.r);
 }
+// лёгкие силуэты: пока зона не загружена, издалека видна её форма
+function zsilTemple() {
+  const g = new THREE.Group(), Z = TP.ZONE, NX = 44, NZ = 30, pos = [], col = [], idx = [];
+  for (let j = 0; j <= NZ; j++) for (let i = 0; i <= NX; i++) {
+    const x = Z[0] + (Z[1] - Z[0]) * i / NX, z = Z[2] + (Z[3] - Z[2]) * j / NZ, h = tpMountH(x, z); pos.push(x, h, z);
+    const e = 0.8, sl = Math.hypot(tpMountH(x + e, z) - tpMountH(x - e, z), tpMountH(x, z + e) - tpMountH(x, z - e)) / (2 * e), r = Math.min(1, sl * 0.9);
+    col.push(0.27 + 0.16 * r, 0.42 - 0.03 * r, 0.18 + 0.17 * r);
+  }
+  for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) { const a = j * (NX + 1) + i, b = a + 1, c = a + NX + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+  g.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(TP.W, TP.WH, TP.D), new THREE.MeshLambertMaterial({ color: 0xf0e6d2 })); wall.position.set(TP.x, TP.HP + TP.WH / 2, TP.cz); g.add(wall);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4, 1), new THREE.MeshLambertMaterial({ color: 0xa04a78 })); roof.rotation.y = Math.PI / 4; roof.scale.set(TP.W * 0.78, 3.2, TP.D * 0.78); roof.position.set(TP.x, TP.HP + TP.WH + 1.6, TP.cz); g.add(roof);
+  return g;
+}
+function zsilArena() {
+  const g = new THREE.Group(), H = arM.hull; if (!H) return null; g.position.set(AR.ax, 0, AR.az);
+  const sh = new THREE.Shape(H.map((p) => new THREE.Vector2(p[0], -p[1]))), pl = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshLambertMaterial({ color: 0x5b6066 }));
+  pl.rotation.x = -Math.PI / 2; pl.position.y = AR.plateY; g.add(pl);
+  const wm = new THREE.MeshLambertMaterial({ color: 0xe8e8e8 });
+  for (let i = 0; i < H.length; i++) { const a = H[i], b = H[(i + 1) % H.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.5) continue; const w = new THREE.Mesh(new THREE.BoxGeometry(L, 1.3, 0.12), wm); w.position.set((a[0] + b[0]) / 2, 0.65, (a[1] + b[1]) / 2); w.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); g.add(w); }
+  return g;
+}
 function zoneTick() {
   for (let i = 0; i < ZONES.length; i++) {
-    const z = ZONES[i]; if (z.st || !zoneNear(z)) continue;
+    const z = ZONES[i];
+    if (!z.st && !z.so && z.sil && typeof scene !== 'undefined') { try { z.so = z.sil(); if (z.so) scene.add(z.so); } catch (e) { z.sil = null; console.warn('силуэт', e); } }
+    if (z.st || !zoneNear(z)) continue;
     z.st = 1; if (z.msg) { try { toast(z.msg, 2600); } catch (e) {} }
-    AST_LOAD(z.parts).then(() => { z.st = 2; z.init(); }).catch((e) => { z.st = 0; z.fail = (z.fail || 0) + 1; if (z.fail > 2) owErr('загрузка ' + z.name, e); });
+    AST_LOAD(z.parts).then(() => { z.st = 2; z.init(); if (z.so) { scene.remove(z.so); z.so.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); z.so = null; } }).catch((e) => { z.st = 0; z.fail = (z.fail || 0) + 1; if (z.fail > 2) owErr('загрузка ' + z.name, e); });
   }
 }
 // ================= ОНЛАЙН: БОЛЬШАЯ КАРТА — дороги из брусчатки, сосны, трава, препятствия =================
@@ -3524,7 +3572,7 @@ function templeBuild() {
   TP.root = root; TP.ready = true;
 }
 function templeInit() { if (TP.ready) return; templeBuild(); }
-zoneAdd({ name: 'храм', x: -153, z: -83.5, r: 140, parts: ['TPA~h', 'AHD~h'], msg: 'Загружаем храм…', init() { owSafe('храм', templeInit); } });
+zoneAdd({ name: 'храм', x: -153, z: -83.5, r: 140, sil: zsilTemple, parts: ['TPA~h', 'AHD~h'], init() { owSafe('храм', templeInit); } });
 
 // ================= ХРАМ: МЕДИТАЦИЯ ВДВОЁМ — коврики, лотос, гвозди, чай, свечи, благовония, приглушённый свет, музыка =================
 // Позы (в осях модели: x вперёд, y вверх, z вправо; углы в радианах, поверх позы покоя)
@@ -3542,7 +3590,9 @@ const TM_TRAY = () => [TP.x + 2.175, TP.cz - 1.05];
 const tmMatW = (i) => [TP.x + 1.6 + i * 1.15, TP.cz - 1.3];
 const tmNailW = (i) => [TP.x + 1.6 + i * 1.15, TP.cz - 2.95];
 const tmIn = (x, z, m) => typeof TP !== 'undefined' && TP.ready && Math.abs(x - TP.x) < TP.W / 2 - (m || 0.3) && Math.abs(z - TP.cz) < TP.D / 2 - (m || 0.3);
-const TM_SEAT = { lotus: 1, pour: 1, drink: 1 };
+const TM_SEAT = { lotus: 1, pour: 1, drink: 1 }, TM_POSE = { lotus: 1, pour: 1, drink: 1, nails: 1 };
+// поза партнёра из сообщения 'tm' (если сервер не передаёт её в общем состоянии)
+function tmOnPeer(d) { const m = d && d[0]; ONLINE.rtm = m && TM_POSE[m] ? { m, x: +d[1], z: +d[2], t: performance.now() } : null; }
 const tmSip = (t) => { const p = (t % 6.5) / 6.5; return p < 0.55 ? 0 : p < 0.68 ? (p - 0.55) / 0.13 : p < 0.86 ? 1 : p < 0.96 ? 1 - (p - 0.86) / 0.1 : 0; };
 const tmPour = (t) => { const p = (t % 2.3) / 2.3; const reach = p < 0.25 ? p / 0.25 : p < 0.78 ? 1 : Math.max(0, 1 - (p - 0.78) / 0.22); const tilt = p < 0.32 ? 0 : p < 0.45 ? (p - 0.32) / 0.13 : p < 0.65 ? 1 : p < 0.75 ? 1 - (p - 0.65) / 0.1 : 0; return { reach, tilt, cup: t % 4.6 < 2.3 ? 0 : 1 }; };
 // поза: вызывается из rigTargets для героя и для партнёра
@@ -3761,6 +3811,12 @@ function templeFrame(dt) {
     }
     hero.root.rotation.y = lerpAngle(hero.root.rotation.y, S.yaw, 1 - Math.exp(-10 * dt));
   }
+  // поза медитации — второму игроку отдельным сообщением (при смене и раз в 2 с)
+  if (ONLINE.joined) {
+    const ps = TM_POSE[TM.st] ? TM.st : '';
+    TM.sendT = (TM.sendT || 0) - dt;
+    if (ps !== TM.sent || (ps && TM.sendT <= 0)) { TM.sent = ps; TM.sendT = 2; try { sendAct('tm', [ps, +p.x.toFixed(2), +p.z.toFixed(2)]); } catch (e) {} }
+  }
   // кнопки
   const U = TM.ui, show = (k, v) => { if (U[k].hidden === v) U[k].hidden = !v; };
   const free = TM.st === 'free', canMed = free && inside && ctl.mode === 'walk' && tmFreeMat() >= 0 && !S.busy;
@@ -3803,6 +3859,7 @@ function templeFrame(dt) {
   }
   SM.G.attributes.iP.needsUpdate = true; SM.G.attributes.iA.needsUpdate = true;
 }
+try { window.tmOnPeer = tmOnPeer; } catch (e) {}
 
 // ================= МАГАЗИН CA$HER: здание, витрины, примерка, касса, деньги =================
 const SHA = AST.SHA;
@@ -4334,6 +4391,7 @@ function updateVendor(dt) {
     } else {
       p.x += (d.x - p.x) * k; p.z += (d.z - p.z) * k; p.y = groundY(p.x, p.z); r.rotation.x = r.rotation.z = 0;
       vState.mode = d.m; vState.clip = d.c; vState.clipRate = d.r; vState.push = 0;
+      const rt = ONLINE.rtm; if (rt && performance.now() - rt.t < 5000) { vState.mode = rt.m; vState.clip = null; vState.clipRate = 0; if (isFinite(rt.x)) { p.x += (rt.x - p.x) * k; p.z += (rt.z - p.z) * k; p.y = groundY(p.x, p.z); } yaw = Math.PI; }
     }
     const vyx = vendor.rigged ? vState.twist - clamp(vState.twist, -0.9, 0.9) : 0;
     r.rotation.y = lerpAngle(r.rotation.y, yaw + vyx, 1 - Math.exp(-10 * dt));
@@ -4700,6 +4758,7 @@ function onPeerAct(a, d) {
     case 'sync': if (d && d[0] >= 100) kartOnSync(d); else carOnSync(d); break;
     case 'rsync': car2OnSync(d); break;
     case 'tea': templeOnAct(d); break;
+    case 'tm': tmOnPeer(d); break;
     case 'outfit': shOnPeerOutfit(d); break;
     case 'sell': shOnPeerSell(d); break;
   }
@@ -6143,7 +6202,7 @@ body.kartin .kpad{display:flex}
 }
 
 owSafe('раскладка', layoutUI); owSafe('ориентация', orientInit);
-zoneAdd({ name: 'картинг', x: -250, z: -7.35, r: 175, parts: ['ARD~h', 'AHD~h', 'KD~h', 'HD~h', 'MRD~h'], msg: 'Загружаем картинг…', init() { owSafe('арена', arenaInit); owSafe('карты', kartInit); owSafe('подиум', cerInit); } });
+zoneAdd({ name: 'картинг', x: -250, z: -7.35, r: 175, sil: zsilArena, parts: ['ARD~h', 'AHD~h', 'KD~h', 'HD~h', 'MRD~h'], init() { owSafe('арена', arenaInit); owSafe('карты', kartInit); owSafe('подиум', cerInit); } });
 
 
 // ================= ОНЛАЙН: ПОДИУМ, МЫШОНОК, БУКЕТ РОЗ (церемония после заезда) =================
@@ -6454,7 +6513,7 @@ function cerPost() {
 }
 
 
-Promise.all([loadRigged(/[?&]lera=old/.test(location.search) ? 'hero2' : 'hero4', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), loadStaticModel('lounge', 2.05)]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
+Promise.all([loadRigged(/[?&]lera=old/.test(location.search) ? 'hero2' : 'hero4', 'anim.json', HERO_H, 1.8), loadRigged('vendor', 'vanim.json', 2.1, 1.5), loadStaticModel('stall', 3.0), loadStaticModel('boat', 4.0), Promise.resolve(makeLounger())]).then(([ch, vend2, stallModel, boatModel, loungeModel]) => {
   console.info('DBG heroes: rigged hero=' + !!ch + ' vendor=' + !!vend2 + ' stall=' + !!stallModel + ' boat=' + !!boatModel + ' lounge=' + !!loungeModel);
   adoptHero(ch || makeCartoonHero()); shade(hero.root);
   setTimeout(() => { MODELS_READY = true; if (PENDING_ENTER) { const a = PENDING_ENTER; PENDING_ENTER = null; enter(a[0], a[1], a[2]); } }, 0);
