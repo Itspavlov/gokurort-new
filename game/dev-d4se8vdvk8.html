@@ -3624,7 +3624,7 @@ var TPOSE = {
   sip: { RightArm: [0.55, 0.3, 0.8], RightForeArm: [0, 0, 2.35], Head: [0, 0, -0.15] },   // глоток
   pour: { Arm: [-0.45, 0, 0.95], ForeArm: [0, 0, 0.35] },
 };
-const TM = { st: 'free', mat: -1, t: 0, p0: null, p1: null, dur: 1, next: null, filled: false, ui: null, k: 0, base: null, glow: [], ready: false, cups: [], pot: null, potHome: null, cupHome: [], v: new THREE.Vector3(), q: new THREE.Quaternion() };
+const TM = { snd: 'b', sndSeq: 0, sndOn: null, st: 'free', mat: -1, t: 0, p0: null, p1: null, dur: 1, next: null, filled: false, ui: null, k: 0, base: null, glow: [], ready: false, cups: [], pot: null, potHome: null, cupHome: [], v: new THREE.Vector3(), q: new THREE.Quaternion() };
 const TM_TRAY = () => [TP.x, TP.cz - 1.05];
 const tmMatW = (i) => [TP.x - 0.575 + i * 1.15, TP.cz - 1.3];
 const tmNailW = (i) => [TP.x - 0.575 + i * 1.15, TP.cz - 2.95];
@@ -3672,14 +3672,23 @@ function tmUI() {
   const st = document.createElement('style'); st.textContent = '#tpUI button{pointer-events:auto;min-width:150px;height:52px;padding:0 22px;border-radius:999px;font-size:18px}#tpUI button[hidden]{display:none}@media (max-height:430px){#tpUI{bottom:110px!important;right:190px!important}#tpUI button{height:44px;min-width:130px}}';
   document.head.appendChild(st); app.appendChild(box);
   const B = {};
-  [['med', 'Медитировать'], ['tea', '🍵 Чай'], ['nails', 'Гвозди'], ['off', 'Сойти'], ['up', 'Встать']].forEach(([k, t]) => {
+  [['snd', '🌧 Дождь'], ['med', 'Медитировать'], ['tea', '🍵 Чай'], ['nails', 'Гвозди'], ['off', 'Сойти'], ['up', 'Встать']].forEach(([k, t]) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'glass'; b.textContent = t; b.hidden = true; box.appendChild(b); B[k] = b;
-    b.addEventListener('click', (e) => { e.preventDefault(); try { audio.unlock(); } catch (x) {} b.blur(); tmPress(k); });
+    const fire = () => { try { audio.unlock(); } catch (x) {} b.blur(); const now = performance.now(); if (now - (b._t || 0) < 350) return; b._t = now; tmPress(k); };
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fire(); });
+    b.addEventListener('click', (e) => { e.preventDefault(); if (e.detail === 0) fire(); });
   });
   TM.ui = B;
 }
 const tmGo = (to, dur, next) => { const p = hero.root.position; TM.p0 = [p.x, p.z]; TM.p1 = to; TM.dur = dur; TM.t = 0; TM.next = next; TM.st = 'move'; };
+// звук зала: поющие чаши или дождь с грозой — общий для обоих игроков
+function tmSetSnd(v, seq) { TM.snd = v; TM.sndSeq = seq; if (TM.ui && TM.ui.snd) TM.ui.snd.textContent = v === 'r' ? '🔔 Чаши' : '🌧 Дождь'; }
+function tmPeerSnd(seq, v) {
+  if (!(seq > 0) || (v !== 'r' && v !== 'b')) return;
+  if (seq > TM.sndSeq || (seq === TM.sndSeq && v !== TM.snd && !seller)) { const ch = v !== TM.snd; tmSetSnd(v, seq); if (ch && TM.k > 0.3) toast((ONLINE.peer ? NAMES.v + ' включил' + (seller ? 'а' : '') + ': ' : '') + (v === 'r' ? 'дождь и гроза 🌧' : 'поющие чаши 🔔'), 2200); }
+}
 function tmPress(k) {
+  if (k === 'snd') { tmSetSnd(TM.snd === 'r' ? 'b' : 'r', TM.sndSeq + 1); toast(TM.snd === 'r' ? 'Дождь и гроза 🌧' : 'Поющие чаши 🔔', 1600); return; }
   if (k === 'med' && TM.st === 'free') {
     if (S.udance) stopDance();
     const i = tmFreeMat(); if (i < 0) return; TM.mat = i; const w = tmMatW(i), p = hero.root.position;
@@ -3832,7 +3841,9 @@ function templeFrame(dt) {
     const k = TM.k, B = TM.base; sun.intensity = B.sun * (1 - 0.82 * k); if (B.hemi) B.hemi.intensity = B.hi * (1 - 0.7 * k); renderer.toneMappingExposure = B.exp * (1 - (GFX.hd ? 0.52 : 0.18) * k);
     TM.dimmed = TM.k > 0.002;
   }
-  if (audio.temple) audio.temple(Math.max(TM.k, inside ? 1 : 0));
+  const lvl = Math.max(TM.k, inside ? 1 : 0), rain = TM.snd === 'r';
+  if (audio.temple) audio.temple(rain ? 0 : lvl);
+  const ron = rain && lvl > 0.5; if (ron !== TM.sndOn) { TM.sndOn = ron; try { audio.track('temple_rain.mp3', ron, 0.6); } catch (e) {} }
   // огоньки и дым
   const tt = T; TM.flames.material.uniforms.uT.value = tt; TM.halos.material.uniforms.uT.value = tt; TM.halos.material.uniforms.uA.value = 0.5 + 0.5 * TM.k;
   // состояние героя
@@ -3859,6 +3870,7 @@ function templeFrame(dt) {
   // кнопки
   const U = TM.ui, show = (k, v) => { if (U[k].hidden === v) U[k].hidden = !v; };
   const free = TM.st === 'free', canMed = free && inside && ctl.mode === 'walk' && tmFreeMat() >= 0 && !S.busy;
+  show('snd', inside && (canMed || !free || ctl.mode === 'walk'));
   show('med', canMed); show('tea', TM.st === 'lotus'); show('nails', TM.st === 'lotus' || TM.st === 'drink'); show('off', TM.st === 'nails'); show('up', TM.st === 'lotus' || TM.st === 'drink' || TM.st === 'nails');
   if (!free || canMed) { if (typeof CAR_UI !== 'undefined' && CAR_UI.btn) CAR_UI.btn.hidden = true; if (typeof RC_UI !== 'undefined' && RC_UI.btn) RC_UI.btn.hidden = true; }
   // подсветка ковриков
@@ -3903,7 +3915,7 @@ try { window.tmOnPeer = tmOnPeer; } catch (e) {}
 // ================= МАГАЗИН CA$HER: здание, витрины, примерка, касса, деньги =================
 const SHA = AST.SHA;
 // локальные оси магазина: фасад смотрит на +Z (в мире — на юг, к лотку), внутри z < 0
-const SH = { x: -12, z: 31, W: 14, D: 11, H: 3.4, FH: 1.25, ready: false, built: false, root: null, inner: null, man: [], doors: [], lights: [], mirror: null, cashier: null, cst: null, ui: null, last: null, near: -1, sell: 0, sellT: 0, sellBusy: false, tryId: null, msg: 0, peerWas: false, err: 0, gerr: 0, frameN: 0, texCache: {} };
+const SH = { dbg: true, x: -12, z: 31, W: 14, D: 11, H: 3.4, FH: 1.25, ready: false, built: false, root: null, inner: null, man: [], doors: [], lights: [], mirror: null, cashier: null, cst: null, ui: null, last: null, near: -1, sell: 0, sellT: 0, sellBusy: false, tryId: null, msg: 0, peerWas: false, err: 0, gerr: 0, frameN: 0, texCache: {} };
 const SH_J = [
   { id: 'base', name: 'Big Love', file: 'hero4.jpg' },
   { id: 'pink', name: 'Only Love Cash', file: 'hero4_pink.jpg', mann: 'mann_pink.jpg' },
@@ -4344,8 +4356,9 @@ function shApplyOutfit(ch, id) {
   const prev = ch.body.material.map;
   if (j.id === 'base') { ch.body.material.map = ch.baseMap; if (prev !== ch.baseMap) shFreeTex(prev); return; }
   shTex(shIsT(ch) ? 'vendor_' + j.id + '.jpg' : j.file, (t) => {
-    if (!t) { if (ch === hero && ch.outfit === id) { ch.outfit = undefined; toast('Не удалось загрузить одежду — попробуй ещё раз', 2600); } return; }
-    if (ch.outfit !== id) return; const old = ch.body.material.map; ch.body.material.map = t; if (old !== t && old !== ch.baseMap) shFreeTex(old);
+    if (!t) { if (ch === hero && ch.outfit === id) { ch.outfit = undefined; setTimeout(() => toast('Не удалось загрузить одежду (' + shFile(j.file) + ') — попробуй ещё раз', 4000), 300); } return; }
+    if (ch.outfit !== id) return; const mat = ch.body.material, old = mat.map; mat.map = t; t.needsUpdate = true; mat.needsUpdate = true; if (old !== t && old !== ch.baseMap) shFreeTex(old);
+    if (ch === hero && SH.dbg) { const gl = renderer.getContext(); setTimeout(() => toast('👕 ' + j.id + ': ' + (t.image ? t.image.width + 'px' : 'нет картинки') + ' · ' + (GFX.hd ? 'hd' : 'low') + ' · ' + (SH_LITE ? 'lite' : 'full') + ' · ' + mat.type + ' · glErr ' + gl.getError() + ' · same ' + (ch.body.material.map === t), 6000), 400); }
   });
 }
 function shMine() { return hero; }
@@ -4361,7 +4374,10 @@ function shUI() {
   document.head.appendChild(st); app.appendChild(box);
   const mon = document.createElement('div'); mon.id = 'shMoney'; mon.hidden = true; app.appendChild(mon); SH.monEl = mon;
   const B = {};
-  ['a', 'b'].forEach((k) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'glass'; b.hidden = true; box.appendChild(b); B[k] = b; b.addEventListener('click', (e) => { e.preventDefault(); try { audio.unlock(); } catch (x) {} b.blur(); if (b._fn) b._fn(); }); });
+  ['a', 'b'].forEach((k) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'glass'; b.hidden = true; box.appendChild(b); B[k] = b; const fire = () => { try { audio.unlock(); } catch (x) {} b.blur(); const now = performance.now(); if (now - (b._t || 0) < 350) return; b._t = now; if (b._fn) b._fn(); };
+    // pointerdown: срабатывает и когда второй палец держит джойстик (click в этом случае телефон глотает)
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fire(); });
+    b.addEventListener('click', (e) => { e.preventDefault(); if (e.detail === 0) fire(); }); });
   SH.ui = B;
 }
 function shBtn(k, label, fn) { const b = SH.ui[k]; if (!label) { if (!b.hidden) b.hidden = true; b._fn = null; return; } if (b.textContent !== label) b.textContent = label; b._fn = fn; if (b.hidden) b.hidden = false; }
@@ -4522,8 +4538,25 @@ function onPeer(present) {
   vendor.root.visible = false; ONLINE.rx = null;
   if (ONLINE.joined) setHint(otherName() + (ONLINE.role === 'seller' ? ' вышла' : ' вышел') + ' из игры. Код комнаты ' + ONLINE.code + ', можно позвать снова.');
 }
+// одежда и поза медитации едут в каждом пакете положения (поле c: «клип~<джерси><поза>»)
+const NT_POSE = { l: 'lotus', p: 'pour', d: 'drink', n: 'nails' };
+function netTag(c) {
+  let o = 0, t = '';
+  try { o = Math.max(0, SH_J.findIndex((j) => j.id === (SH.tryId || SR().wear))); } catch (e) {}
+  try { if (typeof TM !== 'undefined' && TM_POSE[TM.st]) t = TM.st[0]; } catch (e) {}
+  let s = ''; try { if (TM.sndSeq > 0) s = '.' + TM.sndSeq + TM.snd; } catch (e) {}
+  return (c || '') + '~' + o + t + s;
+}
+function netUntag(d) {
+  if (typeof d.c !== 'string') return; const i = d.c.indexOf('~'); if (i < 0) return;
+  const parts = d.c.slice(i + 1).split('.'), tag = parts[0], o = parseInt(tag, 10), tc = tag.replace(/^\d+/, ''); d.c = d.c.slice(0, i) || null;
+  if (parts[1]) { const m = /^(\d+)([rb])$/.exec(parts[1]); if (m) { try { tmPeerSnd(+m[1], m[2]); } catch (e) {} } }
+  if (!isNaN(o)) { try { shOnPeerOutfit([o]); } catch (e) {} }
+  try { tmOnPeer(NT_POSE[tc] ? [NT_POSE[tc], d.x, d.z] : ['']); } catch (e) {}
+}
 function onPeerState(d) {
   if (!d || typeof d.x !== 'number') return;
+  netUntag(d);
   ONLINE.rx = d;
   if (!vendor.root.visible) { const p = vendor.root.position; p.x = d.x; p.z = d.z; p.y = sandY(d.x); vendor.root.rotation.y = d.yaw; vendor.root.visible = true; }
   try { carOnPeer(d); car2OnPeer(d); kartOnPeer(d); } catch (e) { owErr('машина-сеть', e); }
@@ -4573,6 +4606,7 @@ function netTick(dt) {
   ONLINE.sendT -= dt; if (ONLINE.sendT > 0) return; ONLINE.sendT = 0.08; ONLINE.idle += 0.08;
   const p = hero.root.position, yaw = Math.atan2(Math.sin(S.yaw), Math.cos(S.yaw));
   const st = (typeof carNetState === 'function' && carNetState()) || (typeof car2NetState === 'function' && car2NetState()) || (typeof kartNetState === 'function' && kartNetState()) || { x: +p.x.toFixed(2), z: +p.z.toFixed(2), yaw: +yaw.toFixed(2), m: S.mode, c: S.clip || null, r: +(S.clipRate || 0).toFixed(2) };
+  st.c = netTag(st.c);
   const key = st.x + '|' + st.z + '|' + st.yaw + '|' + st.m + '|' + st.c + '|' + st.r;
   if (key === ONLINE.lastSent && ONLINE.idle < 1.5) return;
   ONLINE.lastSent = key; ONLINE.idle = 0; ONLINE.sock.volatile.emit('g-s', st);
@@ -4649,6 +4683,8 @@ function lobbyStart() {
 }
 
 try { window.onPeerEvent = onPeerEvent; } catch (e) {}
+
+try { window.onPeerState = onPeerState; window.netTag = netTag; } catch (e) {}
 
 // ================= ОНЛАЙН, часть 2: клубника, лодка вдвоём, акулы, толчок =================
 // Продавец (Тарас) считает лодку и акул и шлёт покупателю снимки (g-w). Остальное: события g-ev с числами.
