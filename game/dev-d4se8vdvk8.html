@@ -4041,7 +4041,7 @@ function shPeople() {
   try {
     const c = makeRiggedHero(L.srcBuf, L.srcMeta, L.body.material.map, HERO_H, 1.8);
     c.clips = L.clips; SH.cashier = c; SH.cst = { mode: 'idle', ph: 0, give: 0, hold: false, throwP: 0, twist: 0, push: 0, kick: 0, clip: null, clipRate: 0 };
-    shTex('hero4_teal.jpg', (t) => { if (t) c.body.material.map = t; });
+    shTex('mann_teal.jpg', (t) => { if (t) c.body.material.map = t; });
     const [wx, wz] = shL2W(-6.15, -6.5); c.root.position.set(wx, 0.12, wz); c.root.rotation.y = -Math.PI / 2; scene.add(c.root);
   } catch (e) { console.warn('cashier', e); }
 }
@@ -4129,9 +4129,9 @@ function shOnPeerSell(d) { const k = d && d[0] | 0; if (k < 0 || k > 2) return; 
 // ---------- кадр ----------
 function shopFrame(dt) {
   if (!SH.built) { if (typeof owInit === 'function' && OW.ready === false) return; shBuild(); shUI(); }
-  if (!SH.ready) shPeople();
   SH.frameN++;
   const hp = hero.root.position, [lx, lz] = shW2L(hp.x, hp.z), dist = Math.hypot(lx, lz + SH.D / 2);
+  if (!SH.ready && dist < 28) shPeople();          // манекены и кассира грузим, только когда магазин рядом
   const near = dist < 32, inside = hero.root.parent === scene && shInside(hp.x, hp.z);
   SH.inner.visible = dist < 48; for (let i = 0; i < 4 && i < SH.man.length; i++) SH.man[i].g.visible = dist < 90; SH.lights.forEach((L) => { L.visible = dist < 30; });
   if (SH.cashier) { SH.cashier.root.visible = dist < 48; if (SH.cashier.root.visible) animateRigged(SH.cashier, dt, SH.cst); }
@@ -4140,7 +4140,7 @@ function shopFrame(dt) {
   const open = (Math.abs(lx) < 2.2 && Math.abs(lz) < 2.4) || (Math.abs(pv[0]) < 2.2 && Math.abs(pv[1]) < 2.4);
   SH.doors.forEach((d, i) => { const tx = d.userData.x0 + (open ? (i ? 1.2 : -1.2) : 0); d.position.x += (tx - d.position.x) * Math.min(1, dt * 6); });
   // зеркало: только когда героиня внутри, через кадр
-  if (SH.mirror) { SH.mirror.visible = dist < 30; if (inside && SH.frameN % 2 === 0) { try { shMirrorRender(); } catch (e) { if (!SH.err++) console.warn('mirror', e); } } }
+  if (SH.mirror) { SH.mirror.visible = dist < 30 && !!(GFX && GFX.hd); if (inside && SH.mirror.visible && SH.frameN % 2 === 0) { try { shMirrorRender(); } catch (e) { if (!SH.err++) console.warn('mirror', e); } } }
   // свой наряд на Лере
   const me = shMine();
   if (me && me.body && me.outfit === undefined) shApplyOutfit(me, SHS.wear);
