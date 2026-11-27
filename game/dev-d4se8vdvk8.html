@@ -4656,20 +4656,46 @@ function onPeer(present) {
   if (ONLINE.joined) setHint(otherName() + (ONLINE.role === 'seller' ? ' вышла' : ' вышел') + ' из игры. Код комнаты ' + ONLINE.code + ', можно позвать снова.');
 }
 // одежда и поза медитации едут в каждом пакете положения (поле c: «клип~<джерси><поза>»)
-const NT_POSE = { l: 'lotus', p: 'pour', d: 'drink', n: 'nails' };
+const NT_POSE = { l: 'lotus', p: 'pour', d: 'drink', n: 'nails' }, NT_PL = ['', 'lotus', 'pour', 'drink', 'nails'];
+const B62 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const NETX = { t: 0, last: '', mid: '' };
+function netInfo() {
+  const r = { o: 0, t: '', seq: 0, snd: 'b' };
+  try { r.o = Math.max(0, SH_J.findIndex((j) => j.id === (SH.tryId || SR().wear))); } catch (e) {}
+  try { if (typeof TM !== 'undefined' && TM_POSE[TM.st]) r.t = TM.st; } catch (e) {}
+  try { r.seq = TM.sndSeq | 0; r.snd = TM.snd || 'b'; } catch (e) {}
+  return r;
+}
+// 1) в поле c пакета положения: только строчные буквы и цифры (сервер чистит другие символы)
 function netTag(c) {
-  let o = 0, t = '';
-  try { o = Math.max(0, SH_J.findIndex((j) => j.id === (SH.tryId || SR().wear))); } catch (e) {}
-  try { if (typeof TM !== 'undefined' && TM_POSE[TM.st]) t = TM.st[0]; } catch (e) {}
-  let s = ''; try { if (TM.sndSeq > 0) s = '.' + TM.sndSeq + TM.snd; } catch (e) {}
-  return (c || '') + '~' + o + t + s;
+  const n = netInfo();
+  return (c || '') + 'qq' + n.o + (n.t ? n.t[0] : 'x') + (n.seq > 0 ? n.seq + n.snd[0] : '');
 }
 function netUntag(d) {
-  if (typeof d.c !== 'string') return; const i = d.c.indexOf('~'); if (i < 0) return;
-  const parts = d.c.slice(i + 1).split('.'), tag = parts[0], o = parseInt(tag, 10), tc = tag.replace(/^\d+/, ''); d.c = d.c.slice(0, i) || null;
-  if (parts[1]) { const m = /^(\d+)(r|b|m[0-9A-Za-z]{3,12})$/.exec(parts[1]); if (m) { try { tmPeerSnd(+m[1], m[2]); } catch (e) {} } }
-  if (!isNaN(o)) { try { shOnPeerOutfit([o]); } catch (e) {} }
-  try { tmOnPeer(NT_POSE[tc] ? [NT_POSE[tc], d.x, d.z] : ['']); } catch (e) {}
+  if (typeof d.c !== 'string') return; const i = d.c.indexOf('qq'); if (i < 0) return;
+  const m = /^(\d)([lpdnx])(?:(\d+)([rbm]))?$/.exec(d.c.slice(i + 2)); d.c = d.c.slice(0, i) || null; if (!m) return;
+  try { shOnPeerOutfit([+m[1]]); } catch (e) {}
+  try { tmOnPeer(NT_POSE[m[2]] ? [NT_POSE[m[2]], d.x, d.z] : ['']); } catch (e) {}
+  if (m[3]) { const k = m[4]; if (k !== 'm') { try { tmPeerSnd(+m[3], k); } catch (e) {} } else if (NETX.mid) { try { tmPeerSnd(+m[3], 'm' + NETX.mid); } catch (e) {} } }
+}
+// 2) дубль числами через событие «sync» (его сервер точно пропускает): [-777, одежда, поза, seq, звук, длина id, пары символов id]
+function netExtraTick(dt) {
+  if (!ONLINE.joined || !ONLINE.peer) return;
+  const n = netInfo(), id = n.snd[0] === 'm' ? n.snd.slice(1) : '', key = n.o + '|' + n.t + '|' + n.seq + '|' + n.snd;
+  NETX.t -= dt; if (key === NETX.last && NETX.t > 0) return; NETX.last = key; NETX.t = 2;
+  const d = [-777, n.o, Math.max(0, NT_PL.indexOf(n.t)), n.seq, n.snd[0] === 'r' ? 1 : id ? 2 : 0, id.length];
+  for (let k = 0; k < id.length; k += 2) d.push(Math.max(0, B62.indexOf(id[k])) * 62 + (k + 1 < id.length ? Math.max(0, B62.indexOf(id[k + 1])) : 0));
+  try { sendAct('sync', d); } catch (e) {}
+}
+function netExtraRecv(d) {
+  if (!Array.isArray(d) || d.length < 6) return;
+  try { shOnPeerOutfit([d[1] | 0]); } catch (e) {}
+  const rx = ONLINE.rx || {}, pz = NT_PL[d[2] | 0] || '';
+  try { tmOnPeer(pz ? [pz, rx.x, rx.z] : ['']); } catch (e) {}
+  const seq = d[3] | 0, kind = d[4] | 0, len = d[5] | 0; let id = '';
+  for (let k = 0; k < len; k += 2) { const v = d[6 + (k >> 1)] | 0; id += B62[Math.floor(v / 62)] || ''; if (k + 1 < len) id += B62[v % 62] || ''; }
+  if (kind === 2 && id) NETX.mid = id;
+  if (seq > 0) { try { tmPeerSnd(seq, kind === 1 ? 'r' : kind === 2 && id ? 'm' + id : 'b'); } catch (e) {} }
 }
 function onPeerState(d) {
   if (!d || typeof d.x !== 'number') return;
@@ -4719,6 +4745,7 @@ function updateVendor(dt) {
 // свои позы уходят партнёру: часто при движении, редко когда стоим
 function netTick(dt) {
   if (ONLINE.joined) seaTick(dt);
+  try { netExtraTick(dt); } catch (e) {}
   if (!ONLINE.joined || !ONLINE.sock || !ONLINE.sock.connected) return;
   ONLINE.sendT -= dt; if (ONLINE.sendT > 0) return; ONLINE.sendT = 0.08; ONLINE.idle += 0.08;
   const p = hero.root.position, yaw = Math.atan2(Math.sin(S.yaw), Math.cos(S.yaw));
@@ -5080,7 +5107,7 @@ function onPeerAct(a, d) {
     case 'landed': ONLINE.pw = 'beach'; ONLINE.rHop = false; vendor.root.rotation.x = vendor.root.rotation.z = 0; if (seller) ONLINE.buyerHas = false; break;
     case 'bite': peerBite(d[0] | 0, d[1]); break;
     case 'dock': dockLocal(); break;
-    case 'sync': if (d && d[0] >= 100) kartOnSync(d); else carOnSync(d); break;
+    case 'sync': if (d && d[0] === -777) netExtraRecv(d); else if (d && d[0] >= 100) kartOnSync(d); else carOnSync(d); break;
     case 'rsync': car2OnSync(d); break;
     case 'tea': templeOnAct(d); break;
     case 'tm': tmOnPeer(d); break;
