@@ -3903,7 +3903,7 @@ try { window.tmOnPeer = tmOnPeer; } catch (e) {}
 // ================= МАГАЗИН CA$HER: здание, витрины, примерка, касса, деньги =================
 const SHA = AST.SHA;
 // локальные оси магазина: фасад смотрит на +Z (в мире — на юг, к лотку), внутри z < 0
-const SH = { x: -12, z: 31, W: 14, D: 11, H: 3.4, FH: 1.25, ready: false, built: false, root: null, inner: null, man: [], doors: [], lights: [], mirror: null, cashier: null, cst: null, ui: null, last: null, near: -1, sell: 0, sellT: 0, sellBusy: false, tryId: null, msg: 0, peerWas: false, err: 0, frameN: 0, texCache: {} };
+const SH = { x: -12, z: 31, W: 14, D: 11, H: 3.4, FH: 1.25, ready: false, built: false, root: null, inner: null, man: [], doors: [], lights: [], mirror: null, cashier: null, cst: null, ui: null, last: null, near: -1, sell: 0, sellT: 0, sellBusy: false, tryId: null, msg: 0, peerWas: false, err: 0, gerr: 0, frameN: 0, texCache: {} };
 const SH_J = [
   { id: 'base', name: 'Big Love', file: 'hero4.jpg' },
   { id: 'pink', name: 'Only Love Cash', file: 'hero4_pink.jpg', mann: 'mann_pink.jpg' },
@@ -4186,9 +4186,105 @@ function shPeople() {
     shTex('mann_teal.jpg', (t) => { if (t) c.body.material.map = t; });
     const [wx, wz] = shL2W(-6.15, -6.5); c.root.position.set(wx, 0.12, wz); c.root.rotation.y = -Math.PI / 2; scene.add(c.root);
   } catch (e) { console.warn('cashier', e); }
+  try { shGuardBuild(); } catch (e) { console.warn('guard', e); }
 }
 
 // ---------- где можно ходить ----------
+
+// ---------- охранник: Тарас в форме «ОХРАНА» и кепке SECURITY ----------
+const GD = { c: null, s: null, st: 'post', post: [1.9, -0.95], tgt: [-4.2, -6.5], path: null, pi: 0, msgT: 0 };
+function shTarasM() { const c = ONLINE.vend0 || (ONLINE.started ? null : vendor); return c && c.srcBuf && c.srcMeta && c.body ? c : null; }
+function shCapTexText() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.font = 'bold 92px Arial, Helvetica, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SECURITY', 256, 68);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+function shCap() {   // кепка в координатах модели Тараса (y вверх, x вперёд)
+  const C = [0.027, 0.905, 0], R = [0.075, 0.074, 0.067], grp = new THREE.Group();
+  const m = new THREE.MeshLambertMaterial({ color: 0x18181b, side: THREE.DoubleSide });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2), m); dome.scale.set(R[0], R[1], R[2]); dome.position.set(C[0], C[1], C[2]); grp.add(dome);
+  const bg = new THREE.CircleGeometry(1, 24, -Math.PI / 2, Math.PI); bg.rotateX(-Math.PI / 2);
+  const brim = new THREE.Mesh(bg, m); brim.scale.set(0.097, 1, 0.072); brim.position.set(C[0] + 0.02, C[1] + 0.006, 0); brim.rotation.z = -0.26; grp.add(brim);
+  const btn = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 8, 6), m); btn.position.set(C[0], C[1] + R[1] - 0.001, 0); grp.add(btn);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 28, 1, true), m); band.scale.set(R[0] * 1.002, 0.012, R[2] * 1.002); band.position.set(C[0], C[1] - 0.004, C[2]); grp.add(band);
+  const tm = new THREE.MeshBasicMaterial({ map: shCapTexText(), transparent: true, depthWrite: false, color: 0xeeeeee });
+  const txt = new THREE.Mesh(new THREE.SphereGeometry(1.012, 18, 4, Math.PI - 0.8, 1.6, 0.98, 0.46), tm); txt.scale.set(R[0], R[1], R[2]); txt.position.set(C[0], C[1], C[2]); txt.renderOrder = 2; grp.add(txt);
+  return grp;
+}
+function shGuardBuild() {
+  const V = shTarasM(); if (!V || GD.c) return;
+  const meta = V.srcMeta, o = meta.off, n = meta.n, buf = V.srcBuf.slice(0);
+  // волосы под кепку: всё, что на голове выше лба, прижимаем внутрь купола
+  const pos = new Float32Array(buf, o.pos, n * 3), jt = new Uint8Array(buf, o.jt, n * 4), wt = new Uint8Array(buf, o.wt, n * 4);
+  const hb = meta.bones.findIndex((b) => b.name === 'Head'), C = [0.027, 0.905, 0], R = [0.075, 0.074, 0.067], K = 0.9;
+  for (let i = 0; i < n; i++) {
+    let w = 0; for (let k = 0; k < 4; k++) if (jt[i * 4 + k] === hb) w += wt[i * 4 + k] / 255;
+    const y = pos[i * 3 + 1]; if (w < 0.4 || y < 0.9) continue;
+    const ex = (pos[i * 3] - C[0]) / R[0], ey = (y - C[1]) / R[1], ez = (pos[i * 3 + 2] - C[2]) / R[2], r = Math.hypot(ex, Math.max(0, ey), ez);
+    if (r > K) { const f = K / r; pos[i * 3] = C[0] + ex * f * R[0]; pos[i * 3 + 2] = C[2] + ez * f * R[2]; if (ey > 0) pos[i * 3 + 1] = C[1] + ey * f * R[1]; }
+  }
+  const c = makeRiggedHero(buf, meta, V.body.material.map, V.model.scale.x * meta.H, V.walkRate || 1.5);
+  c.clips = V.clips; GD.c = c; GD.s = { mode: 'idle', ph: 0, give: 0, hold: false, throwP: 0, twist: 0, push: 0, kick: 0, clip: null, clipRate: 0 };
+  shTex('vendor_guard.jpg', (t) => { if (t) c.body.material.map = t; });
+  const cap = shCap(); cap.matrixAutoUpdate = false; cap.matrix.fromArray(meta.ibm[hb]); c.B.Head.node.add(cap);
+  const [wx, wz] = shL2W(GD.post[0], GD.post[1]); c.root.position.set(wx, 0.12, wz); c.root.rotation.y = Math.PI; scene.add(c.root);
+}
+const gdW = (lx, lz) => shL2W(lx, lz);
+function gdSay(t) { toast('Охранник: ' + t, 2800); }
+// шаг к точке (мировые координаты), возвращает остаток пути
+function gdStep(c, tx, tz, v, dt) {
+  const p = c.root.position, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
+  if (d > 0.02) { const k = Math.min(1, v * dt / d); p.x += dx * k; p.z += dz * k; c.root.rotation.y = lerpAngle(c.root.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-12 * dt)); }
+  p.y = 0.12; return d;
+}
+function shGuardFrame(dt, inside, lx, lz) {
+  const c = GD.c; if (!c) return;
+  const hp = hero.root.position, st = GD.s, gp = c.root.position, [glx, glz] = shW2L(gp.x, gp.z);
+  c.root.visible = Math.hypot(glx, glz + SH.D / 2) < 70;
+  const onFoot = hero.root.parent === scene && ctl.mode === 'walk';
+  if (GD.st === 'post') {
+    st.give = 0;
+    const [px, pz] = gdW(GD.post[0], GD.post[1]); const d = gdStep(c, px, pz, 1.4, dt);
+    st.mode = d > 0.05 ? 'walk' : 'idle'; st.clipRate = d > 0.05 ? 1.0 : 0;
+    if (d <= 0.05) c.root.rotation.y = lerpAngle(c.root.rotation.y, Math.PI, 1 - Math.exp(-6 * dt));
+    if (SH.tryId && !inside && lz > 0.3 && onFoot && Math.hypot(lx, lz) < 30) { GD.st = 'out'; GD.path = [[0, -0.4], [0, 1.2]]; GD.pi = 0; gdSay('Стоять! Сначала оплати!'); try { audio.hey(110); } catch (e) {} }
+  } else if (GD.st === 'out' || GD.st === 'chase') {
+    st.mode = 'walk'; st.clipRate = 1.9; st.give = 0;
+    let tx, tz;
+    if (GD.st === 'out') { const w = gdW(GD.path[GD.pi][0], GD.path[GD.pi][1]); tx = w[0]; tz = w[1]; }
+    else { tx = hp.x; tz = hp.z; }
+    const d = gdStep(c, tx, tz, 4.6, dt);
+    if (GD.st === 'out' && d < 0.15) { if (++GD.pi >= GD.path.length) GD.st = 'chase'; }
+    if (!SH.tryId) { GD.st = 'back'; GD.path = [[0, 1.2], [0, -0.4], GD.post]; GD.pi = 0; return; }
+    if (!onFoot || Math.hypot(lx, lz) > 40) {   // уехала или убежала далеко — джерси вернули на манекен
+      SH.tryId = null; shApplyOutfit(hero, SR().wear); shSendOutfit(); toast('Джерси вернули на манекен — сначала купи на кассе', 3000);
+      GD.st = 'back'; GD.path = [[0, 1.2], [0, -0.4], GD.post]; GD.pi = 0; return;
+    }
+    if (GD.st === 'chase' && Math.hypot(hp.x - gp.x, hp.z - gp.z) < 0.85) {
+      GD.st = 'drag'; GD.path = [[0, 1.3], [0, -0.6], [-1.2, -3.0], [-3.0, -6.3], GD.tgt]; GD.pi = 0; S.busy = true; S.udance = null; S.clip = null;
+      gdSay('Попалась! Пошли на кассу.'.replace('Попалась', shT() ? 'Попался' : 'Попалась'));
+    }
+  } else if (GD.st === 'drag') {
+    st.mode = 'walk'; st.clipRate = 1.1; st.give = Math.min(1, st.give + dt * 4);
+    const w = gdW(GD.path[GD.pi][0], GD.path[GD.pi][1]); const d = gdStep(c, w[0], w[1], 1.7, dt);
+    if (d < 0.12 && ++GD.pi >= GD.path.length) {
+      GD.st = 'back'; GD.path = [[-1.2, -3.0], [0, -1.0], GD.post]; GD.pi = 0; S.busy = false; S.mode = 'idle';
+      const [sx, sz] = shL2W(-4.25, -6.5); hp.x = sx; hp.z = sz; SH.last = { x: sx, z: sz };
+      const [cx, cz] = shL2W(-6.15, -6.5); S.yaw = Math.atan2(cx - hp.x, cz - hp.z);
+      gdSay('Оплати на кассе — ' + shFmt(SH_PRICE) + ' ₽. Или сними джерси у манекена.'); return;
+    }
+    // героиня рядом, справа-спереди от охранника, он держит её за плечо
+    const y = c.root.rotation.y, fx = Math.sin(y), fz = Math.cos(y), rx = -Math.cos(y), rz = Math.sin(y);
+    const nx = gp.x + fx * 0.38 + rx * 0.44, nz = gp.z + fz * 0.38 + rz * 0.44;
+    hp.x += (nx - hp.x) * Math.min(1, dt * 10); hp.z += (nz - hp.z) * Math.min(1, dt * 10);
+    S.mode = 'walk'; S.yaw = y; if (!S.clip) S.clipRate = walkRateOf(1.7);
+  } else if (GD.st === 'back') {
+    st.give = Math.max(0, st.give - dt * 3); st.mode = 'walk'; st.clipRate = 1.0;
+    const w = gdW(GD.path[GD.pi][0], GD.path[GD.pi][1]); const d = gdStep(c, w[0], w[1], 1.6, dt);
+    if (d < 0.12 && ++GD.pi >= GD.path.length) GD.st = 'post';
+  }
+  if (c.root.visible) animateRigged(c, dt, st);
+}
 function shopGround(x, z) { const [lx, lz] = shW2L(x, z); return (Math.abs(lx) < SH.W / 2 + 0.25 && lz > -SH.D - 0.25 && lz < 0.25) ? 0.12 : null; }
 function shAllowed(x, z) {
   const [lx, lz] = shW2L(x, z), hw = SH.W / 2;
@@ -4298,7 +4394,8 @@ function shopFrame(dt) {
   // деньги видно всегда
   if (SH.monEl) { const show = !!me && $('#hud') && !$('#hud').hidden; if (SH.monEl.hidden === show) SH.monEl.hidden = !show; if (show) shMoney(); }
   // вышла с непокупленной примеркой — вернули на манекен
-  if (SH.tryId && !inside && Math.hypot(lx, lz) > 1.2 && lz > 0.3) {
+  try { shGuardFrame(dt, inside, lx, lz); } catch (e) { if (!SH.gerr++) console.warn('guard', e); }
+  if (SH.tryId && !GD.c && !inside && Math.hypot(lx, lz) > 1.2 && lz > 0.3) {
     SH.tryId = null; shApplyOutfit(me || hero, SR().wear); shSendOutfit(); toast('Джерси вернули на манекен — сначала купи на кассе', 3000);
   }
   if (!SH.ui) return;
@@ -4350,6 +4447,8 @@ function shopGuide() {
   return { h: 'Подойди к манекену, чтобы примерить джерси. В зеркале у задней стены видно, как сидит.', m: null };
 }
 try { window.SH = SH; window.SHS = SHS; window.shopWalk = shopWalk; } catch (e) {}
+
+try { window.GD = GD; } catch (e) {}
 
 // ================= ОНЛАЙН: продавец и покупатель в одной комнате =================
 document.body.classList.add('online');
