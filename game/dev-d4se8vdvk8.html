@@ -3915,7 +3915,7 @@ try { window.tmOnPeer = tmOnPeer; } catch (e) {}
 // ================= МАГАЗИН CA$HER: здание, витрины, примерка, касса, деньги =================
 const SHA = AST.SHA;
 // локальные оси магазина: фасад смотрит на +Z (в мире — на юг, к лотку), внутри z < 0
-const SH = { dbg: true, x: -12, z: 31, W: 14, D: 11, H: 3.4, FH: 1.25, ready: false, built: false, root: null, inner: null, man: [], doors: [], lights: [], mirror: null, cashier: null, cst: null, ui: null, last: null, near: -1, sell: 0, sellT: 0, sellBusy: false, tryId: null, msg: 0, peerWas: false, err: 0, gerr: 0, frameN: 0, texCache: {} };
+const SH = { dbg: false, x: -12, z: 31, W: 14, D: 11, H: 3.4, FH: 1.25, ready: false, built: false, root: null, inner: null, man: [], doors: [], lights: [], mirror: null, cashier: null, cst: null, ui: null, last: null, near: -1, sell: 0, sellT: 0, sellBusy: false, tryId: null, msg: 0, peerWas: false, err: 0, gerr: 0, frameN: 0, texCache: {} };
 const SH_J = [
   { id: 'base', name: 'Big Love', file: 'hero4.jpg' },
   { id: 'pink', name: 'Only Love Cash', file: 'hero4_pink.jpg', mann: 'mann_pink.jpg' },
@@ -5344,6 +5344,7 @@ function carOnPeer(d) {
       if (Math.hypot(CAR.x - d.x, CAR.z - d.z) > 0.3 || Math.abs(Math.atan2(Math.sin(CAR.h - d.yaw), Math.cos(CAR.h - d.yaw))) > 0.1) { CAR.x = d.x; CAR.z = d.z; CAR.h = d.yaw; }
       // сам не садимся: пассажир — только по кнопке «Сесть рядом»
     }
+    if (tag === 'car' && CAR.drv && !seller && (CAR.mode === 'board' || CAR.mode === 'in')) carYieldDriver(d);   // оба сели за руль: покупатель пересаживается рядом
     if (tag === 'car' && !CAR.drv && (CAR.mode === 'out' || CAR.seated)) carPeerSeat('car');   // партнёр за рулём — сидит на месте водителя
     else if (tag === 'carp' && CAR.drv && CAR.seated) carPeerSeat('carp');
   } else if (ONLINE.pcar) {
@@ -5351,6 +5352,15 @@ function carOnPeer(d) {
     carPeerLeave();
     if (was === 'car' && !CAR.drv && (CAR.mode === 'in' || CAR.mode === 'pboard')) { if (CAR.mode === 'in') carPassengerLeave(false); else { CAR.mode = 'out'; CAR.seq = null; CAR.dT[1] = 0; } }
   }
+}
+// оба нажали «Сесть» почти одновременно: за рулём остаётся продавец, покупатель садится на пассажирское в ЕГО машину
+function carYieldDriver(d) {
+  const C = CAR; C.drv = false; C.x = d.x; C.z = d.z; C.h = d.yaw; C.v = 0; C.tx = d.x; C.tz = d.z; C.th = d.yaw; C.dT[0] = 0;
+  if (C.mode === 'board') {
+    if (!C.seq || C.seq.ph === 0) { C.mode = 'pboard'; C.seq = { ph: 0, t: 0, p0: null }; C.dT[1] = 1; }
+    else { C.mode = 'pboard'; C.seq.seat = 1; }
+  } else if (hero.root.parent === C.g) carSetPos(hero.root, carSeatPos(1));
+  toast(otherName() + ' за рулём — ты рядом', 2200);
 }
 function carOnSync(d) {   // партнёр припарковал машину
   if (!CAR.ready || CAR.mode !== 'out' || !Array.isArray(d) || d.length < 3) return;
