@@ -2135,6 +2135,7 @@ const audio = (() => {
     }
     if (ac.state !== 'running') { const r = ac.resume(); if (r && r.catch) r.catch(() => {}); }
   });
+  P.isMuted = () => muted;
   // фоновая музыка-файл (магазин): грузим один раз, играем по кругу, громкость плавно
   const MUS = {};
   P.track = ok((url, on, vol = 0.55) => {
@@ -3672,7 +3673,7 @@ function tmUI() {
   const st = document.createElement('style'); st.textContent = '#tpUI button{pointer-events:auto;min-width:150px;height:52px;padding:0 22px;border-radius:999px;font-size:18px}#tpUI button[hidden]{display:none}@media (max-height:430px){#tpUI{bottom:110px!important;right:190px!important}#tpUI button{height:44px;min-width:130px}}';
   document.head.appendChild(st); app.appendChild(box);
   const B = {};
-  [['snd', '🌧 Дождь'], ['med', 'Медитировать'], ['tea', '🍵 Чай'], ['nails', 'Гвозди'], ['off', 'Сойти'], ['up', 'Встать']].forEach(([k, t]) => {
+  [['mus', '🎵 Музыка'], ['snd', '🌧 Дождь'], ['med', 'Медитировать'], ['tea', '🍵 Чай'], ['nails', 'Гвозди'], ['off', 'Сойти'], ['up', 'Встать']].forEach(([k, t]) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'glass'; b.textContent = t; b.hidden = true; box.appendChild(b); B[k] = b;
     const fire = () => { try { audio.unlock(); } catch (x) {} b.blur(); const now = performance.now(); if (now - (b._t || 0) < 350) return; b._t = now; tmPress(k); };
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fire(); });
@@ -3682,13 +3683,78 @@ function tmUI() {
 }
 const tmGo = (to, dur, next) => { const p = hero.root.position; TM.p0 = [p.x, p.z]; TM.p1 = to; TM.dur = dur; TM.t = 0; TM.next = next; TM.st = 'move'; };
 // звук зала: поющие чаши или дождь с грозой — общий для обоих игроков
-function tmSetSnd(v, seq) { TM.snd = v; TM.sndSeq = seq; if (TM.ui && TM.ui.snd) TM.ui.snd.textContent = v === 'r' ? '🔔 Чаши' : '🌧 Дождь'; }
+function tmSetSnd(v, seq) {
+  TM.snd = v; TM.sndSeq = seq;
+  if (TM.ui && TM.ui.snd) TM.ui.snd.textContent = v === 'r' ? '🔔 Чаши' : v[0] === 'm' ? '🔔 Чаши' : '🌧 Дождь';
+  if (v[0] === 'm') tmMusPlay(v.slice(1)); else tmMusStop();
+}
+// ---------- музыка из интернета (Audius: бесплатные полные треки) ----------
+const AUD = 'https://api.audius.co/v1', AUD_APP = 'klubnichny-reys';
+const MZ = { el: null, id: null, title: '', box: null, vol: 0 };
+function tmMusEl() {
+  if (!MZ.el) { MZ.el = new Audio(); MZ.el.loop = true; MZ.el.preload = 'auto'; MZ.el.volume = 0; MZ.el.addEventListener('error', () => { if (MZ.id) toast('Трек не загрузился — выбери другой', 2600); }); }
+  return MZ.el;
+}
+function tmMusPlay(id) {
+  if (!/^[0-9A-Za-z]{3,12}$/.test(id)) return;
+  const el = tmMusEl(); if (MZ.id !== id) { MZ.id = id; el.src = AUD + '/tracks/' + id + '/stream?app_name=' + AUD_APP; MZ.title = ''; fetch(AUD + '/tracks/' + id + '?app_name=' + AUD_APP).then((r) => r.json()).then((j) => { if (MZ.id === id && j && j.data) { MZ.title = j.data.title + ' — ' + (j.data.user && j.data.user.name || ''); tmMusUI(); } }).catch(() => {}); }
+  tmMusUI();
+}
+function tmMusStop() { MZ.id = null; MZ.title = ''; if (MZ.el) { MZ.el.pause(); MZ.el.removeAttribute('src'); try { MZ.el.load(); } catch (e) {} } tmMusUI(); }
+// громкость: играет только в зале, плавно; уважает кнопку звука
+function tmMusTick(dt, inZal) {
+  if (!MZ.el || !MZ.id) return;
+  const want = inZal && !(audio.isMuted && audio.isMuted()) ? 0.8 : 0;
+  MZ.vol += (want - MZ.vol) * Math.min(1, dt * 2.5); MZ.el.volume = Math.max(0, Math.min(1, MZ.vol));
+  if (want > 0 && MZ.el.paused) { const p = MZ.el.play(); if (p && p.catch) p.catch(() => {}); }
+  else if (want === 0 && MZ.vol < 0.02 && !MZ.el.paused) MZ.el.pause();
+}
+const tmFmtT = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+function tmMusOpen() {
+  if (!MZ.box) {
+    const st = document.createElement('style');
+    st.textContent = '#mzBox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:22px;background:rgba(18,16,24,.92);color:#fff;z-index:30;font:15px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.5)}#mzBox[hidden]{display:none}#mzBox .r{display:flex;gap:8px}#mzBox input{flex:1;min-width:0;height:44px;border-radius:14px;border:0;padding:0 14px;font-size:16px}#mzBox button{height:44px;border-radius:14px;border:0;padding:0 14px;font-size:15px;font-weight:700;background:#ff4f9a;color:#fff}#mzBox .x{background:#3a3746}#mzList{overflow:auto;display:flex;flex-direction:column;gap:6px;min-height:40px}#mzList div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.08);cursor:pointer}#mzList div b{display:block;font-size:15px}#mzList div i{font-style:normal;opacity:.7;font-size:13px}#mzList div.on{background:#ff4f9a55}#mzNow{font-size:13px;opacity:.85}@media (max-height:430px){#mzBox{max-height:94vh;padding:10px;gap:6px}}';
+    document.head.appendChild(st);
+    const b = document.createElement('div'); b.id = 'mzBox'; b.hidden = true;
+    b.innerHTML = '<div class="r"><input id="mzQ" type="search" placeholder="Найти песню или исполнителя" enterkeyhint="search"><button id="mzGo">Найти</button></div><div id="mzNow"></div><div id="mzList"></div><div class="r"><button id="mzStop" class="x">⏹ Выключить</button><button id="mzX" class="x" style="margin-left:auto">Закрыть</button></div>';
+    (document.getElementById('app') || document.body).appendChild(b); MZ.box = b;
+    const q = b.querySelector('#mzQ'), go = () => tmMusSearch(q.value.trim());
+    b.querySelector('#mzGo').addEventListener('click', go);
+    q.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); go(); q.blur(); } });
+    b.querySelector('#mzStop').addEventListener('click', () => { tmSetSnd('b', TM.sndSeq + 1); });
+    b.querySelector('#mzX').addEventListener('click', () => { b.hidden = true; });
+    ['pointerdown', 'touchstart', 'keydown', 'keyup'].forEach((n) => b.addEventListener(n, (e) => e.stopPropagation()));
+  }
+  MZ.box.hidden = false; tmMusUI();
+  if (!MZ.box.querySelector('#mzList').children.length) tmMusSearch('');
+}
+function tmMusSearch(q) {
+  const L = MZ.box.querySelector('#mzList'); L.innerHTML = '<i style="opacity:.7">Ищу…</i>';
+  const url = q ? AUD + '/tracks/search?query=' + encodeURIComponent(q) + '&limit=25&app_name=' + AUD_APP : AUD + '/tracks/trending?time=week&limit=25&app_name=' + AUD_APP;
+  fetch(url).then((r) => r.json()).then((j) => {
+    const a = (j && j.data || []).filter((t) => t && t.id && t.is_streamable !== false);
+    L.innerHTML = a.length ? '' : '<i style="opacity:.7">Ничего не нашлось — попробуй по-другому</i>';
+    a.forEach((t) => {
+      const d = document.createElement('div'); d.dataset.id = t.id;
+      d.innerHTML = '<b></b><i></i>'; d.querySelector('b').textContent = t.title; d.querySelector('i').textContent = (t.user && t.user.name || '') + ' · ' + tmFmtT(t.duration || 0);
+      d.addEventListener('click', () => { try { audio.unlock(); } catch (e) {} tmSetSnd('m' + t.id, TM.sndSeq + 1); const p = tmMusEl().play(); if (p && p.catch) p.catch(() => {}); });
+      L.appendChild(d);
+    });
+    tmMusUI();
+  }).catch(() => { L.innerHTML = '<i style="opacity:.7">Нет связи с музыкальным сервисом</i>'; });
+}
+function tmMusUI() {
+  if (!MZ.box) return;
+  MZ.box.querySelector('#mzNow').textContent = MZ.id ? '▶ ' + (MZ.title || 'Загружаю трек…') + ' — слышно вам обоим' : 'Поиск по Audius — бесплатная музыка. Выбранный трек услышите вы оба.';
+  MZ.box.querySelectorAll('#mzList div').forEach((d) => d.classList.toggle('on', d.dataset.id === MZ.id));
+}
 function tmPeerSnd(seq, v) {
-  if (!(seq > 0) || (v !== 'r' && v !== 'b')) return;
-  if (seq > TM.sndSeq || (seq === TM.sndSeq && v !== TM.snd && !seller)) { const ch = v !== TM.snd; tmSetSnd(v, seq); if (ch && TM.k > 0.3) toast((ONLINE.peer ? NAMES.v + ' включил' + (seller ? 'а' : '') + ': ' : '') + (v === 'r' ? 'дождь и гроза 🌧' : 'поющие чаши 🔔'), 2200); }
+  if (!(seq > 0) || !/^(r|b|m[0-9A-Za-z]{3,12})$/.test(v)) return;
+  if (seq > TM.sndSeq || (seq === TM.sndSeq && v !== TM.snd && !seller)) { const ch = v !== TM.snd; tmSetSnd(v, seq); if (ch && TM.k > 0.3) toast((ONLINE.peer ? NAMES.v + ' включил' + (seller ? 'а' : '') + ': ' : '') + (v === 'r' ? 'дождь и гроза 🌧' : v[0] === 'm' ? 'музыку 🎵' : 'поющие чаши 🔔'), 2200); }
 }
 function tmPress(k) {
-  if (k === 'snd') { tmSetSnd(TM.snd === 'r' ? 'b' : 'r', TM.sndSeq + 1); toast(TM.snd === 'r' ? 'Дождь и гроза 🌧' : 'Поющие чаши 🔔', 1600); return; }
+  if (k === 'mus') { tmMusOpen(); return; }
+  if (k === 'snd') { tmSetSnd(TM.snd === 'r' || TM.snd[0] === 'm' ? 'b' : 'r', TM.sndSeq + 1); toast(TM.snd === 'r' ? 'Дождь и гроза 🌧' : 'Поющие чаши 🔔', 1600); return; }
   if (k === 'med' && TM.st === 'free') {
     if (S.udance) stopDance();
     const i = tmFreeMat(); if (i < 0) return; TM.mat = i; const w = tmMatW(i), p = hero.root.position;
@@ -3841,8 +3907,9 @@ function templeFrame(dt) {
     const k = TM.k, B = TM.base; sun.intensity = B.sun * (1 - 0.82 * k); if (B.hemi) B.hemi.intensity = B.hi * (1 - 0.7 * k); renderer.toneMappingExposure = B.exp * (1 - (GFX.hd ? 0.52 : 0.18) * k);
     TM.dimmed = TM.k > 0.002;
   }
-  const lvl = Math.max(TM.k, inside ? 1 : 0), rain = TM.snd === 'r';
-  if (audio.temple) audio.temple(rain ? 0 : lvl);
+  const lvl = Math.max(TM.k, inside ? 1 : 0), rain = TM.snd === 'r', mus = TM.snd[0] === 'm';
+  if (audio.temple) audio.temple(rain || mus ? 0 : lvl);
+  tmMusTick(dt, lvl > 0.5);
   const ron = rain && lvl > 0.5; if (ron !== TM.sndOn) { TM.sndOn = ron; try { audio.track('temple_rain.mp3', ron, 0.6); } catch (e) {} }
   // огоньки и дым
   const tt = T; TM.flames.material.uniforms.uT.value = tt; TM.halos.material.uniforms.uT.value = tt; TM.halos.material.uniforms.uA.value = 0.5 + 0.5 * TM.k;
@@ -3870,7 +3937,8 @@ function templeFrame(dt) {
   // кнопки
   const U = TM.ui, show = (k, v) => { if (U[k].hidden === v) U[k].hidden = !v; };
   const free = TM.st === 'free', canMed = free && inside && ctl.mode === 'walk' && tmFreeMat() >= 0 && !S.busy;
-  show('snd', inside && (canMed || !free || ctl.mode === 'walk'));
+  show('snd', inside && (canMed || !free || ctl.mode === 'walk')); show('mus', inside && (canMed || !free || ctl.mode === 'walk'));
+  if (!inside && MZ.box && !MZ.box.hidden) MZ.box.hidden = true;
   show('med', canMed); show('tea', TM.st === 'lotus'); show('nails', TM.st === 'lotus' || TM.st === 'drink'); show('off', TM.st === 'nails'); show('up', TM.st === 'lotus' || TM.st === 'drink' || TM.st === 'nails');
   if (!free || canMed) { if (typeof CAR_UI !== 'undefined' && CAR_UI.btn) CAR_UI.btn.hidden = true; if (typeof RC_UI !== 'undefined' && RC_UI.btn) RC_UI.btn.hidden = true; }
   // подсветка ковриков
@@ -4550,7 +4618,7 @@ function netTag(c) {
 function netUntag(d) {
   if (typeof d.c !== 'string') return; const i = d.c.indexOf('~'); if (i < 0) return;
   const parts = d.c.slice(i + 1).split('.'), tag = parts[0], o = parseInt(tag, 10), tc = tag.replace(/^\d+/, ''); d.c = d.c.slice(0, i) || null;
-  if (parts[1]) { const m = /^(\d+)([rb])$/.exec(parts[1]); if (m) { try { tmPeerSnd(+m[1], m[2]); } catch (e) {} } }
+  if (parts[1]) { const m = /^(\d+)(r|b|m[0-9A-Za-z]{3,12})$/.exec(parts[1]); if (m) { try { tmPeerSnd(+m[1], m[2]); } catch (e) {} } }
   if (!isNaN(o)) { try { shOnPeerOutfit([o]); } catch (e) {} }
   try { tmOnPeer(NT_POSE[tc] ? [NT_POSE[tc], d.x, d.z] : ['']); } catch (e) {}
 }
