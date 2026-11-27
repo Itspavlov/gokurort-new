@@ -2300,12 +2300,13 @@ function frame(now) {
 }
 
 // ---------- загрузка по месту: тяжёлые зоны грузятся, когда к ним подходишь ----------
-const ZONES = [];
+const ZONES = [], ZTMP = new THREE.Vector3();
 function zoneAdd(z) { ZONES.push(Object.assign({ st: 0 }, z)); }
 try { window.ZONES = ZONES; window.__zs = () => ({ ar: AR.ready, kart: KART.ready, tp: TP.ready, cer: !!(typeof CER !== 'undefined' && CER), err: (document.getElementById('owerr') || {}).textContent || '' }); } catch (e) {}
 function zoneNear(z) {
-  const hp = typeof hero !== 'undefined' && hero && hero.root ? hero.root.position : null;
+  const hp = typeof hero !== 'undefined' && hero && hero.root ? hero.root.getWorldPosition(ZTMP) : null;   // в машине героиня внутри машины — берём мировые координаты
   if (hp && Math.hypot(hp.x - z.x, hp.z - z.z) < z.r) return true;
+  if (typeof camera !== 'undefined' && camera && Math.hypot(camera.position.x - z.x, camera.position.z - z.z) < z.r) return true;
   const rx = typeof ONLINE !== 'undefined' && ONLINE.peer ? ONLINE.rx : null;
   return !!(rx && Math.hypot(rx.x - z.x, rx.z - z.z) < z.r);
 }
