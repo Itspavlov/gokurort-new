@@ -193,7 +193,7 @@ body.online.sea .chips { display: flex; }
 <div id="astL"><div>Клубничный рейс</div><i><b id="astB"></b></i><small id="astT">Загрузка…</small></div>
 <script>
 (function () {
-  var F = {"PINE": "data/PINE.0af3e763.json", "ARD": "data/ARD.ad4449e6.json", "ARD~h": "data/ARD_h.daa445d8.json", "AHD~h": "data/AHD_h.772d910e.json", "TPA~h": "data/TPA_h.df7019bf.json", "SHA": "data/SHA.b6ff692f.json", "CAR": "data/CAR.f42cabfa.json", "CAR2": "data/CAR2.8b0a8beb.json", "KD~h": "data/KD_h.f186e217.json", "HD~h": "data/HD_h.a9f83bc5.json", "MRD~h": "data/MRD_h.dab4e98b.json", "GFXA": "data/GFXA.83ffd1a1.json"}, CORE = ["PINE", "ARD", "SHA", "CAR", "CAR2", "GFXA"], SZ = {"PINE": 99247, "ARD": 50394, "ARD~h": 2574806, "AHD~h": 155583, "TPA~h": 460330, "SHA": 75, "CAR": 1116640, "CAR2": 1263079, "KD~h": 964705, "HD~h": 357576, "MRD~h": 1305597, "GFXA": 282}; window.ANIMF = {"anim.json": {"core": "data/anim_core.6571c5fa.json", "dance05": "data/anim_dance05.26195637.json", "dance01": "data/anim_dance01.5f538ab2.json", "dance02": "data/anim_dance02.b93ea288.json", "dance03": "data/anim_dance03.61ed2c3f.json", "dance04": "data/anim_dance04.7bb4e301.json", "dance06": "data/anim_dance06.cb33e7d7.json"}, "vanim.json": {"core": "data/vanim_core.0154225f.json", "dance": "data/vanim_dance.9d9bf4fd.json"}};
+  var F = {"PINE": "data/PINE.0af3e763.json", "ARD": "data/ARD.ad4449e6.json", "ARD~h": "data/ARD_h.daa445d8.json", "AHD~h": "data/AHD_h.772d910e.json", "TPA~h": "data/TPA_h.df7019bf.json", "SHA": "data/SHA.b6ff692f.json", "CAR": "data/CAR.f42cabfa.json", "KD~h": "data/KD_h.f186e217.json", "HD~h": "data/HD_h.a9f83bc5.json", "MRD~h": "data/MRD_h.dab4e98b.json", "GFXA": "data/GFXA.83ffd1a1.json"}, CORE = ["PINE", "ARD", "SHA", "CAR", "GFXA"], SZ = {"PINE": 99247, "ARD": 50394, "ARD~h": 2574806, "AHD~h": 155583, "TPA~h": 460330, "SHA": 75, "CAR": 1116640, "KD~h": 964705, "HD~h": 357576, "MRD~h": 1305597, "GFXA": 282}; window.ANIMF = {"anim.json": {"core": "data/anim_core.6571c5fa.json", "dance05": "data/anim_dance05.26195637.json", "dance01": "data/anim_dance01.5f538ab2.json", "dance02": "data/anim_dance02.b93ea288.json", "dance03": "data/anim_dance03.61ed2c3f.json", "dance04": "data/anim_dance04.7bb4e301.json", "dance06": "data/anim_dance06.cb33e7d7.json"}, "vanim.json": {"core": "data/vanim_core.0154225f.json", "dance": "data/vanim_dance.9d9bf4fd.json"}};
   window.AST = {}; Object.keys(F).forEach(function (k) { var t = k.split('~')[0]; if (!AST[t]) AST[t] = {}; });
   var got = {};
   function one(n, prog) {
@@ -3096,6 +3096,7 @@ function tpAllowed(x, z) {
     if (Math.abs(lx) < hW - 0.55 && lz > -hD + 0.55 && lz < hD - 0.55) {          // внутри
       if (Math.abs(lx) < 2.9 && lz < -hD + 2.9) return false;                       // алтарь со статуей
       if (Math.abs(Math.abs(lx) - 5.2) < 0.55 && Math.abs(lz + hD - 1.0) < 0.6) return false;   // кадки у алтаря
+      if (Math.abs(Math.abs(lx) - 4.2) < 1.1 && Math.abs(lz + 4.3) < 1.1) return false;          // колонны с картинами
       return true;
     }
     if (Math.abs(lx) < 1.45 && lz >= hD - 0.55) return true;                         // дверь и проход через портал
@@ -3534,13 +3535,35 @@ function templeBuild() {
     {
       const mats = [], bol = [], tow = [], mg = new THREE.PlaneGeometry(0.62, 1.83); mg.rotateX(-Math.PI / 2);
       const bg = new THREE.CylinderGeometry(0.13, 0.13, 0.62, 14); bg.rotateZ(Math.PI / 2); const tg = new THREE.BoxGeometry(0.34, 0.05, 0.24);
-      for (let sd = -1; sd <= 1; sd += 2) for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
-        const x = sd * (1.6 + c * 1.15), z = -1.3 + r * 2.15;
-        if (Math.abs(x) > iW / 2 - 0.8) continue;
+      [-0.575, 0.575].forEach((x) => { const z = -1.3;   // только два коврика напротив статуи
         mats.push([mg, tpM4(x, 0.01, z)]); bol.push([bg, tpM4(x, 0.14, z + 1.0)]); tow.push([tg, tpM4(x, 0.035, z + 0.62)]);
-      }
+      });
       addT(mats, S({ color: 0xffffff, map: tpTex(TPA.matD), roughness: 0.9, side: THREE.DoubleSide }), { noCast: true });
       addT(bol, S({ color: 0xefe4d2, roughness: 0.9 })); addT(tow, S({ color: 0xfaf6ef, roughness: 0.95 }));
+    }
+    // картины: по две у двери, в задних углах, на колоннах у статуи
+    {
+      const PR = [[0.0,0.50098,0.25,0.49902,1.003],[0.25,0.50781,0.25,0.48535,1.031],[0.5,0.50098,0.25,0.49902,1.003],[0.75,0.50098,0.25,0.49902,1.003],[0.0,0.06348,0.25,0.37402,1.335],[0.25,0.01953,0.25,0.46094,1.084],[0.5,0.08398,0.25,0.33203,1.507],[0.75,0.0918,0.25,0.31738,1.578]], ins = 0.0008, pics = [], frm = [], pil = [], trim = [];
+      const pic = (i, w, m) => {
+        const r = PR[i], h = w / r[4], g = new THREE.PlaneGeometry(w, h), uv = g.attributes.uv;
+        for (let k = 0; k < uv.count; k++) uv.setXY(k, r[0] + ins + uv.getX(k) * (r[2] - 2 * ins), r[1] + ins + uv.getY(k) * (r[3] - 2 * ins));
+        pics.push([g, m.clone().multiply(tpM4(0, 0, 0.032))]); frm.push([box, m.clone().multiply(tpM4(0, 0, 0, 0, w + 0.14, h + 0.14, 0.05))]);
+      };
+      const zd = iD / 2 - 0.045;
+      [[-1, 0, 1], [1, 2, 3]].forEach(([sd, a, b]) => { pic(a, 1.4, tpM4(sd * 2.62, 3.32, zd, Math.PI)); pic(b, 1.4, tpM4(sd * 2.62, 1.6, zd, Math.PI)); });
+      [[-1, 6], [1, 7]].forEach(([sd, i]) => pic(i, 1.9, tpM4(sd * (iW / 2 - 0.76), 2.5, -iD / 2 + 0.76, -sd * Math.PI / 4)));
+      const PX = 4.2, PZ = -4.3, PS = 1.5;
+      [[-1, 5], [1, 4]].forEach(([sd, i]) => {
+        const x = sd * PX;
+        pil.push([box, tpM4(x, WH / 2, PZ, 0, PS, WH, PS)]);
+        trim.push([box, tpM4(x, 0.16, PZ, 0, PS + 0.2, 0.32, PS + 0.2)]); trim.push([box, tpM4(x, WH - 0.9, PZ, 0, PS + 0.16, 0.2, PS + 0.16)]);
+        pic(i, 1.4, tpM4(x, 2.1, PZ + PS / 2 + 0.005));
+      });
+      const mFr = S({ color: 0xc9a05a, metalness: 0.25, roughness: 0.45 });
+      tpUVWorld(addT(pil, mWall), 1); addT(trim, mFr);
+      addT(frm, mFr, { noCast: true });
+      const pt = tpTex('temple_pics.jpg'); pt.anisotropy = 8;
+      addT(pics, new THREE.MeshBasicMaterial({ map: pt, color: 0xeee6dc }), { noCast: true });
     }
     // подвесные фонари: металлический ажур поверх светящейся колбы
     {
@@ -3588,6 +3611,8 @@ function templeBuild() {
 function templeInit() { if (TP.ready) return; templeBuild(); }
 zoneAdd({ name: 'храм', x: -153, z: -83.5, r: 140, sil: zsilTemple, parts: ['TPA~h', 'AHD~h'], init() { owSafe('храм', templeInit); } });
 
+try { window.TP = TP; } catch (e) {}
+
 // ================= ХРАМ: МЕДИТАЦИЯ ВДВОЁМ — коврики, лотос, гвозди, чай, свечи, благовония, приглушённый свет, музыка =================
 // Позы (в осях модели: x вперёд, y вверх, z вправо; углы в радианах, поверх позы покоя)
 var TPOSE = {
@@ -3600,9 +3625,9 @@ var TPOSE = {
   pour: { Arm: [-0.45, 0, 0.95], ForeArm: [0, 0, 0.35] },
 };
 const TM = { st: 'free', mat: -1, t: 0, p0: null, p1: null, dur: 1, next: null, filled: false, ui: null, k: 0, base: null, glow: [], ready: false, cups: [], pot: null, potHome: null, cupHome: [], v: new THREE.Vector3(), q: new THREE.Quaternion() };
-const TM_TRAY = () => [TP.x + 2.175, TP.cz - 1.05];
-const tmMatW = (i) => [TP.x + 1.6 + i * 1.15, TP.cz - 1.3];
-const tmNailW = (i) => [TP.x + 1.6 + i * 1.15, TP.cz - 2.95];
+const TM_TRAY = () => [TP.x, TP.cz - 1.05];
+const tmMatW = (i) => [TP.x - 0.575 + i * 1.15, TP.cz - 1.3];
+const tmNailW = (i) => [TP.x - 0.575 + i * 1.15, TP.cz - 2.95];
 const tmIn = (x, z, m) => typeof TP !== 'undefined' && TP.ready && Math.abs(x - TP.x) < TP.W / 2 - (m || 0.3) && Math.abs(z - TP.cz) < TP.D / 2 - (m || 0.3);
 const TM_SEAT = { lotus: 1, pour: 1, drink: 1 }, TM_POSE = { lotus: 1, pour: 1, drink: 1, nails: 1 };
 // поза партнёра из сообщения 'tm' (если сервер не передаёт её в общем состоянии)
@@ -3730,9 +3755,9 @@ function tmBuild() {
     const L = [], hW = TP.W / 2 - 0.45 - 0.3, hD = TP.D / 2 - 0.45 - 0.3, X = TP.x, Z = TP.cz;
     for (let x = -hW + 0.4; x <= hW - 0.4; x += 1.45) { if (Math.abs(x) > 2.2) L.push([X + x, Z + hD]); if (Math.abs(x) > 3.2) L.push([X + x, Z - hD]); }
     for (let z = -hD + 1.2; z <= hD - 0.4; z += 1.45) { L.push([X + hW, Z + z]); L.push([X - hW, Z + z]); }
-    [[1.6, -1.3], [2.75, -1.3]].forEach(([mx, mz]) => { [[-0.55, -0.75], [0.55, -0.75], [-0.55, 0.75], [0.55, 0.75]].forEach(([a, b]) => L.push([X + mx + a, Z + mz + b])); });
+    [[-1.15, -2.05], [1.15, -2.05], [-1.15, -0.55], [1.15, -0.55]].forEach(([a, b]) => L.push([X + a, Z + b]));
     for (let i = -3; i <= 3; i++) L.push([X + i * 0.75, Z - TP.D / 2 + 2.85]);
-    for (let z = -2.5; z <= 4.5; z += 1.75) { L.push([X - 1.0, Z + z]); L.push([X + 1.0, Z + z]); }   // вдоль прохода
+    for (let z = 1.0; z <= 4.5; z += 1.75) { L.push([X - 1.0, Z + z]); L.push([X + 1.0, Z + z]); }   // вдоль прохода
     const ys = L.map(([x, z]) => FY + ((Math.abs(x - X) < 2.8 && z < Z - TP.D / 2 + 2.6) ? 0.36 : 0));
     const hold = new THREE.CylinderGeometry(0.05, 0.047, 0.075, 18, 1, true); hold.translate(0, 0.0375, 0);
     const wax = new THREE.CircleGeometry(0.045, 16); wax.rotateX(-Math.PI / 2); wax.translate(0, 0.06, 0);
@@ -5279,221 +5304,20 @@ function carInit() {
 owSafe('мир', owInit);
 owSafe('машина', carInit);
 
-// ================= ОНЛАЙН: КРАСНАЯ МАШИНА (Car Concept, Khronos / Eric Chadwick, CC BY 4.0). Своя машина: каждый может сесть за руль и ехать сам =================
-// Место водителя по центру (как у McLaren F1). +x модели — левый борт, +z — вперёд.
-const CAR2DATA = AST.CAR2;
-const RC = { g: null, bodyG: null, x: OW_PARK.x, z: OW_PARK.z + 3.3, h: OW_PARK.h, v: 0, vPrev: 0, steer: 0, spin: 0, mode: 'out', seq: null, d: [0, 0], dT: [0, 0], doors: [], steerG: [], spinG: [], wheel: null,
-  vmax: 26, vrev: 7, L: 2.8, seated: false, ready: false, dead: false, peer: false, tx: 0, tz: 0, th: 0, tv: 0, pitch: 0, roll: 0 };
-const RC_SEAT = [0, 0.2, 0.42], RC_DOOR = [1.0, 0.25], RC_SC = 0.8;
+// красная машина удалена: заглушки, чтобы остальной код не менялся
+const RC = { g: null, mode: 'out', ready: false, peer: false, x: 0, z: 0, h: 0 };
 const RC_UI = {};
-const rcLocal = (wx, wz) => { const dx = wx - RC.x, dz = wz - RC.z, c = Math.cos(RC.h), s = Math.sin(RC.h); return [dx * c - dz * s, dx * s + dz * c]; };
-const rcWorld = (lx, lz) => { const c = Math.cos(RC.h), s = Math.sin(RC.h); return [RC.x + lx * c + lz * s, RC.z - lx * s + lz * c]; };
-
-function rcMats() {
-  const hd = typeof GFX !== 'undefined' && GFX.hd, L = (c) => new THREE.Color(c).convertSRGBToLinear();
-  const P = (o) => hd ? new THREE.MeshPhysicalMaterial(Object.assign({ metalness: 0, roughness: 0.5, envMapIntensity: 1.0, side: THREE.DoubleSide }, o)) : new THREE.MeshPhongMaterial({ color: o.color, shininess: o.roughness < 0.3 ? 80 : 20, side: THREE.DoubleSide, transparent: !!o.transparent, opacity: o.opacity || 1, depthWrite: o.depthWrite !== false });
-  const fix = (m) => { if (hd && m.color) m.color.convertSRGBToLinear(); if (hd && m.emissive) m.emissive.convertSRGBToLinear(); return m; };
-  const red = fix(P({ color: 0xa3000f, metalness: 0.35, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.5 }));
-  const black = fix(P({ color: 0x0a0a0c, metalness: 0.4, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.3 }));
-  const plastic = fix(P({ color: 0x0c0c0d, roughness: 0.75 }));
-  const glass = hd ? new THREE.MeshPhysicalMaterial({ color: 0x050608, roughness: 0.03, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.7, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })
-    : new THREE.MeshPhongMaterial({ color: 0x0b0d10, specular: 0x8a9099, shininess: 110, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
-  if (hd) glass.color.convertSRGBToLinear();
-  const M = {
-    'Paint 1 Carmine': red, 'Paint 2 Carmine': black, 'Material_2': plastic, 'Glass': glass,
-    'Rim1': fix(P({ color: 0x1b1c1f, metalness: 0.85, roughness: 0.32, envMapIntensity: 1.3 })), 'Rim2': fix(P({ color: 0xdfe2e6, metalness: 1, roughness: 0.12, envMapIntensity: 1.5 })),
-    'Interior 1': fix(P({ color: 0x0d0d0e, roughness: 0.6 })), 'Interior 2': fix(P({ color: 0x2a2a2c, roughness: 0.65 })), 'Interior 3 Carmine': fix(P({ color: 0x5a070c, roughness: 0.55, sheen: hd ? new THREE.Color(0x401010) : undefined })),
-    'Disc': fix(P({ color: 0x9a9da1, metalness: 1, roughness: 0.45 })), 'Brake': fix(P({ color: 0xc0101a, metalness: 0.3, roughness: 0.35, clearcoat: 1 })),
-    'Mechanical': fix(P({ color: 0x141416, roughness: 0.7 })), 'Floormat': fix(P({ color: 0x111112, roughness: 0.95 })), 'Panel Sides': fix(P({ color: 0x18181a, roughness: 0.7 })),
-    'Hardware': fix(P({ color: 0x8a8d92, metalness: 1, roughness: 0.3 })), 'Mirror': fix(P({ color: 0xffffff, metalness: 1, roughness: 0.02, envMapIntensity: 1.6 })),
-    'Tireside': fix(P({ color: 0x151517, roughness: 0.85 })), 'Tiretread': fix(P({ color: 0x0e0e0f, roughness: 0.92 })),
-    'Headlight': fix(P({ color: 0xe8eef5, roughness: 0.1, emissive: 0xc8d4e8, emissiveIntensity: hd ? 0.35 : 0, clearcoat: 1 })),
-    'Brakelight': fix(P({ color: 0x8a0008, roughness: 0.15, emissive: 0xff1020, emissiveIntensity: hd ? 0.6 : 0, clearcoat: 1 })),
-    'Signallight': fix(P({ color: 0x8a4a00, roughness: 0.15, emissive: 0xff8a10, emissiveIntensity: hd ? 0.3 : 0, clearcoat: 1 })),
-    'Dashboard': fix(P({ color: 0x101820, roughness: 0.2, emissive: 0x204a6a, emissiveIntensity: hd ? 0.4 : 0 })),
-  };
-  return (n) => M[n] || plastic;
-}
-function rcMesh(d, mat) {
-  const q = CAR2DATA.q, p16 = new Int16Array(owB64(d.p)), pos = new Float32Array(p16.length);
-  for (let i = 0; i < p16.length; i++) pos[i] = p16[i] / q;
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(owB64(d.n)), 3, true));
-  g.setIndex(new THREE.BufferAttribute(new Uint16Array(owB64(d.i)), 1)); g.computeBoundingSphere();
-  const m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.castShadow = !mat.transparent; m.receiveShadow = false; if (mat.transparent) m.renderOrder = 2; return m;
-}
-function rcBuild() {
-  const g = new THREE.Group(), bodyG = new THREE.Group(); g.add(bodyG);
-  const mat = rcMats(), PV = CAR2DATA.pv, grp = {};
-  const mk = (k) => { const G = new THREE.Group(); G.position.set(PV[k][0], PV[k][1], PV[k][2]); grp[k] = G; return G; };
-  ['DL', 'DR', 'steer'].forEach((k) => bodyG.add(mk(k)));
-  ['WFL', 'WFR', 'WRL', 'WRR'].forEach((k) => { const s = mk(k), sp = new THREE.Group(); s.add(sp); g.add(s); grp[k + 's'] = sp; });
-  CAR2DATA.parts.forEach((p) => {
-    const m = rcMesh(p, mat(p.m));
-    if (p.g === 'body') bodyG.add(m); else if (p.g[0] === 'W') grp[p.g + 's'].add(m); else grp[p.g].add(m);
-  });
-  RC.doors = [grp.DL, grp.DR]; RC.steerG = [grp.WFL, grp.WFR]; RC.spinG = [grp.WFLs, grp.WFRs, grp.WRLs, grp.WRRs]; RC.wheel = grp.steer;
-  RC.bodyG = bodyG; RC.g = g; return g;
-}
-// ---- препятствия: мир + другая машина ----
 function obbHit(px, pz, cx, cz, ch, hx, hz) { const dx = px - cx, dz = pz - cz, c = Math.cos(ch), s = Math.sin(ch); return Math.abs(dx * c - dz * s) < hx && Math.abs(dx * s + dz * c) < hz; }
-function rcBlocked(x, z, h) {
-  const s = Math.sin(h), c = Math.cos(h);
-  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
-    const dz = a * 1.95, dx = b * 0.9, px = x + s * dz + c * dx, pz = z + c * dz - s * dx;
-    if (owBlocked(px, pz)) return true;
-    if (CAR.ready && obbHit(px, pz, CAR.x, CAR.z, CAR.h, 1.0, 2.3)) return true;
-  }
-  return false;
-}
-function rcWalkPush(p) {
-  if (!RC.ready || RC.mode !== 'out' || hero.root.parent !== scene) return;
-  const l = rcLocal(p.x, p.z), hx = 1.4, hz = 2.6;
-  if (Math.abs(l[0]) >= hx || Math.abs(l[1]) >= hz) return;
-  const px = hx - Math.abs(l[0]), pz = hz - Math.abs(l[1]);
-  if (px < pz) l[0] = (l[0] < 0 ? -1 : 1) * hx; else l[1] = (l[1] < 0 ? -1 : 1) * hz;
-  const w = rcWorld(l[0], l[1]); p.x = w[0]; p.z = w[1];
-}
-// ---- кнопка ----
-function rcUI() {
-  const app = document.getElementById('app') || document.body;
-  const b = document.createElement('button'); b.id = 'car2Btn'; b.type = 'button'; b.className = 'glass'; b.hidden = true; b.style.cssText = '';
-  const st = document.createElement('style'); st.textContent = '#car2Btn{position:absolute;right:max(30px,calc(env(safe-area-inset-right,0px) + 24px));bottom:222px;min-width:140px;height:54px;padding:0 26px;border-radius:999px;z-index:7;font-size:19px}#car2Btn[hidden]{display:none}@media (max-height:430px){#car2Btn{bottom:110px;right:190px;height:46px}}';
-  document.head.appendChild(st); app.appendChild(b); RC_UI.btn = b;
-  b.addEventListener('click', (e) => { e.preventDefault(); audio.unlock(); b.blur(); rcPress(); });
-  window.addEventListener('keydown', (e) => { if (e.repeat || (e.target && e.target.tagName === 'INPUT')) return; if (e.code === 'KeyF' && !b.hidden) b.click(); });
-}
-function rcPress() { if (RC.mode === 'out') rcBoard(); else if (RC.mode === 'in') rcExit(); }
-const rcCanSit = () => RC.ready && !RC.dead && RC.mode === 'out' && !RC.peer && CAR.mode === 'out' && (typeof KART === 'undefined' || KART.mode === 'out') && hero.root.parent === scene && ctl.mode === 'walk' &&
-  !S.busy && !S.kick && !S.seated && !ONLINE.myHop && !ONLINE.falling && ONLINE.where === 'beach' && ONLINE.phase === 'beach';
-const rcNear = () => { const l = rcLocal(hero.root.position.x, hero.root.position.z); return Math.abs(l[0]) < 3.6 && Math.abs(l[1]) < 3.9; };
-function rcBoard() {
-  if (!rcCanSit()) return;
-  if (S.udance) stopDance();
-  RC.mode = 'board'; input.x = input.y = 0; RC.seq = { ph: 0, t: 0, p0: null }; RC.dT[0] = 1; RC_UI.btn.hidden = true;
-}
-function rcExit() {
-  if (RC.mode !== 'in' || Math.abs(RC.v) > 0.8) return;
-  RC.mode = 'exit'; input.x = input.y = 0; RC_UI.btn.hidden = true; RC.seq = { ph: 0, t: 0, p0: null, p1: null }; RC.dT[0] = 1;
-}
-function rcExitSpot() {
-  const c = [[2.0, 0.2], [2.7, 0.2], [2.0, -1.4], [-2.0, 0.2], [-2.7, 0.2]];
-  for (let i = 0; i < c.length; i++) { const w = rcWorld(c[i][0], c[i][1]); if (!owBlocked(w[0], w[1]) && !(CAR.ready && obbHit(w[0], w[1], CAR.x, CAR.z, CAR.h, 1.2, 2.5))) return w; }
-  return rcWorld(c[0][0], c[0][1]);
-}
-const rcSeatPos = () => ({ x: RC_SEAT[0], y: RC_SEAT[1], z: RC_SEAT[2] });
-function rcSeqTick(dt) {
-  const q = RC.seq; if (!q) return; q.t += dt;
-  if (RC.mode === 'board') {
-    if (q.ph === 0) {
-      const tg = rcWorld(1.85, RC_DOOR[1]), hp = hero.root.position, dx = tg[0] - hp.x, dz = tg[1] - hp.z, d = Math.hypot(dx, dz);
-      if (d > 0.14 && q.t < 4.2) { const st = Math.min(d, 3.6 * dt); hp.x += dx / d * st; hp.z += dz / d * st; S.yaw = Math.atan2(dx, dz); S.mode = 'walk'; if (!S.clip) S.clipRate = walkRateOf(3.6); return; }
-      hp.x = tg[0]; hp.z = tg[1];
-      reparent(hero.root, RC.g); q.p0 = { x: hero.root.position.x, y: hero.root.position.y, z: hero.root.position.z };
-      S.mode = 'sit'; S.ground = false; S.clipRate = 0; S.yaw = 0; S.push = 0; carScale(hero.root, RC_SC); q.t = 0; q.ph = 1;
-    } else if (q.ph === 1) {
-      const u = Math.min(1, q.t / 0.6); carSetPos(hero.root, carHop(q.p0, rcSeatPos(), carSmooth(u), 0.3));
-      if (u >= 1) { RC.seated = true; q.ph = 2; q.t = 0; RC.dT[0] = 0; }
-    } else if (q.t > 0.35 && RC.d[0] < 0.2 || q.t > 1.4) {
-      RC.mode = 'in'; RC.seq = null; setHint('Едем на красной! Стик — газ и руль. Остановишься — появится «Выйти».'); setTimeout(() => setHint(''), 6000);
-    }
-  } else if (RC.mode === 'exit') {
-    RC.v *= Math.exp(-8 * dt);
-    if (q.ph === 0) {
-      if (q.t > 0.45) {
-        q.ph = 1; q.t = 0; RC.seated = false; reparent(hero.root, scene); carScale(hero.root, 1);
-        q.p0 = { x: hero.root.position.x, y: hero.root.position.y, z: hero.root.position.z };
-        const w = rcExitSpot(); q.p1 = { x: w[0], y: sandY(w[0]), z: w[1] }; S.yaw = Math.atan2(q.p1.x - q.p0.x, q.p1.z - q.p0.z); S.mode = 'idle'; S.clipRate = 0;
-      }
-    } else if (q.ph === 1) {
-      const u = Math.min(1, q.t / 0.55); carSetPos(hero.root, carHop(q.p0, q.p1, carSmooth(u), 0.3));
-      if (u >= 1) { q.ph = 2; q.t = 0; RC.dT[0] = 0; }
-    } else if (q.t > 0.4 || RC.d[0] < 0.15) {
-      RC.mode = 'out'; RC.seq = null; RC.v = 0; S.ground = true; S.mode = 'idle'; S.clipRate = 0; hero.root.position.y = sandY(hero.root.position.x); hero.root.rotation.x = hero.root.rotation.z = 0;
-      if (ONLINE.joined) sendAct('rsync', [RC.x, RC.z, Math.atan2(Math.sin(RC.h), Math.cos(RC.h))]);
-    }
-  }
-}
-// ---- сеть: партнёр в красной машине ----
-function car2NetState() {
-  if (!RC.ready || !RC.seated || RC.mode === 'out') return null;
-  return { x: +RC.x.toFixed(2), z: +RC.z.toFixed(2), yaw: +Math.atan2(Math.sin(RC.h), Math.cos(RC.h)).toFixed(2), m: 'sit', c: 'red', r: +RC.v.toFixed(2) };
-}
-function rcPeerIn(d) {
-  RC.peer = true; RC.x = RC.tx = d.x; RC.z = RC.tz = d.z; RC.h = RC.th = d.yaw; RC.v = RC.tv = d.r || 0;
-  reparent(vendor.root, RC.g); carScale(vendor.root, RC_SC * CAR_VK); ONLINE.pw = 'car'; ONLINE.pseat = -2; vendor.root.visible = true;
-  carSetPos(vendor.root, rcSeatPos()); vendor.root.rotation.set(0, 0, 0); vState.mode = 'sit'; vState.clip = null; vState.clipRate = 0;
-}
-function rcPeerOut() {
-  if (!RC.peer) return; RC.peer = false; RC.v = 0;
-  if (vendor.root.parent === RC.g) { reparent(vendor.root, scene); carScale(vendor.root, 1); const w = rcExitSpot(); vendor.root.position.set(w[0], sandY(w[0]), w[1]); vendor.root.rotation.set(0, 0, 0); }
-  if (ONLINE.pw === 'car' && ONLINE.pseat === -2) { ONLINE.pw = 'beach'; ONLINE.pseat = -1; } vState.mode = 'idle'; vState.clip = null;
-}
-function car2OnPeer(d) {
-  if (!RC.ready || RC.dead || !d) return;
-  if (d.c === 'red') { if (!RC.peer) rcPeerIn(d); RC.tx = d.x; RC.tz = d.z; RC.th = d.yaw; RC.tv = d.r || 0; }
-  else if (RC.peer) rcPeerOut();
-}
-function car2OnSync(d) { if (!RC.ready || RC.mode !== 'out' || RC.peer || !Array.isArray(d) || d.length < 3) return; RC.x = +d[0]; RC.z = +d[1]; RC.h = +d[2]; RC.v = 0; }
-function car2SyncPark() { if (RC.ready && RC.mode === 'out' && !RC.peer && ONLINE.joined) sendAct('rsync', [RC.x, RC.z, Math.atan2(Math.sin(RC.h), Math.cos(RC.h))]); }
-function car2PeerGone() { if (RC.ready) rcPeerOut(); }
-function car2CtlMode() { if (!RC.ready || RC.mode === 'out') return null; return RC.mode === 'in' ? 'drive' : 'none'; }
-function car2Guide() { if (!RC.ready || RC.mode === 'out') return null; return RC.mode === 'in' ? { h: 'Стик — газ и руль. ' + otherName() + ' может сесть в розовую и поехать рядом.', m: null } : { h: '', m: null }; }
-// ---- кадр ----
-function rcTick(dt) {
-  const C = RC; if (!C.ready || C.dead || !hero || !hero.root) return;
-  if (C.mode === 'out' && !C.peer) {
-    C.dT[0] = C.dT[1] = 0;
-    if (hero.root.parent === scene && ctl.mode === 'walk') { const l = rcLocal(hero.root.position.x, hero.root.position.z); if (Math.hypot(l[0] - RC_DOOR[0], l[1] - RC_DOOR[1]) < 2.6) C.dT[0] = 1; }
-  }
-  rcSeqTick(dt);
-  if (C.mode === 'in') {
-    const thr = input.y, vt = thr > 0.08 ? thr * C.vmax : thr < -0.08 ? thr * C.vrev : 0;
-    const rate = Math.abs(thr) <= 0.08 ? 2.6 : (vt * C.v < 0 || Math.abs(vt) < Math.abs(C.v) ? 12 : 7);
-    C.v += clamp(vt - C.v, -rate * dt, rate * dt);
-    const sMax = 0.62 / (1 + Math.abs(C.v) / 9); C.steer += (input.x * sMax - C.steer) * (1 - Math.exp(-8 * dt));
-    const nh = C.h - C.steer * C.v / C.L * dt, s = Math.sin(C.h), c = Math.cos(C.h), nx = C.x + s * C.v * dt, nz = C.z + c * C.v * dt;
-    if (!rcBlocked(nx, nz, nh)) { C.x = nx; C.z = nz; C.h = nh; }
-    else if (!rcBlocked(nx, nz, C.h)) { C.x = nx; C.z = nz; }
-    else { if (Math.abs(C.v) > 3 && audio.thump) audio.thump(); C.v = -C.v * 0.25; }
-    if (Math.abs(C.v) > 2) camYaw = lerpAngle(camYaw, C.h + Math.PI, 1 - Math.exp(-1.6 * dt));
-  } else if (C.peer) {
-    const k = 1 - Math.exp(-12 * dt), oh = C.h;
-    C.x += (C.tx - C.x) * k; C.z += (C.tz - C.z) * k; C.h = lerpAngle(C.h, C.th, k); C.v += (C.tv - C.v) * (1 - Math.exp(-8 * dt));
-    const dh = Math.atan2(Math.sin(C.h - oh), Math.cos(C.h - oh)); const st = Math.abs(C.v) > 1 && dt > 0 ? clamp(-dh / dt * C.L / C.v, -0.6, 0.6) : 0;
-    C.steer += (st - C.steer) * (1 - Math.exp(-8 * dt));
-  } else { C.v *= Math.exp(-6 * dt); if (Math.abs(C.v) < 0.02) C.v = 0; C.steer += (0 - C.steer) * (1 - Math.exp(-5 * dt)); }
-  // кнопка: если розовая ближе — её кнопка
-  if (C.mode === 'in') { const still = Math.abs(C.v) < 0.8; RC_UI.btn.hidden = !still; if (still) RC_UI.btn.textContent = 'Выйти'; }
-  else if (C.mode === 'out') {
-    let ok = rcCanSit() && rcNear();
-    if (ok && CAR_UI.btn && !CAR_UI.btn.hidden) { const a = rcLocal(hero.root.position.x, hero.root.position.z), b = carLocal(hero.root.position.x, hero.root.position.z); if (Math.hypot(b[0], b[1]) < Math.hypot(a[0], a[1])) ok = false; else CAR_UI.btn.hidden = true; }
-    RC_UI.btn.hidden = !ok; if (ok) RC_UI.btn.textContent = 'Сесть';
-  } else RC_UI.btn.hidden = true;
-  const g = C.g; g.position.x = C.x; g.position.z = C.z; g.position.y = sandY(C.x) + 0.02; g.rotation.y = C.h;
-  for (let i = 0; i < 2; i++) { C.d[i] += (C.dT[i] - C.d[i]) * (1 - Math.exp(-6.5 * dt)); C.doors[i].rotation.y = (i === 0 ? -1 : 1) * 1.1 * C.d[i]; }
-  C.spin += C.v * dt / 0.378;
-  for (let i = 0; i < 4; i++) { C.spinG[i].rotation.x = C.spin; if (i < 2) C.steerG[i].rotation.y = -C.steer; }
-  if (C.wheel) C.wheel.rotation.z = C.steer * 2.2;
-  const acc = (C.v - C.vPrev) / Math.max(dt, 0.001); C.vPrev = C.v;
-  C.pitch += (clamp(-acc * 0.002, -0.03, 0.03) - C.pitch) * (1 - Math.exp(-6 * dt)); C.roll += (clamp(-C.steer * C.v * 0.003, -0.04, 0.04) - C.roll) * (1 - Math.exp(-6 * dt));
-  C.bodyG.rotation.x = C.pitch; C.bodyG.rotation.z = C.roll;
-  const hop = C.seq && (C.mode === 'board' && C.seq.ph < 2 || C.mode === 'exit' && C.seq.ph >= 1);
-  if (C.seated && !hop) { carSetPos(hero.root, rcSeatPos()); hero.root.rotation.x = hero.root.rotation.z = 0; }
-  if (C.peer && vendor.root.parent === C.g) carSetPos(vendor.root, rcSeatPos());
-}
-function car2Frame(dt) {
-  try { rcTick(dt); if (RC.mode === 'in' && audio.car) audio.car(Math.min(1, Math.abs(RC.v) / RC.vmax), true); } catch (e) {
-    RC.dead = true; owErr('красная-кадр', e);
-    try { if (hero.root.parent !== scene) reparent(hero.root, scene); carScale(hero.root, 1); S.ground = true; S.mode = 'idle'; RC.mode = 'out'; RC.seated = false; RC_UI.btn.hidden = true; } catch (x) {}
-  }
-}
-function car2Init() {
-  if (RC.ready) return;
-  rcUI(); const g = rcBuild(); g.position.set(RC.x, sandY(RC.x) + 0.02, RC.z); g.rotation.y = RC.h; scene.add(g);
-  RC.ready = true;
-}
-owSafe('красная машина', car2Init);
+function rcWalkPush() {}
+function car2NetState() { return null; }
+function car2OnPeer() {}
+function car2OnSync() {}
+function car2SyncPark() {}
+function car2PeerGone() {}
+function car2CtlMode() { return null; }
+function car2Guide() { return null; }
+function car2Frame() {}
+function rcPress() {}
 
 // ================= ОНЛАЙН: КАРТИНГ — два карта, шлем, руль, старт, круги, клубника =================
 const KD = AST.KD, HD = AST.HD, KPOSE = {"54":[[0.0004,0.1755,0.6009,0.3124,1.0979,0.0191,-0.1741,0.6024,-0.29,1.0876,-0.1321,2.1522,-1.3444,-0.0,0.1321,2.1522,-1.3444,0.0,-0.128,0.0435,0.0],[0.134,0.2583,0.6509,0.2775,0.7041,-0.0044,-0.2443,0.7523,-0.3771,1.2954,-0.1321,2.1522,-1.3443,-0.0,0.1321,2.1522,-1.3443,0.0,-0.128,0.0435,0.0],[0.028,0.2461,0.7567,0.4,1.2971,-0.1156,-0.2588,0.6497,-0.2592,0.6977,-0.1321,2.1522,-1.3443,0.0,0.1321,2.1522,-1.3443,0.0,-0.128,0.0435,0.0]],"52":[[0.0504,0.0716,0.387,0.4084,0.9015,-0.0825,-0.1087,0.6075,-0.2747,0.6991,-0.0308,1.979,-0.9301,0.0,0.0289,1.9423,-0.8728,-0.0,-0.0934,0.0701,0.0],[0.2447,0.1887,0.5169,0.2251,0.4142,-0.1359,-0.1555,0.7527,-0.3943,0.9044,-0.0308,1.979,-0.9301,-0.0,0.0289,1.9423,-0.8728,0.0,-0.0934,0.0701,0.0],[0.1036,0.1356,0.5468,0.5149,1.0855,-0.315,-0.1854,0.7402,-0.0703,0.205,-0.0308,1.979,-0.9301,0.0,0.0289,1.9423,-0.8728,-0.0,-0.0934,0.0701,0.0]]}, HFIT = {"54": {"p": [-0.00327, 0.04434, 0.00271], "q": [-0.07045, 0.77755, 0.08855, 0.61855]}, "52": {"p": [-0.00435, 0.04426, 0.00336], "q": [-0.08936, 0.79647, 0.12155, 0.58556]}};
