@@ -2135,6 +2135,20 @@ const audio = (() => {
     }
     if (ac.state !== 'running') { const r = ac.resume(); if (r && r.catch) r.catch(() => {}); }
   });
+  // фоновая музыка-файл (магазин): грузим один раз, играем по кругу, громкость плавно
+  const MUS = {};
+  P.track = ok((url, on, vol = 0.55) => {
+    if (!ac) return; let m = MUS[url];
+    if (!m) {
+      if (!on) return;
+      m = MUS[url] = { g: ac.createGain(), src: null, buf: null, want: true, loading: true }; m.g.gain.value = 0; m.g.connect(mst);
+      fetch(url).then((r) => r.arrayBuffer()).then((ab) => new Promise((res, rej) => ac.decodeAudioData(ab, res, rej))).then((b) => { m.buf = b; m.loading = false; if (m.want) P.track(url, true, vol); }).catch(() => { m.loading = false; });
+    }
+    m.want = on; if (!m.buf) return;
+    if (on && !m.src) { if (m.old) { try { m.old.stop(); } catch (e) {} m.old = null; } const s = ac.createBufferSource(); s.buffer = m.buf; s.loop = true; s.connect(m.g); s.start(0, m.pos || 0); m.src = s; m.t0 = ac.currentTime - (m.pos || 0); }
+    m.g.gain.setTargetAtTime(on ? vol : 0, ac.currentTime, on ? 0.6 : 0.35);
+    if (!on && m.src) { const s = m.src; m.src = null; m.pos = (ac.currentTime - m.t0) % m.buf.duration; m.old = s; setTimeout(() => { try { s.stop(); } catch (e) {} if (m.old === s) m.old = null; }, 1600); }
+  });
   P.toggle = ok(() => { muted = !muted; if (ac) mst.gain.setTargetAtTime(muted ? 0 : 0.9, ac.currentTime, 0.05); return muted; });
   const gull = () => {
     const n = 2 + ((Math.random() * 2) | 0), base = 1400 + Math.random() * 500; let t0 = ac.currentTime + 0.02; const pn = ac.createStereoPanner ? ac.createStereoPanner() : null;
@@ -3815,7 +3829,7 @@ function templeFrame(dt) {
   if (ONLINE.joined) {
     const ps = TM_POSE[TM.st] ? TM.st : '';
     TM.sendT = (TM.sendT || 0) - dt;
-    if (ps !== TM.sent || (ps && TM.sendT <= 0)) { TM.sent = ps; TM.sendT = 2; try { sendAct('tm', [ps, +p.x.toFixed(2), +p.z.toFixed(2)]); } catch (e) {} }
+    if (ps !== TM.sent || (ps && TM.sendT <= 0)) { TM.sent = ps; TM.sendT = 2; try { sendNet('tm', [ps, +p.x.toFixed(2), +p.z.toFixed(2)]); } catch (e) {} }
   }
   // кнопки
   const U = TM.ui, show = (k, v) => { if (U[k].hidden === v) U[k].hidden = !v; };
@@ -3879,13 +3893,15 @@ const shL2W = (lx, lz) => [SH.x - lx, SH.z - lz];           // поворот н
 const shW2L = (x, z) => [SH.x - x, SH.z - z];
 const shFmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 // ---------- сохранённое: деньги, купленное, что надето ----------
+// у Леры и у Тараса свой гардероб, деньги общие на устройстве
 const SHS = (() => {
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
-  return { money: +g('csr_money', 0) || 0, owned: g('csr_owned', ['base']), wear: g('csr_wear', 'base') };
+  const fix = (r) => { if (!Array.isArray(r.owned)) r.owned = ['base']; if (r.owned.indexOf('base') < 0) r.owned.push('base'); if (r.owned.indexOf(r.wear) < 0) r.wear = 'base'; return r; };
+  return { money: +g('csr_money', 0) || 0, l: fix({ owned: g('csr_owned', ['base']), wear: g('csr_wear', 'base') }), t: fix({ owned: g('csr_owned_t', ['base']), wear: g('csr_wear_t', 'base') }) };
 })();
-function shSave() { try { localStorage.setItem('csr_money', JSON.stringify(SHS.money)); localStorage.setItem('csr_owned', JSON.stringify(SHS.owned)); localStorage.setItem('csr_wear', JSON.stringify(SHS.wear)); } catch (e) {} }
-if (SHS.owned.indexOf('base') < 0) SHS.owned.push('base');
-if (SHS.owned.indexOf(SHS.wear) < 0) SHS.wear = 'base';
+const shT = () => !!(seller && ONLINE.joined);          // я — Тарас
+const SR = () => (shT() ? SHS.t : SHS.l);
+function shSave() { try { localStorage.setItem('csr_money', JSON.stringify(SHS.money)); localStorage.setItem('csr_owned', JSON.stringify(SHS.l.owned)); localStorage.setItem('csr_wear', JSON.stringify(SHS.l.wear)); localStorage.setItem('csr_owned_t', JSON.stringify(SHS.t.owned)); localStorage.setItem('csr_wear_t', JSON.stringify(SHS.t.wear)); } catch (e) {} }
 
 // ---------- текстуры-надписи ----------
 function shCanvas(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g, w, h); const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t; }
@@ -4182,17 +4198,18 @@ function shopCam(cp, f) {
   cp.x = w[0]; cp.z = w[1]; cp.y = clamp(cp.y, 0.9, SH.H - 0.2);
 }
 
-// ---------- одежда на Лере ----------
+// ---------- одежда на Лере и на Тарасе ----------
+const shIsT = (ch) => ch === (ONLINE.vend0 || (ONLINE.started ? null : vendor));
 function shApplyOutfit(ch, id) {
-  if (!ch || !ch.body || !(ch.srcMeta && ch.srcMeta.idle)) return;
-  const j = shJ(id); ch.outfit = id;
+  if (!ch || !ch.body || !ch.rigged || !ch.body.material) return;
+  const j = shJ(id); if (ch.outfit === id) return; ch.outfit = id;
   if (!ch.baseMap) ch.baseMap = ch.body.material.map;
   if (j.id === 'base') { ch.body.material.map = ch.baseMap; return; }
-  shTex(j.file, (t) => { if (t && ch.outfit === id) ch.body.material.map = t; });
+  shTex(shIsT(ch) ? 'vendor_' + j.id + '.jpg' : j.file, (t) => { if (t && ch.outfit === id) ch.body.material.map = t; });
 }
-function shMine() { return (!seller || !ONLINE.joined) ? hero : null; }       // примеряет только Лера
-function shSendOutfit() { if (ONLINE.joined && !seller) { try { sendAct('outfit', [SH_J.findIndex((j) => j.id === (SH.tryId || SHS.wear))]); } catch (e) {} } }
-function shOnPeerOutfit(d) { const j = SH_J[d && d[0] | 0]; if (j && seller && ONLINE.char0) shApplyOutfit(ONLINE.char0, j.id); }
+function shMine() { return hero; }
+function shSendOutfit() { if (ONLINE.joined && ONLINE.peer) { SH.outT = 6; try { sendNet('outfit', [SH_J.findIndex((j) => j.id === (SH.tryId || SR().wear))]); } catch (e) {} } }
+function shOnPeerOutfit(d) { const j = SH_J[d && d[0] | 0]; if (j && vendor) shApplyOutfit(vendor, j.id); }
 
 // ---------- интерфейс ----------
 function shUI() {
@@ -4213,19 +4230,22 @@ function shCashierSay(t) { toast('Кассир: ' + t, 3200); }
 // ---------- продажа клубники Тарасу у лотка: уговорить два раза ----------
 const SELL_L = ['Тарас, купи стаканчик клубники! Всего 2 500.', 'Ну пожалуйста! Свежая, в шоколаде!', 'Последний раз прошу — купи, не пожалеешь!'];
 const SELL_T = ['Не, не хочу.', 'Хм… дороговато как-то.', 'Ладно, уговорила! Держи 2 500.'];
-function shTarasSays(t) { if (ONLINE.peer && vendor.root.visible) say('v', t, 2.6); else toast('Тарас: ' + t, 2600); }
+const SELL_L2 = ['Лера, купи стаканчик клубники! Всего 2 500.', 'Ну купи! Свежая, в шоколаде!', 'Последний раз предлагаю — бери, не пожалеешь!'];
+const SELL_T2 = ['Не, не хочу.', 'Хм… дороговато как-то.', 'Ладно, уговорил! Держи 2 500.'];
+const shSL = (taras) => (taras ? SELL_L2 : SELL_L), shST = (taras) => (taras ? SELL_T2 : SELL_T);
+function shTarasSays(t) { if (ONLINE.peer && vendor.root.visible) say('v', t, 2.6); else toast(NAMES.v + ': ' + t, 2600); }
 function shSellStep() {
   if (SH.sellBusy) return; SH.sellBusy = true; const k = SH.sell;
-  say('h', SELL_L[k], 2.4); if (ONLINE.joined) { try { sendAct('sell', [k]); } catch (e) {} }
+  say('h', shSL(shT())[k], 2.4); if (ONLINE.joined) { try { sendNet('sell', [k]); } catch (e) {} }
   setTimeout(() => {
-    shTarasSays(SELL_T[k]); SH.sellBusy = false;
+    shTarasSays(shST(shT())[k]); SH.sellBusy = false;
     if (k < 2) { SH.sell = k + 1; return; }
     SHS.money += SH_CUP; shSave(); shMoney(); SH.sell = 0; SH.sellT = 3;
     try { audio.pop(); setTimeout(() => audio.pop(), 140); hero.root.getWorldPosition(heroWorld); burst(new V3(heroWorld.x, heroWorld.y + 1.6, heroWorld.z), [0x7ee2a0, 0xffd166, 0xffffff], 18, 3); } catch (e) {}
     toast('+2 500 ₽ · всего ' + shFmt(SHS.money) + ' ₽', 2600);
   }, 1500);
 }
-function shOnPeerSell(d) { const k = d && d[0] | 0; if (k < 0 || k > 2) return; say('v', SELL_L[k], 2.4); setTimeout(() => say('h', SELL_T[k], 2.6), 1500); }
+function shOnPeerSell(d) { const k = d && d[0] | 0; if (k < 0 || k > 2) return; const pt = !shT(); say('v', shSL(pt)[k], 2.4); setTimeout(() => say('h', shST(pt)[k], 2.6), 1500); }
 
 // ---------- кадр ----------
 function shopFrame(dt) {
@@ -4244,13 +4264,17 @@ function shopFrame(dt) {
   if (SH.mirror) { SH.mirror.visible = dist < 30 && !!(GFX && GFX.hd); if (inside && SH.mirror.visible && SH.frameN % 2 === 0) { try { shMirrorRender(); } catch (e) { if (!SH.err++) console.warn('mirror', e); } } }
   // свой наряд на Лере
   const me = shMine();
-  if (me && me.body && me.outfit === undefined) shApplyOutfit(me, SHS.wear);
-  if (ONLINE.peer && !SH.peerWas) shSendOutfit(); SH.peerWas = !!ONLINE.peer;
-  // деньги видно всегда у Леры
+  if (me && me.body && me.outfit === undefined) shApplyOutfit(me, SR().wear);
+  if (ONLINE.peer && !SH.peerWas) SH.outT = 1.5; SH.peerWas = !!ONLINE.peer;
+  if (ONLINE.peer) { SH.outT = (SH.outT || 0) - dt; if (SH.outT <= 0) shSendOutfit(); } else if (vendor && vendor.outfit && vendor.outfit !== 'base' && ONLINE.joined) shApplyOutfit(vendor, 'base');
+  // музыка в магазине
+  const mus = inside;
+  if (mus !== !!SH.musOn) { SH.musOn = mus; try { audio.track('shop_music.mp3', mus, 0.5); } catch (e) {} }
+  // деньги видно всегда
   if (SH.monEl) { const show = !!me && $('#hud') && !$('#hud').hidden; if (SH.monEl.hidden === show) SH.monEl.hidden = !show; if (show) shMoney(); }
   // вышла с непокупленной примеркой — вернули на манекен
   if (SH.tryId && !inside && Math.hypot(lx, lz) > 1.2 && lz > 0.3) {
-    SH.tryId = null; shApplyOutfit(me || hero, SHS.wear); shSendOutfit(); toast('Джерси вернули на манекен — сначала купи на кассе', 3000);
+    SH.tryId = null; shApplyOutfit(me || hero, SR().wear); shSendOutfit(); toast('Джерси вернули на манекен — сначала купи на кассе', 3000);
   }
   if (!SH.ui) return;
   const free = hero.root.parent === scene && ctl.mode === 'walk' && !S.busy && CAR.mode === 'out' && RC.mode === 'out' && (typeof KART === 'undefined' || KART.mode === 'out') && (typeof TM === 'undefined' || TM.st === 'free');
@@ -4261,12 +4285,12 @@ function shopFrame(dt) {
       let best = -1, bd = 1.7;
       SH.man.forEach((m, i) => { const d = Math.hypot(lx - m.x, lz - m.z); if (d < bd) { bd = d; best = i; } });
       if (best >= 0) {
-        const m = SH.man[best], j = shJ(m.id), cur = SH.tryId || SHS.wear;
+        const m = SH.man[best], j = shJ(m.id), cur = SH.tryId || SR().wear;
         if (cur === m.id) {
-          if (SH.tryId) a = ['Снять «' + j.name + '»', () => { SH.tryId = null; shApplyOutfit(me, SHS.wear); shSendOutfit(); }];
+          if (SH.tryId) a = ['Снять «' + j.name + '»', () => { SH.tryId = null; shApplyOutfit(me, SR().wear); shSendOutfit(); }];
         } else a = ['Примерить «' + j.name + '»', () => {
-          const own = SHS.owned.indexOf(m.id) >= 0;
-          if (own) { SHS.wear = m.id; SH.tryId = null; shSave(); toast('Надела «' + j.name + '»', 1800); }
+          const own = SR().owned.indexOf(m.id) >= 0;
+          if (own) { SR().wear = m.id; SH.tryId = null; shSave(); toast((shT() ? 'Надел' : 'Надела') + ' «' + j.name + '»', 1800); }
           else { SH.tryId = m.id; toast('Сидит отлично! Купить можно на кассе — ' + shFmt(SH_PRICE) + ' ₽', 3000); }
           shApplyOutfit(me, m.id); shSendOutfit(); try { audio.whoosh(); } catch (e) {}
         }];
@@ -4276,15 +4300,15 @@ function shopFrame(dt) {
         if (SH.tryId) {
           const j = shJ(SH.tryId);
           b = ['Купить «' + j.name + '» · ' + shFmt(SH_PRICE) + ' ₽', () => {
-            if (SHS.money < SH_PRICE) { shCashierSay('Не хватает ' + shFmt(SH_PRICE - SHS.money) + ' ₽. Продай клубнику Тарасу у лотка — он платит 2 500 за стаканчик.'); return; }
-            SHS.money -= SH_PRICE; SHS.owned.push(j.id); SHS.wear = j.id; SH.tryId = null; shSave(); shMoney(); shSendOutfit();
+            if (SHS.money < SH_PRICE) { shCashierSay('Не хватает ' + shFmt(SH_PRICE - SHS.money) + ' ₽. Продай клубнику ' + (shT() ? 'Лере' : 'Тарасу') + ' у лотка — 2 500 за стаканчик.'); return; }
+            SHS.money -= SH_PRICE; SR().owned.push(j.id); SR().wear = j.id; SH.tryId = null; shSave(); shMoney(); shSendOutfit();
             shCashierSay('Спасибо за покупку! «' + j.name + '» — твоя.'); try { audio.pop(); hero.root.getWorldPosition(heroWorld); burst(new V3(heroWorld.x, heroWorld.y + 1.7, heroWorld.z), [0xe23d8b, 0xffffff, 0x7ee2a0], 20, 3.2); } catch (e) {}
           }];
         } else if (SH.msg <= 0) { shCashierSay('Привет! Примерь джерси на манекене и приходи ко мне. Каждая — 5 000 ₽.'); SH.msg = 12; }
       }
       SH.msg -= dt;
-    } else if (!seller || !ONLINE.joined) {
-      // у лотка: продать стаканчик Тарасу
+    } else {
+      // у лотка: продать стаканчик партнёру
       const sd = Math.hypot(hp.x - STALL.x, hp.z - STALL.z);
       SH.sellT -= dt;
       if (sd < 3.4 && ONLINE.where === 'beach' && SH.sellT <= 0) a = [SH.sell === 0 ? 'Продать клубнику · 2 500 ₽' : SH.sell === 1 ? 'Уговорить' : 'Уговорить ещё раз', shSellStep];
@@ -4297,7 +4321,6 @@ function shopFrame(dt) {
 function shopGuide() {
   if (!SH.built || hero.root.parent !== scene) return null;
   const hp = hero.root.position; if (!shInside(hp.x, hp.z)) return null;
-  if (seller && ONLINE.joined) return { h: 'Магазин CA$HER. Примерять одежду может Лера.', m: null };
   if (SH.tryId) return { h: 'Нравится? Купи на кассе слева — ' + shFmt(SH_PRICE) + ' ₽. У тебя ' + shFmt(SHS.money) + ' ₽.', m: null };
   return { h: 'Подойди к манекену, чтобы примерить джерси. В зеркале у задней стены видно, как сидит.', m: null };
 }
@@ -4363,6 +4386,7 @@ function onPeerState(d) {
 }
 function onPeerEvent(d) {
   if (!d) return;
+  if (d.t === 'say' && typeof d.text === 'string' && d.text.slice(0, 2) === '~G') { try { const w = d.text.slice(2).split(' '), a = w.shift(); if (a) onPeerAct(a, w.map((v) => (v !== '' && isFinite(+v) ? +v : v))); } catch (e) { owErr('сеть', e); } return; }
   if (d.t === 'say' && typeof d.text === 'string' && d.text.charCodeAt(0) === 126 && /^~[OA][0-9a-z]{6}/.test(d.text)) { if (typeof voiceSig === 'function') { try { voiceSig(d.text); } catch (e) { owErr('голос-сеть', e); } return; } }
   if (d.t === 'say' && typeof d.text === 'string') { say('v', d.text, Math.max(2.6, 1.2 + d.text.length * 0.07)); chatLogAdd(NAMES.v, d.text, false); if (d.text === 'Эй!') audio.hey(peerPitch()); }
   else if (d.t === 'act' && typeof d.a === 'string') onPeerAct(d.a, Array.isArray(d.d) ? d.d : []);
@@ -4480,6 +4504,8 @@ function lobbyStart() {
   if (q.length === 4) { $('#codeIn').value = q; $('#lobbyP').textContent = 'Входим в комнату ' + q + '…'; joinRoom(q); }
 }
 
+try { window.onPeerEvent = onPeerEvent; } catch (e) {}
+
 // ================= ОНЛАЙН, часть 2: клубника, лодка вдвоём, акулы, толчок =================
 // Продавец (Тарас) считает лодку и акул и шлёт покупателю снимки (g-w). Остальное: события g-ev с числами.
 const FEED_AT = { x: 38, z: 0.9 }, DOCK_RING = { x: 3.2, z: 0.9 };
@@ -4496,6 +4522,8 @@ const sendAct = (a, d) => {
   const m = { t: 'act', a }; if (d) m.d = d.map((v) => +(+v).toFixed(2)); ONLINE.sock.emit('g-ev', m);
 };
 const sendSay = (text) => { if (ONLINE.joined && ONLINE.sock && ONLINE.sock.connected) ONLINE.sock.emit('g-ev', { t: 'say', text }); };
+// служебные события (поза, одежда, продажа) идут через текстовый канал: сервер пропускает его без фильтров
+const sendNet = (a, d) => sendSay(('~G' + a + ' ' + (d || []).map((v) => String(v).replace(/\s/g, '')).join(' ')).trim().slice(0, 78));
 const handPos = (ch) => (ch.rigged ? ch.handL.getWorldPosition(new V3()) : ch.arms[1].localToWorld(ch.handLocal.clone()));
 const NEAR_GIVE = 5.5;   // прилавок и круг вокруг него не пускают ближе, поэтому радиус с запасом
 const boatDocked = () => Math.hypot(boat.position.x - BOAT_DOCK.x, boat.position.z - BOAT_DOCK.z) < 1.8;
