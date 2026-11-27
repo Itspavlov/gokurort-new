@@ -2077,7 +2077,7 @@ function tapAt(ev) {
 }
 // запретить сдвиг и зум страницы от второго пальца: джойстик держим одним, камеру крутим другим
 ['gesturestart', 'gesturechange', 'gestureend'].forEach((n) => document.addEventListener(n, (e) => e.preventDefault()));
-document.addEventListener('touchmove', (e) => { if (e.target && e.target.closest && e.target.closest('.chatbar')) return; e.preventDefault(); }, { passive: false });
+document.addEventListener('touchmove', (e) => { if (e.target && e.target.closest && (e.target.closest('.chatbar') || e.target.closest('#mzList'))) return; e.preventDefault(); }, { passive: false });
 document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 // палец по сцене вращает камеру; два пальца (щипок) — приближение; короткое касание — тап по акуле
 {
@@ -3713,16 +3713,18 @@ const tmFmtT = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padS
 function tmMusOpen() {
   if (!MZ.box) {
     const st = document.createElement('style');
-    st.textContent = '#mzBox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:22px;background:rgba(18,16,24,.92);color:#fff;z-index:30;font:15px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.5)}#mzBox[hidden]{display:none}#mzBox .r{display:flex;gap:8px}#mzBox input{flex:1;min-width:0;height:44px;border-radius:14px;border:0;padding:0 14px;font-size:16px}#mzBox button{height:44px;border-radius:14px;border:0;padding:0 14px;font-size:15px;font-weight:700;background:#ff4f9a;color:#fff}#mzBox .x{background:#3a3746}#mzList{overflow:auto;display:flex;flex-direction:column;gap:6px;min-height:40px}#mzList div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.08);cursor:pointer}#mzList div b{display:block;font-size:15px}#mzList div i{font-style:normal;opacity:.7;font-size:13px}#mzList div.on{background:#ff4f9a55}#mzNow{font-size:13px;opacity:.85}@media (max-height:430px){#mzBox{max-height:94vh;padding:10px;gap:6px}}';
+    st.textContent = '#mzBox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,92vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:22px;background:rgba(18,16,24,.92);color:#fff;z-index:30;font:15px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.5)}#mzBox[hidden]{display:none}#mzBox .r{display:flex;gap:8px}#mzBox input{flex:1;min-width:0;height:44px;border-radius:14px;border:0;padding:0 14px;font-size:16px}#mzBox button{height:44px;border-radius:14px;border:0;padding:0 14px;font-size:15px;font-weight:700;background:#ff4f9a;color:#fff}#mzBox .x{background:#3a3746}#mzList{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;min-height:40px;flex:1 1 auto}#mzBox input{-webkit-user-select:text;user-select:text;touch-action:manipulation}#mzBox button{touch-action:manipulation}#mzList div{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.08);cursor:pointer}#mzList div b{display:block;font-size:15px}#mzList div i{font-style:normal;opacity:.7;font-size:13px}#mzList div.on{background:#ff4f9a55}#mzNow{font-size:13px;opacity:.85}@media (max-height:430px){#mzBox{max-height:94vh;padding:10px;gap:6px}}';
     document.head.appendChild(st);
     const b = document.createElement('div'); b.id = 'mzBox'; b.hidden = true;
     b.innerHTML = '<div class="r"><input id="mzQ" type="search" placeholder="Найти песню или исполнителя" enterkeyhint="search"><button id="mzGo">Найти</button></div><div id="mzNow"></div><div id="mzList"></div><div class="r"><button id="mzStop" class="x">⏹ Выключить</button><button id="mzX" class="x" style="margin-left:auto">Закрыть</button></div>';
     (document.getElementById('app') || document.body).appendChild(b); MZ.box = b;
     const q = b.querySelector('#mzQ'), go = () => tmMusSearch(q.value.trim());
-    b.querySelector('#mzGo').addEventListener('click', go);
+    // кнопки — по касанию (pointerdown): на телефоне click теряется, когда закрывается клавиатура
+    const tap = (el, fn) => { el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fn(); }); el.addEventListener('click', (e) => { e.preventDefault(); if (e.detail === 0) fn(); }); };
+    tap(b.querySelector('#mzGo'), () => { go(); q.blur(); });
     q.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); go(); q.blur(); } });
-    b.querySelector('#mzStop').addEventListener('click', () => { tmSetSnd('b', TM.sndSeq + 1); });
-    b.querySelector('#mzX').addEventListener('click', () => { b.hidden = true; });
+    tap(b.querySelector('#mzStop'), () => { tmSetSnd('b', TM.sndSeq + 1); });
+    tap(b.querySelector('#mzX'), () => { q.blur(); b.hidden = true; });
     ['pointerdown', 'touchstart', 'keydown', 'keyup'].forEach((n) => b.addEventListener(n, (e) => e.stopPropagation()));
   }
   MZ.box.hidden = false; tmMusUI();
@@ -3737,7 +3739,12 @@ function tmMusSearch(q) {
     a.forEach((t) => {
       const d = document.createElement('div'); d.dataset.id = t.id;
       d.innerHTML = '<b></b><i></i>'; d.querySelector('b').textContent = t.title; d.querySelector('i').textContent = (t.user && t.user.name || '') + ' · ' + tmFmtT(t.duration || 0);
-      d.addEventListener('click', () => { try { audio.unlock(); } catch (e) {} tmSetSnd('m' + t.id, TM.sndSeq + 1); const p = tmMusEl().play(); if (p && p.catch) p.catch(() => {}); });
+      const pick = () => { try { audio.unlock(); } catch (e) {} tmSetSnd('m' + t.id, TM.sndSeq + 1); const p = tmMusEl().play(); if (p && p.catch) p.catch(() => {}); };
+      // касание без прокрутки = выбор трека; с прокруткой — просто листаем
+      d.addEventListener('pointerdown', (e) => { d._y = e.clientY; d._x = e.clientX; d._st = L.scrollTop; });
+      d.addEventListener('pointerup', (e) => { if (d._y == null) return; const mv = Math.abs(e.clientY - d._y) + Math.abs(e.clientX - d._x) + Math.abs(L.scrollTop - d._st); d._y = null; if (mv < 12) { d._t = performance.now(); pick(); } });
+      d.addEventListener('pointercancel', () => { d._y = null; });
+      d.addEventListener('click', () => { if (performance.now() - (d._t || 0) > 600) pick(); });
       L.appendChild(d);
     });
     tmMusUI();
