@@ -4678,14 +4678,13 @@ function netUntag(d) {
   try { tmOnPeer(NT_POSE[m[2]] ? [NT_POSE[m[2]], d.x, d.z] : ['']); } catch (e) {}
   if (m[3]) { const k = m[4]; if (k !== 'm') { try { tmPeerSnd(+m[3], k); } catch (e) {} } else if (NETX.mid) { try { tmPeerSnd(+m[3], 'm' + NETX.mid); } catch (e) {} } }
 }
-// 2) дубль числами через событие «sync» (его сервер точно пропускает): [-777, одежда, поза, seq, звук, длина id, пары символов id]
+// 2) звук зала (и id трека) — текстовым каналом «~Gsnd <seq> <звук>»: сервер его пропускает без фильтра
 function netExtraTick(dt) {
   if (!ONLINE.joined || !ONLINE.peer) return;
-  const n = netInfo(), id = n.snd[0] === 'm' ? n.snd.slice(1) : '', key = n.o + '|' + n.t + '|' + n.seq + '|' + n.snd;
-  NETX.t -= dt; if (key === NETX.last && NETX.t > 0) return; NETX.last = key; NETX.t = 2;
-  const d = [-777, n.o, Math.max(0, NT_PL.indexOf(n.t)), n.seq, n.snd[0] === 'r' ? 1 : id ? 2 : 0, id.length];
-  for (let k = 0; k < id.length; k += 2) d.push(Math.max(0, B62.indexOf(id[k])) * 62 + (k + 1 < id.length ? Math.max(0, B62.indexOf(id[k + 1])) : 0));
-  try { sendAct('sync', d); } catch (e) {}
+  const n = netInfo(); if (!(n.seq > 0)) return;
+  const key = n.seq + '|' + n.snd;
+  NETX.t -= dt; if (key === NETX.last && NETX.t > 0) return; NETX.last = key; NETX.t = 3;
+  try { sendNet('snd', [n.seq, n.snd]); } catch (e) {}
 }
 function netExtraRecv(d) {
   if (!Array.isArray(d) || d.length < 6) return;
@@ -5108,6 +5107,7 @@ function onPeerAct(a, d) {
     case 'bite': peerBite(d[0] | 0, d[1]); break;
     case 'dock': dockLocal(); break;
     case 'sync': if (d && d[0] === -777) netExtraRecv(d); else if (d && d[0] >= 100) kartOnSync(d); else carOnSync(d); break;
+    case 'snd': if (d && d.length >= 2) { const v = String(d[1]); if (v[0] === 'm') NETX.mid = v.slice(1); tmPeerSnd(+d[0], v); } break;
     case 'rsync': car2OnSync(d); break;
     case 'tea': templeOnAct(d); break;
     case 'tm': tmOnPeer(d); break;
